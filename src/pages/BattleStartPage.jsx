@@ -1,24 +1,28 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import ItemCard from "../components/ItemCard";
-import { useLocation } from "react-router-dom";
 
 const BattleStartPage = () => {
-  const location = useLocation();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [userItems, setUserItems] = useState([]);
   const [userItemPowers, setUserItemPowers] = useState({});
-
-  // ✅ location.state から受け取る（Zukanから来た場合）
-  const [selectedItem, setSelectedItem] = useState(location.state?.selectedItem || null);
-  const [questionCount, setQuestionCount] = useState(location.state?.questionCount || 3);
-
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [questionCount, setQuestionCount] = useState(3);
   const enemy = "カブトムシくん";
 
+  // 🔹 locationから初期選択反映
+  useEffect(() => {
+    if (location.state?.selectedItem) {
+      setSelectedItem(location.state.selectedItem);
+    }
+  }, [location.state]);
+
+  // 🔹 アイテム & パワー取得
   useEffect(() => {
     const fetchAll = async () => {
       const user = getAuth().currentUser;
@@ -41,7 +45,6 @@ const BattleStartPage = () => {
         ...powers[id],
       }));
 
-      console.log("📦 マージ済みアイテム：", itemList);
       setUserItems(itemList);
     };
 
@@ -50,8 +53,6 @@ const BattleStartPage = () => {
 
   const handleStartBattle = () => {
     if (!selectedItem) return;
-
-    console.log("🧩 選択アイテム：", selectedItem);
 
     navigate("/battle", {
       state: {
@@ -62,12 +63,11 @@ const BattleStartPage = () => {
     });
   };
 
-
   return (
     <div className="min-h-screen bg-yellow-50 p-6">
       <h1 className="text-2xl font-bold text-center mb-4">⚔️ バトル準備</h1>
 
-      {/* 問題数選択 */}
+      {/* 🔸 問題数選択 */}
       <div className="text-center mb-6">
         <p className="mb-2 font-bold">バトルの問題数をえらんでね</p>
         {[1, 3, 5].map((num) => (
@@ -85,8 +85,7 @@ const BattleStartPage = () => {
         ))}
       </div>
 
-      {/* アイテム選択 */}
-      <p className="text-center font-bold mb-2">使うアイテムを1つえらぼう！</p>
+      {/* 🔸 アイテム選択 */}
       <div className="flex flex-wrap justify-center">
         {userItems.map((item) => (
           <div
@@ -101,7 +100,7 @@ const BattleStartPage = () => {
         ))}
       </div>
 
-      {/* バトル開始ボタン */}
+      {/* 🔸 バトル開始 */}
       <div className="text-center mt-6">
         <button
           onClick={handleStartBattle}

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 import ItemCard from "../components/ItemCard";
 
 const BattlePage = () => {
@@ -10,31 +12,48 @@ const BattlePage = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [currentRound, setCurrentRound] = useState(1);
   const [selectedPw, setSelectedPw] = useState(null);
-  const [myTotalPw, setMyTotalPw] = useState(300);
+  const [myTotalPw, setMyTotalPw] = useState(0);
   const [enemyTotalPw, setEnemyTotalPw] = useState(500);
   const [battleLog, setBattleLog] = useState([]);
   const [question, setQuestion] = useState(null);
 
-  // ✅ selectedItemをマージして保持
+  // ✅ Firestoreのパワー情報をマージ
   useEffect(() => {
-  if (!state?.selectedItem) return;
+    const fetchAndMergeItemPower = async () => {
+      if (!state?.selectedItem) return;
 
-  const raw = state.selectedItem;
+      const raw = state.selectedItem;
+      const itemId = raw.itemId;
+      const user = auth.currentUser;
 
-  const merged = {
-    ...raw,
-    pw: raw.pw ?? 0,
-    cpt: raw.cpt ?? 0,
-    bpt: raw.bpt ?? 0,
-  };
+      if (!user) return;
 
-  setSelectedItem(merged);
+      try {
+        const docRef = doc(db, "userItemPowers", user.uid);
+        const docSnap = await getDoc(docRef);
 
-  // ✅ この位置に移動！
-  console.log("selectedItemの中身（BattlePage）:", merged);
-  console.log("攻撃力 (cpt)：", merged.cpt || 0);
-  console.log("防御力 (bpt)：", merged.bpt || 0);
-}, [state]);
+        let powerData = {};
+        if (docSnap.exists()) {
+          powerData = docSnap.data()[itemId] || {};
+        }
+
+        const merged = {
+          ...raw,
+          pw: powerData.pw ?? 0,
+          cpt: powerData.cpt ?? 0,
+          bpt: powerData.bpt ?? 0,
+        };
+
+        setSelectedItem(merged);
+        setMyTotalPw(merged.pw); // ✅ 初期PWセット！
+        console.log("✅ merged:", merged);
+      } catch (error) {
+        console.error("🔥 Firestore 取得エラー:", error);
+      }
+    };
+
+    fetchAndMergeItemPower();
+  }, [state]);
 
   const allQuestions = [
     {
@@ -112,7 +131,9 @@ const BattlePage = () => {
           style={{ width: `${(value / max) * 100}%` }}
         ></div>
       </div>
-      <p className="text-sm mt-1">{value} PW</p>
+      <p className="text-sm mt-1">
+        {value} / {max} PW
+      </p>
     </div>
   );
 
@@ -127,7 +148,7 @@ const BattlePage = () => {
       </p>
 
       <div className="flex justify-center items-center mb-4 gap-4 flex-wrap">
-        {renderGauge("🧑 あなた", myTotalPw, 500, "bg-blue-400")}
+        {renderGauge("🧑 あなた", myTotalPw, selectedItem.pw, "bg-blue-400")}
         <span className="font-bold">VS</span>
         {renderGauge(`👑 ${enemy}`, enemyTotalPw, 500, "bg-purple-400")}
       </div>
@@ -136,12 +157,14 @@ const BattlePage = () => {
       <div className="flex justify-center my-4">
         <ItemCard item={selectedItem} owned={true} />
       </div>
-<div className="text-center text-sm text-gray-700 mb-4">
-  <p>
-    🥊 <span className="font-bold text-red-500">攻撃力：</span>{selectedItem.cpt ?? 0}　
-    💪 <span className="font-bold text-blue-500">防御力：</span>{selectedItem.bpt ?? 0}
-  </p>
-</div>
+
+      <div className="text-center text-sm text-gray-700 mb-4">
+        <p>
+          🥊 <span className="font-bold text-red-500">攻撃力：</span>{selectedItem.cpt ?? 0}　
+          💪 <span className="font-bold text-blue-500">防御力：</span>{selectedItem.bpt ?? 0}
+        </p>
+      </div>
+
       <p className="text-center text-blue-800 font-bold mb-2">
         あなたのターン！まず PW を選んでください
       </p>

@@ -54,13 +54,14 @@ const BattleStartPage = () => {
   const handleStartBattle = () => {
     if (!selectedItem) return;
 
-    navigate("/battle", {
-      state: {
-        selectedItem,
-        enemy,
-        questionCount,
-      },
-    });
+    navigate("/battle/play", {
+  state: {
+    selectedItem,
+    enemy,
+    questionCount,
+  },
+});
+
   };
 
   return (

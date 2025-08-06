@@ -18,6 +18,7 @@ import ZukanInsectDetailPage from "./pages/ZukanInsectDetailPage"; // ←これ�
 import BattleStartPage from "./pages/BattleStartPage"; // ← 追加するページ
 import BattlePage from "./pages/BattlePage";           // ← 本バトル画面（あとで作る）
 import BattleRankSelectPage from "./pages/BattleRankSelectPage";
+import BattlePlayPage from "./pages/BattlePlayPage"; // ← 追記！
 
 function App() {
   return (
@@ -47,7 +48,7 @@ function App() {
         <Route path="/battle/start" element={<BattleStartPage />} />
         <Route path="/battle" element={<BattlePage />} />
         <Route path="/battle/item-select" element={<BattleRankSelectPage />} />
-
+        <Route path="/battle/play" element={<BattlePlayPage />} /> 
         {/* <Route path="/battle/result" element={<BattleResultPage />} /> */}
       </Routes>
     </Router>

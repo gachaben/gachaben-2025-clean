@@ -1,6 +1,9 @@
 import React from 'react';
 
 const ItemCard = ({ item, owned, pwMode, onClick }) => {
+  // ✅ 安全装置：itemが未定義なら何も表示しない
+  if (!item) return null;
+
   console.log("🧩 ItemCard 受け取り：", item); // ✅ 正しい場所に移動済み！
 
   const { itemId, imageName, name, pw = 0, cpt = 0, bpt = 0, stage, seriesId } = item;
@@ -29,7 +32,6 @@ const ItemCard = ({ item, owned, pwMode, onClick }) => {
     if (cpt >= 50) return 1;
     return 0;
   };
-
   const getBptLevel = (bpt) => {
     if (bpt >= 250) return 5;
     if (bpt >= 200) return 4;

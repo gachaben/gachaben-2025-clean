@@ -1,101 +1,103 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, updateDoc, increment } from "firebase/firestore";
+import { useNavigate, useLocation } from "react-router-dom";
+import { auth, db } from "../firebase";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 const BattleResultPage = () => {
-  const { state } = useLocation();
   const navigate = useNavigate();
-  const [saved, setSaved] = useState(false);
-  const [reward, setReward] = useState(0);
+  const { state } = useLocation();
+  const {
+    myBet,
+    enemyBet,
+    winner,
+    myCorrect,
+    cpuCorrect,
+    selectedItem,     // ← 自分のアイテム（PWを更新する）
+    enemyItem,        // ← 仮想相手（表示用）
+  } = state || {};
 
-  if (!state) {
-    navigate("/battle/start");
-    return null;
+  const [updated, setUpdated] = useState(false); // PW反映済みチェック
+
+  // ✅ ダメージ計算
+  let message = "";
+  let myDamage = 0;
+  let enemyDamage = 0;
+
+  if (winner === "player") {
+    enemyDamage = myBet;
+    message = `🎉 あなたの勝利！敵に ${enemyDamage} ダメージ！`;
+  } else if (winner === "cpu") {
+    myDamage = enemyBet;
+    message = `💥 敵の勝利…あなたに ${myDamage} ダメージ…`;
+  } else {
+    message = "🤝 引き分け！おたがいノーダメージ！";
   }
 
-  const { enemy, myTotalPw, enemyTotalPw, battleLog } = state;
+  // ✅ Firestore上の自分のPWを更新する
+  const updateMyPw = async () => {
+    if (!selectedItem || !selectedItem.itemId || myDamage === 0) return;
 
-  const getResultMessage = () => {
-    if (myTotalPw > enemyTotalPw) return "🏆 勝ちました！";
-    if (myTotalPw < enemyTotalPw) return "😢 負けました…";
-    return "🤝 引き分け！";
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      const docRef = doc(db, "userItemPowers", user.uid);
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) return;
+
+      const data = docSnap.data();
+      const currentPw = data[selectedItem.itemId]?.pw ?? 0;
+      const newPw = Math.max(currentPw - myDamage, 0);
+
+      await updateDoc(docRef, {
+        [`${selectedItem.itemId}.pw`]: newPw,
+      });
+
+      console.log("✅ 自分のPWを更新:", newPw);
+      setUpdated(true);
+    } catch (err) {
+      console.error("🔥 PW更新エラー", err);
+    }
   };
 
-  const calculateReward = () => {
-    return myTotalPw > enemyTotalPw ? 10 : 5;
-  };
-
+  // ✅ 初回マウント時にPW反映
   useEffect(() => {
-    const saveBpt = async () => {
-      if (saved) return;
+    if (!updated && myDamage > 0) {
+      updateMyPw();
+    }
+  }, [updated, myDamage]);
 
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) return;
-
-      const db = getFirestore();
-      const userRef = doc(db, "users", user.uid);
-      const rewardPoint = calculateReward();
-
-      try {
-        await updateDoc(userRef, {
-          bpt: increment(rewardPoint),
-        });
-        setReward(rewardPoint);
-        setSaved(true);
-      } catch (error) {
-        console.error("Bpt保存エラー:", error);
-      }
-    };
-
-    saveBpt();
-  }, [saved, myTotalPw, enemyTotalPw]);
+  const handleNext = () => {
+    navigate("/zukan-top"); // ← 戻り先は自由に
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-yellow-100 to-white flex flex-col items-center p-6">
-      <h1 className="text-2xl font-bold mb-4">バトル結果</h1>
+    <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center p-4">
+      <h1 className="text-2xl font-bold mb-4 text-center">🏁 バトル結果発表</h1>
 
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md text-center">
-        <p className="text-lg mb-2">👾 対戦相手：{enemy}</p>
-        <h2 className="text-2xl font-bold mb-4 text-green-600">{getResultMessage()}</h2>
+      <div className="bg-white rounded shadow p-6 w-full max-w-md text-center">
+        <p className="text-xl font-bold text-green-700 mb-4">{message}</p>
 
-        <p className="mb-2">🧍‍♂️ あなたの攻撃PW：<span className="font-bold">{myTotalPw}</span></p>
-        <p className="mb-2">👾 相手の攻撃PW：<span className="font-bold">{enemyTotalPw}</span></p>
+        <div className="mb-4 text-sm text-gray-600">
+          <p>あなたの正解数：{myCorrect} 問</p>
+          <p>カブトムシくんの正解数：{cpuCorrect} 問</p>
+        </div>
 
-        {saved && (
-          <p className="mt-4 text-blue-700 font-bold">
-            🎁 報酬として {reward} Bpt を獲得しました！
-          </p>
-        )}
+        <div className="my-6">
+          <p>🧑 あなたの残りPW：<strong>次の画面で反映！</strong></p>
+          <p>👑 相手のPW：<strong>今回は仮想なので表示のみ</strong></p>
+        </div>
 
         <button
-          onClick={() => navigate("/battle/start")}
-          className="mt-6 px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+          className="mt-4 px-6 py-2 bg-blue-500 text-white font-bold rounded shadow hover:bg-blue-600"
+          onClick={handleNext}
         >
-          🔁 もう一度バトルする
+          つづける
         </button>
-      </div>
-
-      <div className="mt-6 w-full max-w-md">
-        <h2 className="font-semibold mb-2">📜 バトルログ：</h2>
-        <ul className="bg-white rounded p-4 shadow-md text-sm max-h-64 overflow-y-auto">
-          {battleLog.map((log, index) => (
-            <li key={index} className="mb-3 border-b pb-1">
-              <strong>{log.round}回戦：</strong> {log.result}（{log.bet} PW）<br />
-              {log.question !== "―" && (
-                <>
-                  問：{log.question} <br />
-                  回答：{log.selected}（正解：{log.correct}）
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );
 };
 
 export default BattleResultPage;
-

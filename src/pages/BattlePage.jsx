@@ -45,7 +45,7 @@ const BattlePage = () => {
         };
 
         setSelectedItem(merged);
-        setMyTotalPw(merged.pw); // ✅ 初期PWセット！
+        setMyTotalPw(merged.pw); // ✅ 初期PWをここでセット！
         console.log("✅ merged:", merged);
       } catch (error) {
         console.error("🔥 Firestore 取得エラー:", error);
@@ -79,6 +79,12 @@ const BattlePage = () => {
 
   const handleAnswer = (option) => {
     if (!selectedPw || !question) return;
+
+    // 🛡 念のためのガード：所持PWを超えていたら弾く
+    if (selectedPw > myTotalPw) {
+      alert("❌ 所持PWを超えています！");
+      return;
+    }
 
     const correct = option === question.answer;
     const log = correct
@@ -174,11 +180,12 @@ const BattlePage = () => {
           <button
             key={pw}
             onClick={() => setSelectedPw(pw)}
+            disabled={pw > myTotalPw} // ← 所持PW超過は選べない！
             className={`px-4 py-2 rounded-full border font-bold ${
               selectedPw === pw
                 ? "bg-blue-500 text-white"
                 : "bg-white text-blue-500 border-blue-500"
-            }`}
+            } ${pw > myTotalPw ? "opacity-50 cursor-not-allowed" : ""}`}
           >
             {pw} PW
           </button>

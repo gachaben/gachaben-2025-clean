@@ -5,16 +5,37 @@ import ItemCard from "../components/ItemCard";
 const BattlePage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { enemy, questionCount, selectedItem } = state || {};
+  const { enemy, questionCount } = state || {};
 
+  const [selectedItem, setSelectedItem] = useState(null);
   const [currentRound, setCurrentRound] = useState(1);
   const [selectedPw, setSelectedPw] = useState(null);
-  const [myTotalPw, setMyTotalPw] = useState(300); // 初期所持PW
-  const [enemyTotalPw, setEnemyTotalPw] = useState(500); // 初期所持PW
+  const [myTotalPw, setMyTotalPw] = useState(300);
+  const [enemyTotalPw, setEnemyTotalPw] = useState(500);
   const [battleLog, setBattleLog] = useState([]);
   const [question, setQuestion] = useState(null);
 
-  // 仮問題（複数追加可能）
+  // ✅ selectedItemをマージして保持
+  useEffect(() => {
+  if (!state?.selectedItem) return;
+
+  const raw = state.selectedItem;
+
+  const merged = {
+    ...raw,
+    pw: raw.pw ?? 0,
+    cpt: raw.cpt ?? 0,
+    bpt: raw.bpt ?? 0,
+  };
+
+  setSelectedItem(merged);
+
+  // ✅ この位置に移動！
+  console.log("selectedItemの中身（BattlePage）:", merged);
+  console.log("攻撃力 (cpt)：", merged.cpt || 0);
+  console.log("防御力 (bpt)：", merged.bpt || 0);
+}, [state]);
+
   const allQuestions = [
     {
       text: "カブトムシの幼虫が食べるものは？",
@@ -49,14 +70,11 @@ const BattlePage = () => {
       setEnemyTotalPw((prev) => Math.max(prev - selectedPw, 0));
     }
 
-    setBattleLog((prev) => [
-      ...prev,
-      `Round ${currentRound}：${log}`,
-    ]);
+    setBattleLog((prev) => [...prev, `Round ${currentRound}：${log}`]);
 
     if (currentRound < questionCount) {
       setCurrentRound((prev) => prev + 1);
-      setSelectedPw(null); // 次のラウンドに向けてリセット
+      setSelectedPw(null);
     } else {
       setTimeout(() => {
         navigate("/battle/result", {
@@ -108,22 +126,26 @@ const BattlePage = () => {
         🧑 あなた vs 👑 {enemy}
       </p>
 
-      {/* PWゲージ表示 */}
       <div className="flex justify-center items-center mb-4 gap-4 flex-wrap">
         {renderGauge("🧑 あなた", myTotalPw, 500, "bg-blue-400")}
         <span className="font-bold">VS</span>
         {renderGauge(`👑 ${enemy}`, enemyTotalPw, 500, "bg-purple-400")}
       </div>
 
-      {/* アイテムカード表示 */}
+      {/* ✅ アイテムカード */}
       <div className="flex justify-center my-4">
         <ItemCard item={selectedItem} owned={true} />
       </div>
-
-      {/* PW選択 */}
+<div className="text-center text-sm text-gray-700 mb-4">
+  <p>
+    🥊 <span className="font-bold text-red-500">攻撃力：</span>{selectedItem.cpt ?? 0}　
+    💪 <span className="font-bold text-blue-500">防御力：</span>{selectedItem.bpt ?? 0}
+  </p>
+</div>
       <p className="text-center text-blue-800 font-bold mb-2">
         あなたのターン！まず PW を選んでください
       </p>
+
       <div className="flex justify-center mb-4 flex-wrap gap-2">
         {[100, 200, 300, 400, 500].map((pw) => (
           <button
@@ -140,7 +162,6 @@ const BattlePage = () => {
         ))}
       </div>
 
-      {/* 問題表示 */}
       {selectedPw && question && (
         <div className="text-center mb-4">
           <p className="text-lg font-semibold mb-2">{question.text}</p>
@@ -158,7 +179,6 @@ const BattlePage = () => {
         </div>
       )}
 
-      {/* バトルログ */}
       <div className="mt-6 bg-white rounded p-4 shadow">
         <h2 className="font-bold mb-2">📜 バトルログ：</h2>
         {battleLog.map((log, idx) => (

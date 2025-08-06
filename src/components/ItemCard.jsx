@@ -1,19 +1,19 @@
 import React from 'react';
 
 const ItemCard = ({ item, owned, pwMode, onClick }) => {
+  console.log("🧩 ItemCard 受け取り：", item); // ✅ 正しい場所に移動済み！
+
   const { itemId, imageName, name, pw = 0, cpt = 0, bpt = 0, stage, seriesId } = item;
 
   const isSRank = imageName.includes('_S_');
   const isARank = imageName.includes('_A_');
   const isBRank = imageName.includes('_B_');
 
-  // ✅ spark 演出動画の指定
   let sparkVideo = null;
   if (isSRank) sparkVideo = 'S_spark.mp4';
   else if (isARank) sparkVideo = 'A_spark.mp4';
   else if (isBRank) sparkVideo = 'B_spark.mp4';
 
-  // ✅ ランクごとの文字色
   const getRankStyle = () => {
     if (isSRank) return 'text-yellow-300';
     if (isARank) return 'text-purple-300';
@@ -21,7 +21,6 @@ const ItemCard = ({ item, owned, pwMode, onClick }) => {
     return 'text-white';
   };
 
-  // ✅ レベル（5段階）算出
   const getCptLevel = (cpt) => {
     if (cpt >= 250) return 5;
     if (cpt >= 200) return 4;
@@ -42,10 +41,8 @@ const ItemCard = ({ item, owned, pwMode, onClick }) => {
 
   const cptLevel = getCptLevel(cpt);
   const bptLevel = getBptLevel(bpt);
-
   const imagePath = `/images/${seriesId}/stage${stage}/${imageName}.png`;
 
-  // ✅ ランク文字（S/A/B）決定
   const getRankLetter = () => {
     if (isSRank) return 'S';
     if (isARank) return 'A';
@@ -53,7 +50,6 @@ const ItemCard = ({ item, owned, pwMode, onClick }) => {
     return '';
   };
 
-  // ✅ 改行付き表示名（ヘラクレスだけ特別対応）
   const displayName = name === 'ヘラクレスオオカブト'
     ? 'ヘラクレス\nオオカブト'
     : name;
@@ -63,14 +59,10 @@ const ItemCard = ({ item, owned, pwMode, onClick }) => {
       onClick={pwMode ? onClick : undefined}
       className={`relative w-[150px] h-[220px] m-2 border rounded-xl overflow-hidden shadow-md bg-white transition-transform duration-300 transform hover:scale-105 hover:shadow-xl ${owned ? '' : 'opacity-60 grayscale'}`}
     >
-      {/* ✅ ランク文字（右上表示） */}
-      <div
-        className={`absolute top-1 right-2 z-30 text-4xl font-bold drop-shadow-md font-serif ${getRankStyle()}`}
-      >
+      <div className={`absolute top-1 right-2 z-30 text-4xl font-bold drop-shadow-md font-serif ${getRankStyle()}`}>
         {getRankLetter()}
       </div>
 
-      {/* ✅ ランク演出動画 */}
       {sparkVideo && (
         <video
           src={`/images/effects/${sparkVideo}`}
@@ -81,7 +73,6 @@ const ItemCard = ({ item, owned, pwMode, onClick }) => {
         />
       )}
 
-      {/* ✅ コンテンツ本体 */}
       <div className="relative z-10 flex flex-col items-center justify-between h-full p-2 text-white">
         <div className="text-sm font-bold text-center break-words h-[38px] overflow-hidden leading-tight mt-3 whitespace-pre-line">
           {displayName}
@@ -95,13 +86,11 @@ const ItemCard = ({ item, owned, pwMode, onClick }) => {
 
         <div className="text-xs mt-1">{pw} PW</div>
 
-        {/* 攻撃力（🥊） */}
         <div className="text-[11px] leading-none mt-1">
           攻撃力：
           {Array(cptLevel).fill('🥊').map((icon, i) => <span key={i}>{icon}</span>)}
         </div>
 
-        {/* 防御力（💪） */}
         <div className="text-[11px] leading-none">
           防御力：
           {Array(bptLevel).fill('💪').map((icon, i) => <span key={i}>{icon}</span>)}

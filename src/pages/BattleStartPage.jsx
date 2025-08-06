@@ -4,13 +4,19 @@ import { getAuth } from "firebase/auth";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import ItemCard from "../components/ItemCard";
+import { useLocation } from "react-router-dom";
 
 const BattleStartPage = () => {
+  const location = useLocation();
   const navigate = useNavigate();
+
   const [userItems, setUserItems] = useState([]);
   const [userItemPowers, setUserItemPowers] = useState({});
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [questionCount, setQuestionCount] = useState(3);
+
+  // ✅ location.state から受け取る（Zukanから来た場合）
+  const [selectedItem, setSelectedItem] = useState(location.state?.selectedItem || null);
+  const [questionCount, setQuestionCount] = useState(location.state?.questionCount || 3);
+
   const enemy = "カブトムシくん";
 
   useEffect(() => {
@@ -18,24 +24,21 @@ const BattleStartPage = () => {
       const user = getAuth().currentUser;
       if (!user) return;
 
-      // ① アイテム取得
       const itemSnap = await getDoc(doc(db, "userItems", user.uid));
       const rawItems = itemSnap.exists() ? itemSnap.data() : {};
 
-      // ② 育成パワー取得
       const powersSnap = await getDocs(collection(db, "userItemPowers", user.uid, "items"));
       const powers = {};
       powersSnap.forEach((doc) => {
         powers[doc.id] = doc.data();
       });
 
-      setUserItemPowers(powers); // ← 保持だけしておく（任意）
+      setUserItemPowers(powers);
 
-      // ③ 両方マージして userItems 作成
       const itemList = Object.entries(rawItems).map(([id, data]) => ({
         itemId: id,
         ...data,
-        ...powers[id], // マージ（pw, cpt, bpt）
+        ...powers[id],
       }));
 
       console.log("📦 マージ済みアイテム：", itemList);
@@ -52,12 +55,13 @@ const BattleStartPage = () => {
 
     navigate("/battle", {
       state: {
-        selectedItem, // ← すでにマージ済み
+        selectedItem,
         enemy,
         questionCount,
       },
     });
   };
+
 
   return (
     <div className="min-h-screen bg-yellow-50 p-6">

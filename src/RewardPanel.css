@@ -1,0 +1,29 @@
+/* 🔥 激アツボタンの炎エフェクト */
+@keyframes flame {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.05) rotate(1deg); }
+  100% { transform: scale(1) rotate(-1deg); }
+}
+
+.animate-fire {
+  animation: flame 0.3s infinite alternate;
+  box-shadow: 0 0 15px red, 0 0 20px orange;
+}
+
+/* 🎇 浮かび上がる演出（+1000など） */
+.reward-float {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 2rem;
+  color: red;
+  font-weight: bold;
+  animation: flyUp 2s ease-out forwards;
+  z-index: 9999;
+}
+
+@keyframes flyUp {
+  0% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -200px); }
+}

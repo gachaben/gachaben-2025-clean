@@ -1,0 +1,66 @@
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  padding: 20px;
+}
+
+.card {
+  width: 100px;
+  height: 140px;
+  perspective: 1000px;
+  cursor: pointer;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+.card.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-front, .card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.card-front img, .card-back img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-back {
+  transform: rotateY(180deg);
+}
+/* 追加してね */
+.flash-rainbow {
+  animation: rainbowFlash 0.8s ease-out;
+}
+
+@keyframes rainbowFlash {
+  0% {
+    background-color: #ffffff;
+  }
+  25% {
+    background-color: #ffccff;
+  }
+  50% {
+    background-color: #ccffff;
+  }
+  75% {
+    background-color: #ffffcc;
+  }
+  100% {
+    background-color: transparent;
+  }
+}

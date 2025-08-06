@@ -1,0 +1,54 @@
+.evolve-container {
+  padding: 20px;
+  text-align: center;
+}
+
+.roulette-box {
+  position: relative;
+  width: 300px;
+  height: 300px;
+  margin: 0 auto;
+}
+
+.pointer {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-right: 15px solid transparent;
+  border-bottom: 30px solid red;
+  z-index: 2;
+}
+
+.roulette-wheel {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 6px solid #333;
+  position: relative;
+  transform: rotate(0deg);
+}
+
+.roulette-item {
+  position: absolute;
+  width: 50%;
+  height: 50%;
+  left: 50%;
+  top: 50%;
+  transform-origin: 0% 0%;
+  background: #eee;
+  color: #000;
+  font-weight: bold;
+  padding-top: 20px;
+}
+
+.roulette-item.success {
+  background-color: gold;
+}
+
+.roulette-item.normal {
+  background-color: #9ecffb;
+}

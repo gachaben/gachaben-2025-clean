@@ -1,0 +1,66 @@
+/* 🔧 src/components/ItemCard.css */
+
+.card-base {
+  width: 130px;
+  height: 200px;
+  border-radius: 16px;
+  padding: 8px;
+  margin: 8px;
+  color: black;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* 爆裂ゾーン */
+.zone-bakuretsu {
+  background: radial-gradient(circle at center, #ff5722, #ff9800);
+  animation: flicker 1s infinite;
+}
+
+/* 超越ゾーン */
+.zone-chouetsu {
+  background: linear-gradient(135deg, #e0f7fa, #80deea);
+  animation: aura 2s infinite;
+}
+
+/* 神化ゾーン */
+.zone-shinka {
+  background: linear-gradient(135deg, #9c27b0, #fbc02d);
+  animation: sparkle 2.5s infinite;
+}
+
+/* カード内の画像だけに適用（グローバル干渉を防ぐ） */
+.card-base img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
+/* アニメーション定義 */
+@keyframes flicker {
+  0% { box-shadow: 0 0 5px #ff5722; }
+  50% { box-shadow: 0 0 15px #ff9800; }
+  100% { box-shadow: 0 0 5px #ff5722; }
+}
+
+@keyframes aura {
+  0% { box-shadow: 0 0 5px #80deea; }
+  50% { box-shadow: 0 0 15px #4dd0e1; }
+  100% { box-shadow: 0 0 5px #80deea; }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    box-shadow: 0 0 6px #fbc02d, 0 0 12px #9c27b0;
+  }
+  50% {
+    box-shadow: 0 0 18px #fbc02d, 0 0 24px #9c27b0;
+  }
+}

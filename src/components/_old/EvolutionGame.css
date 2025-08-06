@@ -1,0 +1,67 @@
+.evolution-container {
+  text-align: center;
+  padding: 20px;
+}
+
+.choices {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 20px;
+}
+
+.choice-btn {
+  font-size: 1.5rem;
+  padding: 10px 20px;
+  border-radius: 1rem;
+  background: #fffae5;
+  border: 2px solid #aaa;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.choice-btn:hover {
+  background-color: #ffe14d;
+}
+
+.evolution-stage, .jackpot-stage {
+  animation: fadeIn 1s ease-in;
+}
+
+.character {
+  width: 200px;
+  margin-top: 20px;
+}
+
+.premium {
+  animation: glow 2s infinite alternate;
+}
+
+.spin-effect {
+  width: 100px;
+  height: 100px;
+  margin: 30px auto;
+  border: 10px solid gold;
+  border-top: 10px solid transparent;
+  border-radius: 50%;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes glow {
+  from {
+    box-shadow: 0 0 10px gold;
+  }
+  to {
+    box-shadow: 0 0 20px orange;
+  }
+}

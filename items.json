@@ -1,0 +1,842 @@
+[
+  {
+    "itemId": "001_A_herakuresu_stage1",
+    "imageName": "2508_A_001_herakuresu_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_A_ageha_stage1",
+    "imageName": "2508_A_002_ageha_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_A_hati_stage1",
+    "imageName": "2508_A_003_hati_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_A_hotaru_stage1",
+    "imageName": "2508_A_004_hotaru_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_A_kabuto_stage1",
+    "imageName": "2508_A_005_kabuto_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_A_monsiro_stage1",
+    "imageName": "2508_A_006_monsiro_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_A_semi_stage1",
+    "imageName": "2508_A_007_semi_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_A_tentoumusi_stage1",
+    "imageName": "2508_A_008_tentoumusi_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_A_tombo_stage1",
+    "imageName": "2508_A_009_tombo_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_A_kuwagata_stage1",
+    "imageName": "2508_A_010_kuwagata_stage1.png",
+    "stage": 1,
+    "pw": 600,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_B_herakuresu_stage1",
+    "imageName": "2508_B_001_herakuresu_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_B_ageha_stage1",
+    "imageName": "2508_B_002_ageha_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_B_hati_stage1",
+    "imageName": "2508_B_003_hati_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_B_hotaru_stage1",
+    "imageName": "2508_B_004_hotaru_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_B_kabuto_stage1",
+    "imageName": "2508_B_005_kabuto_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_B_monsiro_stage1",
+    "imageName": "2508_B_006_monsiro_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_B_semi_stage1",
+    "imageName": "2508_B_007_semi_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_B_tentoumusi_stage1",
+    "imageName": "2508_B_008_tentoumusi_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_B_tombo_stage1",
+    "imageName": "2508_B_009_tombo_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_B_kuwagata_stage1",
+    "imageName": "2508_B_010_kuwagata_stage1.png",
+    "stage": 1,
+    "pw": 100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_S_herakuresu_stage1",
+    "imageName": "2508_S_001_herakuresu_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_S_ageha_stage1",
+    "imageName": "2508_S_002_ageha_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_S_hati_stage1",
+    "imageName": "2508_S_003_hati_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_S_hotaru_stage1",
+    "imageName": "2508_S_004_hotaru_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_S_kabuto_stage1",
+    "imageName": "2508_S_005_kabuto_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_S_monsiro_stage1",
+    "imageName": "2508_S_006_monsiro_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_S_semi_stage1",
+    "imageName": "2508_S_007_semi_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_S_tentoumusi_stage1",
+    "imageName": "2508_S_008_tentoumusi_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_S_tombo_stage1",
+    "imageName": "2508_S_009_tombo_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_S_kuwagata_stage1",
+    "imageName": "2508_S_010_kuwagata_stage1.png",
+    "stage": 1,
+    "pw": 1100,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_A_herakuresu_stage2",
+    "imageName": "2508_A_001_herakuresu_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_A_ageha_stage2",
+    "imageName": "2508_A_002_ageha_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_A_hati_stage2",
+    "imageName": "2508_A_003_hati_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_A_hotaru_stage2",
+    "imageName": "2508_A_004_hotaru_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_A_kabuto_stage2",
+    "imageName": "2508_A_005_kabuto_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_A_monsiro_stage2",
+    "imageName": "2508_A_006_monsiro_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_A_monsiro_stage2",
+    "imageName": "2508_A_007_monsiro_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_A_tentoumusi_stage2",
+    "imageName": "2508_A_008_tentoumusi_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_A_tombo_stage2",
+    "imageName": "2508_A_009_tombo_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_A_kuwagata_stage2",
+    "imageName": "2508_A_010_kuwagata_stage2.png",
+    "stage": 2,
+    "pw": 700,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_B_herakuresu_stage2",
+    "imageName": "2508_B_001_herakuresu_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_B_ageha_stage2",
+    "imageName": "2508_B_002_ageha_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_B_hati_stage2",
+    "imageName": "2508_B_003_hati_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_B_hotaru_stage2",
+    "imageName": "2508_B_004_hotaru_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_B_kabuto_stage2",
+    "imageName": "2508_B_005_kabuto_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_B_monsiro_stage2",
+    "imageName": "2508_B_006_monsiro_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_B_monsiro_stage2",
+    "imageName": "2508_B_007_monsiro_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_B_tentoumusi_stage2",
+    "imageName": "2508_B_008_tentoumusi_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_B_tombo_stage2",
+    "imageName": "2508_B_009_tombo_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_B_kuwagata_stage2",
+    "imageName": "2508_B_010_kuwagata_stage2.png",
+    "stage": 2,
+    "pw": 200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_S_herakuresu_stage2",
+    "imageName": "2508_S_001_herakuresu_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_S_ageha_stage2",
+    "imageName": "2508_S_002_ageha_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_S_hati_stage2",
+    "imageName": "2508_S_003_hati_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_S_hotaru_stage2",
+    "imageName": "2508_S_004_hotaru_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_S_kabuto_stage2",
+    "imageName": "2508_S_005_kabuto_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_S_monsiro_stage2",
+    "imageName": "2508_S_006_monsiro_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_S_monsiro_stage2",
+    "imageName": "2508_S_007_monsiro_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_S_tentoumusi_stage2",
+    "imageName": "2508_S_008_tentoumusi_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_S_tombo_stage2",
+    "imageName": "2508_S_009_tombo_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_S_kuwagata_stage2",
+    "imageName": "2508_S_010_kuwagata_stage2.png",
+    "stage": 2,
+    "pw": 1200,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_A_herakuresu_stage3",
+    "imageName": "2508_A_001_herakuresu_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_A_ageha_stage3",
+    "imageName": "2508_A_002_ageha_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_A_hati_stage3",
+    "imageName": "2508_A_003_hati_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_A_hotaru_stage3",
+    "imageName": "2508_A_004_hotaru_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_A_kabuto_stage3",
+    "imageName": "2508_A_005_kabuto_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_A_monsiro_stage3",
+    "imageName": "2508_A_006_monsiro_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_A_semi_stage3",
+    "imageName": "2508_A_007_semi_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_A_tentoumusi_stage3",
+    "imageName": "2508_A_008_tentoumusi_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_A_tombo_stage3",
+    "imageName": "2508_A_009_tombo_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_A_kuwagata_stage3",
+    "imageName": "2508_A_010_kuwagata_stage3.png",
+    "stage": 3,
+    "pw": 800,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_B_herakuresu_stage3",
+    "imageName": "2508_B_001_herakuresu_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_B_ageha_stage3",
+    "imageName": "2508_B_002_ageha_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_B_hati_stage3",
+    "imageName": "2508_B_003_hati_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_B_hotaru_stage3",
+    "imageName": "2508_B_004_hotaru_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_B_kabuto_stage3",
+    "imageName": "2508_B_005_kabuto_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_B_monsiro_stage3",
+    "imageName": "2508_B_006_monsiro_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_B_semi_stage3",
+    "imageName": "2508_B_007_semi_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_B_tentoumusi_stage3",
+    "imageName": "2508_B_008_tentoumusi_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_B_tombo_stage3",
+    "imageName": "2508_B_009_tombo_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_B_kuwagata_stage3",
+    "imageName": "2508_B_010_kuwagata_stage3.png",
+    "stage": 3,
+    "pw": 300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_S_herakuresu_stage3",
+    "imageName": "2508_S_001_herakuresu_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_S_ageha_stage3",
+    "imageName": "2508_S_002_ageha_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_S_hati_stage3",
+    "imageName": "2508_S_003_hati_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_S_hotaru_stage3",
+    "imageName": "2508_S_004_hotaru_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_S_kabuto_stage3",
+    "imageName": "2508_S_005_kabuto_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_S_monsiro_stage3",
+    "imageName": "2508_S_006_monsiro_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_S_semi_stage3",
+    "imageName": "2508_S_007_semi_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_S_tentoumusi_stage3",
+    "imageName": "2508_S_008_tentoumusi_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_S_tombo_stage3",
+    "imageName": "2508_S_009_tombo_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_S_kuwagata_stage3",
+    "imageName": "2508_S_010_kuwagata_stage3.png",
+    "stage": 3,
+    "pw": 1300,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_A_herakuresu_stage4",
+    "imageName": "2508_A_001_herakuresu_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_A_ageha_stage4",
+    "imageName": "2508_A_002_ageha_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_A_hati_stage4",
+    "imageName": "2508_A_003_hati_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_A_hotaru_stage4",
+    "imageName": "2508_A_004_hotaru_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_A_kabutopremium_stage4",
+    "imageName": "2508_A_005_kabutopremium_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_A_monsiro_stage4",
+    "imageName": "2508_A_006_monsiro_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_A_semi_stage4",
+    "imageName": "2508_A_007_semi_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_A_tentoumusi_stage4",
+    "imageName": "2508_A_008_tentoumusi_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_A_tombo_stage4",
+    "imageName": "2508_A_009_tombo_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_A_kuwagata_stage4",
+    "imageName": "2508_A_010_kuwagata_stage4.png",
+    "stage": 4,
+    "pw": 1500,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_B_herakuresu_stage4",
+    "imageName": "2508_B_001_herakuresu_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_B_ageha_stage4",
+    "imageName": "2508_B_002_ageha_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_B_hati_stage4",
+    "imageName": "2508_B_003_hati_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_B_hotaru_stage4",
+    "imageName": "2508_B_004_hotaru_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_B_kabutopremium_stage4",
+    "imageName": "2508_B_005_kabutopremium_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_B_monsiro_stage4",
+    "imageName": "2508_B_006_monsiro_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_B_semi_stage4",
+    "imageName": "2508_B_007_semi_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_B_tentoumusi_stage4",
+    "imageName": "2508_B_008_tentoumusi_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_B_tombo_stage4",
+    "imageName": "2508_B_009_tombo_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_B_kuwagata_stage4",
+    "imageName": "2508_B_010_kuwagata_stage4.png",
+    "stage": 4,
+    "pw": 1000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "001_S_herakuresu_stage4",
+    "imageName": "2508_S_001_herakuresu_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "002_S_ageha_stage4",
+    "imageName": "2508_S_002_ageha_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "003_S_hati_stage4",
+    "imageName": "2508_S_003_hati_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "004_S_hotaru_stage4",
+    "imageName": "2508_S_004_hotaru_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "005_S_kabutopremium_stage4",
+    "imageName": "2508_S_005_kabutopremium_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "006_S_monsiro_stage4",
+    "imageName": "2508_S_006_monsiro_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "007_S_semi_stage4",
+    "imageName": "2508_S_007_semi_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "008_S_tentoumusi_stage4",
+    "imageName": "2508_S_008_tentoumusi_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "009_S_tombo_stage4",
+    "imageName": "2508_S_009_tombo_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  },
+  {
+    "itemId": "010_S_kuwagata_stage4",
+    "imageName": "2508_S_010_kuwagata_stage4.png",
+    "stage": 4,
+    "pw": 2000,
+    "seriesId": "kontyu"
+  }
+]

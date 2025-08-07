@@ -19,6 +19,11 @@ const BattleStartPage = () => {
   useEffect(() => {
     if (location.state?.selectedItem) {
       setSelectedItem(location.state.selectedItem);
+      
+      setUserItems((prev) => [
+    location.state.selectedItem,
+    ...prev.filter((item) => item.itemId !== location.state.selectedItem.itemId)
+  ]); 
     }
   }, [location.state]);
 
@@ -54,7 +59,7 @@ const BattleStartPage = () => {
   const handleStartBattle = () => {
     if (!selectedItem) return;
 
-    navigate("/battle/play", {
+    navigate("/battle", {
   state: {
     selectedItem,
     enemy,

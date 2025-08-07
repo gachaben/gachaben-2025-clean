@@ -9,9 +9,9 @@ const BattlePlayPage = () => {
 
   const [myAnswers, setMyAnswers] = useState([]);
   const [cpuAnswers, setCpuAnswers] = useState([]);
-  const [myAnswerText, setMyAnswerText] = useState(null);         // 🆕 自分の解答表示用
-  const [cpuAnswerText, setCpuAnswerText] = useState(null);       // 🆕 CPUの解答表示用
-  const [cpuAnswerCorrect, setCpuAnswerCorrect] = useState(null); // 🆕 CPUの正誤
+  const [myAnswerText, setMyAnswerText] = useState(null);
+  const [cpuAnswerText, setCpuAnswerText] = useState(null);
+  const [cpuAnswerCorrect, setCpuAnswerCorrect] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [question, setQuestion] = useState(null);
   const [isMyTurnDone, setIsMyTurnDone] = useState(false);
@@ -46,13 +46,10 @@ const BattlePlayPage = () => {
     setIsMyTurnDone(true);
   };
 
-  // ✅ CPUの疑似解答
   useEffect(() => {
     if (isMyTurnDone) {
       const simulateCpu = () => {
-        const correctRate = 0.7;
         const delay = 1000 + Math.random() * 2000;
-
         setTimeout(() => {
           const options = question.options;
           const randomAnswer = options[Math.floor(Math.random() * options.length)];
@@ -64,12 +61,10 @@ const BattlePlayPage = () => {
           setIsCpuTurnDone(true);
         }, delay);
       };
-
       simulateCpu();
     }
   }, [isMyTurnDone]);
 
-  // ✅ 両者回答後 → 次の問題 or 結果へ
   useEffect(() => {
     if (isMyTurnDone && isCpuTurnDone) {
       const next = currentQuestionIndex + 1;
@@ -116,66 +111,45 @@ const BattlePlayPage = () => {
         Round {currentQuestionIndex + 1} / {questionCount}
       </h1>
 
-      <div className="flex justify-center gap-8 flex-wrap">
-        {/* 左側（あなた） */}
-        <div className="w-72 bg-white rounded shadow p-4">
-          <h2 className="text-center font-bold text-blue-600 mb-2">🧑 あなた</h2>
+      <div className="flex flex-col md:flex-row justify-center items-start gap-4 mt-6">
+        {/* 自分側 */}
+        <div className="w-full md:w-1/2 bg-white p-4 rounded-lg shadow-md">
+          <h2 className="text-center font-bold text-blue-600">🧑‍🎓 あなた</h2>
           <ItemCard item={selectedItem} owned={true} />
-          <p className="text-sm text-center mt-2 text-gray-500">{myBet} PWベット中</p>
-          <p className="font-semibold mt-2">{question.text}</p>
-          <div className="flex flex-col gap-2 mt-2">
-            {question.options.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => handleMyAnswer(opt)}
-                disabled={isMyTurnDone}
-                className={`px-4 py-2 rounded border text-left ${
-                  isMyTurnDone
-                    ? "bg-gray-200 text-gray-500"
-                    : "bg-blue-100 hover:bg-blue-200"
-                }`}
-              >
-                {opt}
-              </button>
-            ))}
+          <p className="text-center mt-2 font-semibold text-sm">PWベット中</p>
+          <div className="mt-4">
+            <p className="text-center mb-2 font-semibold">{question.text}</p>
+            <div className="flex flex-col items-center gap-2">
+              {question.options.map((opt) => (
+                <button
+                  key={opt}
+                  onClick={() => handleMyAnswer(opt)}
+                  className={`px-4 py-2 rounded shadow w-3/4
+                    ${myAnswerText === opt ? "bg-blue-400 text-white" : "bg-white hover:bg-blue-100"}`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
           </div>
-
-          {isMyTurnDone && myAnswerText && (
-            <p className="mt-2 text-center text-sm font-bold">
-              選択：{myAnswerText}{" "}
-              {myAnswerText === question.answer ? (
-                <span className="text-green-500">✅</span>
-              ) : (
-                <span className="text-red-500">❌</span>
-              )}
-            </p>
-          )}
         </div>
 
-        {/* 右側（CPU） */}
-        <div className="w-72 bg-white rounded shadow p-4">
-          <h2 className="text-center font-bold text-purple-600 mb-2">👑 カブトムシくん</h2>
+        {/* 相手側 */}
+        <div className="w-full md:w-1/2 bg-white p-4 rounded-lg shadow-md">
+          <h2 className="text-center font-bold text-purple-600">👑 カブトムシくん</h2>
           <ItemCard item={enemyItem} owned={false} />
-          <p className="text-sm text-center mt-2 text-gray-500">{enemyBet} PWベット中</p>
-          <p className="font-semibold mt-2">{question.text}</p>
-
-          <div className="h-24 flex justify-center items-center mt-2">
-            {isMyTurnDone ? (
-              isCpuTurnDone ? (
-                <p className="text-sm font-bold">
-                  選択：{cpuAnswerText}{" "}
-                  {cpuAnswerCorrect ? (
-                    <span className="text-green-500">✅</span>
-                  ) : (
-                    <span className="text-red-500">❌</span>
-                  )}
-                </p>
-              ) : (
-                <p className="text-gray-500 animate-pulse">🤔 解答中...</p>
-              )
-            ) : (
-              <p className="text-gray-400">待機中...</p>
-            )}
+          <p className="text-center mt-2 font-semibold text-sm">PWベット中</p>
+          <p className="text-center mt-4">{question.text}</p>
+          <div className="flex flex-col items-center gap-2 mt-2">
+            {question.options.map((opt) => (
+              <div
+                key={opt}
+                className={`px-4 py-2 rounded w-3/4 text-center
+                  ${cpuAnswerText === opt ? "bg-purple-400 text-white" : "bg-gray-100"}`}
+              >
+                {opt}
+              </div>
+            ))}
           </div>
         </div>
       </div>

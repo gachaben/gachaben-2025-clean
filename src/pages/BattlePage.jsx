@@ -34,9 +34,11 @@ const BattlePage = () => {
   };
 
   setSelectedItem(merged);
-  setSelectedPw(null); // ✅ これで強制的に null に初期化！
-  console.log("✅ selectedItemの中身（BattlePage）:", merged);
+  setSelectedPw(null);
 
+// ✅ アイテムに紐づくPWを最初の所持PWとする
+  setMyTotalPw(merged.pw ?? 0);
+  console.log("✅ selectedItemの中身（BattlePage）:", merged);
 }, [state]);
 
 
@@ -161,15 +163,24 @@ const BattlePage = () => {
       あなたのターン！まず PW を選んでください
     </p>
     <div className="flex justify-center flex-wrap gap-2">
-      {[100, 200, 300, 400, 500].map((pw) => (
-        <button
-          key={pw}
-          onClick={() => setSelectedPw(pw)}
-          className="px-4 py-2 rounded-full border font-bold bg-white text-blue-500 border-blue-500 hover:bg-blue-100"
-        >
-          {pw} PW
-        </button>
-      ))}
+     {[100, 200, 300, 400, 500].map((pw) => {
+  const isDisabled = pw > myTotalPw;
+  return (
+    <button
+      key={pw}
+      onClick={() => !isDisabled && setSelectedPw(pw)}
+      disabled={isDisabled}
+      className={`px-4 py-2 rounded-full border font-bold
+        ${isDisabled
+          ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
+          : "bg-white text-blue-500 border-blue-500 hover:bg-blue-100"
+        }`}
+    >
+      {pw} PW
+    </button>
+  );
+})}
+
     </div>
   </div>
 )}

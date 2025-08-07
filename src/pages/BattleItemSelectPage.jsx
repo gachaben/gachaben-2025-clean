@@ -1,71 +1,106 @@
-// src/pages/BattleItemSelectPage.jsx
-
+// src/pages/BattleSelectPage.jsx
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase"; // ← あなたのプロジェクトに合わせて調整
+import { useLocation, useNavigate } from "react-router-dom";
+import ItemCard from "../components/ItemCard";
 
-const BattleItemSelectPage = () => {
+const BattleSelectPage = () => {
+  const { state } = useLocation();
   const navigate = useNavigate();
-  const [items, setItems] = useState([]);
 
-  // Firestoreからitemsを取得
+  const {
+    selectedItem,
+    questionCount: initialQuestionCount = 1,
+    initialSelectedPw = 100,
+    enemy = "CPU",
+  } = state || {};
+
+  // 直打ち対策：アイテムが無ければ入口へ
   useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "items"));
-        const itemList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+    if (!selectedItem) {
+      navigate("/battle/select-item", { replace: true });
+    }
+  }, [selectedItem, navigate]);
 
-        // フィルタしたければここでできる（例：stage === 3のみなど）
-        setItems(itemList);
-      } catch (error) {
-        console.error("アイテム取得エラー:", error);
-      }
-    };
+  if (!selectedItem) return null; // リダイレクト中
 
-    fetchItems();
-  }, []);
+  // 画面内の選択状態
+  const [questionCount, setQuestionCount] = useState(initialQuestionCount);
+  const [selectedPw, setSelectedPw] = useState(initialSelectedPw);
 
-  const handleSelect = (item) => {
-    navigate("/battle/start", {
+  // バトル開始
+  const startBattle = () => {
+    navigate("/battle", {
       state: {
-        selectedItem: item,
+        selectedItem,
+        questionCount,
+        initialSelectedPw: selectedPw, // ← BattlePage 側で受ける名前
+        enemy,
       },
     });
   };
 
   return (
-    <div className="min-h-screen bg-blue-50 flex flex-col items-center justify-center p-6">
-      <h1 className="text-2xl font-bold mb-4">⚔️ バトルに使うキャラを選ぼう！</h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6">バトル設定</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {items.map((item) => {
-          const imagePath = `/images/${item.seriesId}/stage${item.stage}/${item.imageName}.png`;
-
-          return (
-            <div
-              key={item.id}
-              className="bg-white rounded-xl shadow-md p-4 cursor-pointer hover:shadow-lg"
-              onClick={() => handleSelect(item)}
-            >
-              <img
-                src={imagePath}
-                alt={item.name}
-                className="w-32 h-32 object-contain mx-auto mb-2"
-              />
-              <h2 className="text-lg font-semibold text-center">{item.name}</h2>
-              <p className="text-center text-sm text-gray-600">
-                所持PW：{item.pw ?? 0}
-              </p>
-            </div>
-          );
-        })}
+      {/* 選んだキャラの確認 */}
+      <div className="mb-6">
+        <p className="text-sm mb-2">選んだキャラ</p>
+        <div className="flex items-center gap-3">
+          <ItemCard item={selectedItem} owned pwMode={false} />
+          <button
+            className="px-3 py-2 border rounded"
+            onClick={() => navigate("/battle/select-item")}
+          >
+            変更する
+          </button>
+        </div>
       </div>
+
+      {/* ラウンド数を選ぶ */}
+      <div className="mb-6">
+        <p className="mb-2">ラウンド数を選ぶ</p>
+        <div className="flex gap-3">
+          {[1, 3, 5].map((n) => (
+            <button
+              key={n}
+              className={`px-4 py-2 rounded border ${
+                questionCount === n ? "bg-blue-500 text-white" : "bg-white"
+              }`}
+              onClick={() => setQuestionCount(n)}
+            >
+              {n}回戦
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* かけるPWを選ぶ */}
+      <div className="mb-8">
+        <p className="mb-2">かけるPWを選ぶ</p>
+        <div className="flex gap-3 flex-wrap">
+          {[100, 200, 300, 400, 500].map((pw) => (
+            <button
+              key={pw}
+              className={`px-4 py-2 rounded border ${
+                selectedPw === pw ? "bg-green-500 text-white" : "bg-white"
+              }`}
+              onClick={() => setSelectedPw(pw)}
+            >
+              {pw}PW
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        className="px-5 py-3 rounded bg-rose-400 text-white"
+        onClick={startBattle}
+      >
+        ▶ バトルスタート
+      </button>
     </div>
   );
 };
 
-export default BattleItemSelectPage;
+export default BattleSelectPage;

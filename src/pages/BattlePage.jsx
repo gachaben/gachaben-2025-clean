@@ -1,204 +1,184 @@
+// src/pages/BattlePage.jsx
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase";
 import ItemCard from "../components/ItemCard";
+import PwSelectModal from "../components/PwSelectModal";
+import QuestionComponent from "../components/QuestionComponent";
 
 const BattlePage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { enemy, questionCount } = state || {};
+  const {
+    selectedItem,
+    questionCount = 3,
+    selectedPw: initialPw,
+    enemy = "CPU",
+  } = state || {};
 
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [selectedPw, setSelectedPw] = useState(null);
+  const [selectedPw, setSelectedPw] = useState(initialPw);
+
+  console.log("🧪 BattlePage受信：", selectedItem, questionCount, selectedPw);
+
+  if (!selectedItem) return <p>アイテムが選ばれていません。</p>;
+
   const [currentRound, setCurrentRound] = useState(1);
-  const [myTotalPw, setMyTotalPw] = useState(300);
-  const [enemyTotalPw, setEnemyTotalPw] = useState(500);
-  const [battleLog, setBattleLog] = useState([]);
   const [question, setQuestion] = useState(null);
+  const [myAnswer, setMyAnswer] = useState(null);
+  const [enemyAnswer, setEnemyAnswer] = useState(null);
+  const [myItem, setMyItem] = useState(null);
+  const [myPw, setMyPw] = useState(1000); // 初期値（あとでFirestoreと同期）
+  const [enemyPw, setEnemyPw] = useState(1000); // 仮データ
 
+  // ✅ Firestoreから自分のitemデータをマージしてセット
   useEffect(() => {
-    console.log("📦 location.state:", state);
-    console.log("🧩 state.selectedItem:", state?.selectedItem);
+    const fetchUserItemPower = async () => {
+      if (!selectedItem || !auth.currentUser) return;
 
-    if (!state?.selectedItem) return;
+      try {
+        const docRef = doc(db, "userItemPowers", auth.currentUser.uid);
+        const docSnap = await getDoc(docRef);
+        const itemId = selectedItem.itemId;
 
-    const raw = state.selectedItem;
-    const merged = {
-      ...raw,
-      pw: raw.pw ?? 0,
-      cpt: raw.cpt ?? 0,
-      bpt: raw.bpt ?? 0,
+        let powerData = {};
+        if (docSnap.exists()) {
+          powerData = docSnap.data()[itemId] || {};
+        }
+
+        const merged = {
+          ...selectedItem,
+          pw: powerData.pw ?? 0,
+          cpt: powerData.cpt ?? 0,
+          bpt: powerData.bpt ?? 0,
+        };
+
+        setMyItem(merged);
+        setMyPw(merged.pw ?? 0);
+        console.log("✅ マージ済アイテム：", merged);
+      } catch (error) {
+        console.error("🔥 Firestore取得エラー:", error);
+      }
     };
 
-    setSelectedItem(merged);
-    setSelectedPw(null);
-    setMyTotalPw(merged.pw ?? 0);
-    console.log("✅ selectedItemの中身（BattlePage）:", merged);
-  }, [state]);
+    fetchUserItemPower();
+  }, [selectedItem]);
 
-  const allQuestions = [
-    {
-      text: "カブトムシの幼虫が食べるものは？",
-      options: ["木の葉", "腐葉土", "果物"],
-      answer: "腐葉土",
-    },
-    {
-      text: "セミの鳴き声は？",
-      options: ["ミーンミーン", "チュンチュン", "ケロケロ"],
-      answer: "ミーンミーン",
-    },
-    {
-      text: "トンボの羽はいくつ？",
-      options: ["2枚", "4枚", "6枚"],
-      answer: "4枚",
-    },
-  ];
-
+  // ✅ 新しい問題セット（モック）
   useEffect(() => {
-    setQuestion(allQuestions[(currentRound - 1) % allQuestions.length]);
-  }, [currentRound]);
+    if (selectedPw !== null) {
+      setQuestion({
+        text: `Round ${currentRound}： 2 + 2 = ?`,
+        choices: ["2", "4", "6", "8"],
+        correct: "4",
+      });
+    }
+  }, [selectedPw]);
 
-  const handleAnswer = (option) => {
-    if (!selectedPw || !question) return;
+  // ✅ 回答処理
+  const handleMyAnswer = (choice) => {
+    setMyAnswer(choice);
 
-    const correct = option === question.answer;
-    const log = correct
-      ? `✅ 正解！${selectedPw}PW分 相手にダメージ！`
-      : `❌ 不正解…攻撃できなかった`;
+    // CPUはランダムに1秒後に回答
+    setTimeout(() => {
+      const randomChoice =
+        question.choices[Math.floor(Math.random() * question.choices.length)];
+      setEnemyAnswer(randomChoice);
+    }, 1000);
+  };
 
-    if (correct) {
-      setEnemyTotalPw((prev) => Math.max(prev - selectedPw, 0));
+  // ✅ 次のラウンドへ
+  const handleNext = () => {
+    const isMyCorrect = myAnswer === question.correct;
+    const isEnemyCorrect = enemyAnswer === question.correct;
+
+    if (isMyCorrect) {
+      setEnemyPw((prev) => Math.max(0, prev - selectedPw));
+    }
+    if (isEnemyCorrect) {
+      setMyPw((prev) => Math.max(0, prev - selectedPw));
     }
 
-    setBattleLog((prev) => [...prev, `Round ${currentRound}：${log}`]);
-
-    if (currentRound < questionCount) {
+    if (currentRound >= questionCount) {
+      // ✅ バトル終了 → 結果ページへ遷移
+      navigate("/battle/result", {
+        state: {
+          myRemainingPw: myPw - (isEnemyCorrect ? selectedPw : 0),
+          enemyRemainingPw: enemyPw - (isMyCorrect ? selectedPw : 0),
+        },
+      });
+    } else {
       setCurrentRound((prev) => prev + 1);
       setSelectedPw(null);
-    } else {
-      setTimeout(() => {
-        navigate("/battle/result", {
-          state: {
-            myTotalPw,
-            enemyTotalPw,
-          },
-        });
-      }, 1000);
+      setQuestion(null);
+      setMyAnswer(null);
+      setEnemyAnswer(null);
     }
   };
 
-  const renderUnifiedGauge = (myPw, enemyPw) => {
-    const total = myPw + enemyPw;
-    const myRatio = total === 0 ? 0.5 : myPw / total;
-    const enemyRatio = total === 0 ? 0.5 : enemyPw / total;
-
-    return (
-      <div className="text-center w-full max-w-md mx-auto mb-4">
-        <div className="flex justify-between text-sm font-bold px-2 mb-1">
-          <span>🧑 あなた：{myPw} PW</span>
-          <span>👑 {decodeURIComponent(enemy)}：{enemyPw} PW</span>
-        </div>
-        <div className="w-full h-4 bg-gray-300 rounded-full overflow-hidden relative flex">
-          <div
-            className="bg-blue-400 h-full"
-            style={{ width: `${myRatio * 100}%` }}
-          ></div>
-          <div
-            className="bg-purple-400 h-full"
-            style={{ width: `${enemyRatio * 100}%` }}
-          ></div>
-        </div>
-      </div>
-    );
-  };
-
-  if (!selectedItem) {
-    return (
-      <div className="min-h-screen bg-yellow-100 flex flex-col items-center justify-center p-4">
-        <p className="text-xl font-bold text-red-600 mb-4">
-          ⚠️ キャラが選ばれていません
-        </p>
-        <button
-          className="px-4 py-2 bg-blue-500 text-white rounded shadow"
-          onClick={() => navigate("/battle/item-select")}
-        >
-          キャラを選びに行く
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-yellow-50 p-4">
-      <h1 className="text-2xl font-bold text-center mb-2">
-        バトル Round {currentRound} / {questionCount}
-      </h1>
-
-      <p className="text-center text-lg mb-2">
-        🧑 あなた vs 👑 {decodeURIComponent(enemy)}
-      </p>
-
-      {renderUnifiedGauge(myTotalPw, enemyTotalPw)}
-
-      <div className="flex justify-center my-4">
-        <ItemCard item={selectedItem} owned={true} />
-      </div>
-
-      <div className="text-center text-sm text-gray-700 mb-4">
-        <p>
-          🥊 <span className="text-red-500 font-bold">攻撃力：</span> {selectedItem.cpt ?? 0}　
-          💪 <span className="text-blue-500 font-bold">防御力：</span> {selectedItem.bpt ?? 0}
-        </p>
-      </div>
-
-      {selectedPw == null && (
-        <div className="text-center my-4">
-          <p className="text-blue-800 font-bold mb-2">
-            あなたのターン！まず PW を選んでください
-          </p>
-          <div className="flex justify-center flex-wrap gap-2">
-            {[100, 200, 300, 400, 500].map((pw) => {
-              const isDisabled = pw > myTotalPw;
-              return (
-                <button
-                  key={pw}
-                  onClick={() => !isDisabled && setSelectedPw(pw)}
-                  disabled={isDisabled}
-                  className={`px-4 py-2 rounded-full border font-bold ${
-                    isDisabled
-                      ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
-                      : "bg-white text-blue-500 border-blue-500 hover:bg-blue-100"
-                  }`}
-                >
-                  {pw} PW
-                </button>
-              );
-            })}
-          </div>
+    <div className="flex flex-col min-h-screen p-2 sm:p-4 bg-gradient-to-b from-yellow-100 to-yellow-50">
+      {/* 🔺 相手の情報（上） */}
+      <div className="flex flex-col items-center bg-red-200 rounded-lg p-2 sm:p-4 mb-2">
+        <h3 className="font-bold text-lg">👑 {enemy}</h3>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          <ItemCard item={selectedItem} />
+          <p>残りPW：{enemyPw}</p>
         </div>
-      )}
-
-      {selectedPw != null && question && (
-        <div className="text-center mb-4">
-          <p className="text-lg font-semibold mb-2">{question.text}</p>
-          <div className="flex flex-col items-center gap-2">
-            {question.options.map((opt) => (
+        {question && (
+          <div className="mt-2 flex flex-wrap justify-center gap-2">
+            {question.choices.map((choice) => (
               <button
-                key={opt}
-                onClick={() => handleAnswer(opt)}
-                className="bg-white hover:bg-blue-100 px-6 py-2 rounded shadow"
+                key={choice}
+                disabled
+                className={`px-3 py-1 border rounded ${
+                  enemyAnswer === choice ? "bg-red-400" : "bg-white"
+                }`}
               >
-                {opt}
+                {choice}
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      <div className="mt-6 bg-white rounded p-4 shadow">
-        <h2 className="font-bold mb-2">📜 バトルログ：</h2>
-        {battleLog.map((log, idx) => (
-          <p key={idx} className="text-sm">{log}</p>
-        ))}
+      {/* 🔻 自分の情報（下） */}
+      <div className="flex flex-col items-center bg-blue-200 rounded-lg p-2 sm:p-4">
+        <h3 className="font-bold text-lg">🧑 あなた</h3>
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          <ItemCard item={myItem} />
+          <p>残りPW：{myPw}</p>
+        </div>
+
+        {/* PW未選択 */}
+        {!selectedPw && <PwSelectModal onSelect={(pw) => setSelectedPw(pw)} />}
+
+        {/* 問題出題 */}
+        {selectedPw && question && !myAnswer && (
+          <div className="mt-3">
+            <QuestionComponent
+              question={question.text}
+              choices={question.choices}
+              onSelect={handleMyAnswer}
+            />
+          </div>
+        )}
+
+        {/* 判定表示＋次へ */}
+        {myAnswer && enemyAnswer && (
+          <div className="mt-4 text-center">
+            <p>
+              正解：{question.correct} / あなた：{myAnswer} / 相手：
+              {enemyAnswer}
+            </p>
+            <button
+              className="mt-2 bg-green-600 text-white px-4 py-2 rounded"
+              onClick={handleNext}
+            >
+              {currentRound < questionCount ? "次の問題へ" : "バトル終了"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

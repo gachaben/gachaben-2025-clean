@@ -1,3 +1,5 @@
+// 🔧 ファイル：src/pages/BattleStartPage.jsx
+
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getAuth } from "firebase/auth";
@@ -13,21 +15,22 @@ const BattleStartPage = () => {
   const [userItemPowers, setUserItemPowers] = useState({});
   const [selectedItem, setSelectedItem] = useState(null);
   const [questionCount, setQuestionCount] = useState(3);
+
   const enemy = "カブトムシくん";
 
-  // 🔹 locationから初期選択反映
+  // 🔹 選択されたアイテム（locationから）
   useEffect(() => {
-    if (location.state?.selectedItem) {
-      setSelectedItem(location.state.selectedItem);
-      
-      setUserItems((prev) => [
-    location.state.selectedItem,
-    ...prev.filter((item) => item.itemId !== location.state.selectedItem.itemId)
-  ]); 
+    const selected = location.state?.selectedItem;
+    if (!selected) {
+      // ❗️選ばれていない場合は戻す
+      navigate("/battle/select-item");
+      return;
     }
-  }, [location.state]);
 
-  // 🔹 アイテム & パワー取得
+    setSelectedItem(selected);
+  }, [location.state, navigate]);
+
+  // 🔹 ユーザーアイテムとパワー取得（一覧用）
   useEffect(() => {
     const fetchAll = async () => {
       const user = getAuth().currentUser;
@@ -56,70 +59,52 @@ const BattleStartPage = () => {
     fetchAll();
   }, []);
 
+  // 🔹 バトルへ進む
   const handleStartBattle = () => {
     if (!selectedItem) return;
 
     navigate("/battle", {
-  state: {
-    selectedItem,
-    enemy,
-    questionCount,
-  },
-});
-
+      state: {
+        selectedItem,
+        enemy,
+        questionCount,
+      },
+    });
   };
 
   return (
-    <div className="min-h-screen bg-yellow-50 p-6">
-      <h1 className="text-2xl font-bold text-center mb-4">⚔️ バトル準備</h1>
+    <div className="p-6">
+      <h2 className="text-xl font-bold mb-4">問題数を選んでね！</h2>
 
-      {/* 🔸 問題数選択 */}
-      <div className="text-center mb-6">
-        <p className="mb-2 font-bold">バトルの問題数をえらんでね</p>
-        {[1, 3, 5].map((num) => (
+      <div className="flex gap-2 mb-4">
+        {[1, 3, 5].map((count) => (
           <button
-            key={num}
-            onClick={() => setQuestionCount(num)}
-            className={`mx-2 px-4 py-2 rounded-full border font-bold ${
-              questionCount === num
-                ? "bg-green-500 text-white"
-                : "bg-white text-green-500 border-green-500"
+            key={count}
+            className={`px-4 py-2 rounded ${
+              questionCount === count ? "bg-blue-500 text-white" : "bg-gray-300"
             }`}
+            onClick={() => setQuestionCount(count)}
           >
-            {num}問
+            {count}問
           </button>
         ))}
       </div>
 
-      {/* 🔸 アイテム選択 */}
-      <div className="flex flex-wrap justify-center">
-        {userItems.map((item) => (
-          <div
-            key={item.itemId}
-            onClick={() => setSelectedItem(item)}
-            className={`cursor-pointer ${
-              selectedItem?.itemId === item.itemId ? "ring-4 ring-blue-400" : ""
-            }`}
-          >
-            <ItemCard item={item} owned={true} />
-          </div>
-        ))}
-      </div>
+      <button
+        onClick={handleStartBattle}
+        className="bg-green-500 text-white px-6 py-2 rounded disabled:opacity-50"
+        disabled={!selectedItem}
+      >
+        バトルスタート！
+      </button>
 
-      {/* 🔸 バトル開始 */}
-      <div className="text-center mt-6">
-        <button
-          onClick={handleStartBattle}
-          disabled={!selectedItem}
-          className={`px-6 py-3 rounded-lg font-bold shadow ${
-            selectedItem
-              ? "bg-blue-500 text-white"
-              : "bg-gray-400 text-white cursor-not-allowed"
-          }`}
-        >
-          バトルスタート！
-        </button>
-      </div>
+      {/* 🔽 参考用：選ばれたアイテムを表示 */}
+      {selectedItem && (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold mb-2">選ばれたアイテム：</h3>
+          <ItemCard item={selectedItem} />
+        </div>
+      )}
     </div>
   );
 };

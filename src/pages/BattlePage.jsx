@@ -128,29 +128,32 @@ const BattlePage = () => {
 
   return (
     <div className="min-h-screen bg-yellow-50 p-2 flex flex-col">
-      <h1 className="text-xl font-bold text-center mb-1">
-        バトル Round {currentRound} / {questionCount}
-      </h1>
-      {renderUnifiedGauge(myTotalPw, enemyTotalPw)}
+     <h1 className="text-xl font-bold text-center mb-1">
+     バトル Round {currentRound} / {questionCount}
+     </h1>
 
-      {/* 上下分割 */}
-      <div className="flex-1 flex flex-col md:flex-col gap-4">
-        {/* 上：相手 */}
-        <div className="flex flex-col items-center bg-purple-50 p-2 rounded shadow">
-          <ItemCard item={{ name: decodeURIComponent(enemy) }} owned={true} />
-          <p className="text-sm mt-1">👑 {decodeURIComponent(enemy)}</p>
-        </div>
+     {/* 上下分割 */}
+     <div className="flex-1 flex flex-col md:flex-col gap-4">
+     {/* 上：相手 */}
+     <div className="flex flex-col items-center bg-purple-50 p-2 rounded shadow">
+     <ItemCard item={{ name: decodeURIComponent(enemy) }} owned={true} />
+     <p className="text-sm mt-1">👑 {decodeURIComponent(enemy)}</p>
+  </div>
 
-        {/* 下：自分 */}
-        <div className="flex flex-col items-center bg-blue-50 p-2 rounded shadow">
-          <ItemCard item={selectedItem} owned={true} />
-          <p className="text-sm mt-1">🧑 あなた</p>
-          <p className="text-xs text-gray-700">
-            🥊 攻撃力：{selectedItem.cpt ?? 0}　
-            💪 防御力：{selectedItem.bpt ?? 0}
-          </p>
-        </div>
-      </div>
+  {/* ★ 中央：ゲージ（ここに移動） */}
+  {renderUnifiedGauge(myTotalPw, enemyTotalPw)}
+
+  {/* 下：自分 */}
+  <div className="flex flex-col items-center bg-blue-50 p-2 rounded shadow">
+    <ItemCard item={selectedItem} owned={true} />
+    <p className="text-sm mt-1">🧑 あなた</p>
+    <p className="text-xs text-gray-700">
+      🥊 攻撃力：{selectedItem.cpt ?? 0}　
+      💪 防御力：{selectedItem.bpt ?? 0}
+    </p>
+  </div>
+</div>
+
 
       {/* PW選択 or 問題表示 */}
       {selectedPw == null && (

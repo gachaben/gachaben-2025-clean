@@ -17,8 +17,9 @@ const BattlePage = () => {
   const [myTotalPw, setMyTotalPw] = useState(300);
   const [enemyTotalPw, setEnemyTotalPw] = useState(500);
 
-  // サドンデスフラグ
+  // サドンデス & 最大ラウンド（延長で+1していく）
   const [isSuddenDeath, setIsSuddenDeath] = useState(false);
+  const [maxRounds, setMaxRounds] = useState(Math.max(1, Number(questionCount) || 3));
 
   // 今ラウンドの賭け
   const [enemySelectedPw, setEnemySelectedPw] = useState(null);
@@ -112,7 +113,7 @@ const BattlePage = () => {
     );
   };
 
-  // 自分の回答処理
+  // 自分の回答処理（サドンデス延長ロジック内蔵）
   const handleAnswer = (option) => {
     if (phase !== "question" || mySelectedPw == null || enemySelectedPw == null || !question) return;
 
@@ -129,11 +130,21 @@ const BattlePage = () => {
         setMyCorrect(myIsCorrect);
         setEnemyCorrect(enemyIsCorrect);
 
+        // 次状態を先に計算（setStateは非同期なので勝敗判定はnext値で）
+        let nextMy = myTotalPw;
+        let nextEnemy = enemyTotalPw;
+
         if (!(myIsCorrect && enemyIsCorrect)) {
-          if (myIsCorrect) setEnemyTotalPw((prev) => Math.max(prev - mySelectedPw, 0));
-          if (enemyIsCorrect && enemySelectedPw) setMyTotalPw((prev) => Math.max(prev - enemySelectedPw, 0));
+          if (myIsCorrect) nextEnemy = Math.max(nextEnemy - (mySelectedPw || 0), 0);
+          if (enemyIsCorrect && enemySelectedPw)
+            nextMy = Math.max(nextMy - (enemySelectedPw || 0), 0);
         }
 
+        // 反映
+        setMyTotalPw(nextMy);
+        setEnemyTotalPw(nextEnemy);
+
+        // ログ
         setBattleLog((prev) => [
           ...prev,
           myIsCorrect && enemyIsCorrect
@@ -142,17 +153,26 @@ const BattlePage = () => {
         ]);
 
         setTimeout(() => {
-          const finishedNormal = currentRound >= questionCount && !isSuddenDeath;
-          const afterAnyRound = isSuddenDeath || finishedNormal;
+          const isLastNormalRound = currentRound >= maxRounds && !isSuddenDeath;
 
-          if (afterAnyRound) {
-            if (myTotalPw !== enemyTotalPw) {
-              navigate("/battle/result", { state: { myTotalPw, enemyTotalPw } });
+          if (isLastNormalRound) {
+            if (nextMy !== nextEnemy) {
+              navigate("/battle/result", { state: { myTotalPw: nextMy, enemyTotalPw: nextEnemy } });
             } else {
+              // 延長突入（サドンデスON + 最大ラウンド拡張 + 次ラウンドへ）
               setIsSuddenDeath(true);
+              setMaxRounds((prev) => prev + 1);
+              setCurrentRound((prev) => prev + 1);
+            }
+          } else if (isSuddenDeath) {
+            // サドンデス中：差がつくまで続行
+            if (nextMy !== nextEnemy) {
+              navigate("/battle/result", { state: { myTotalPw: nextMy, enemyTotalPw: nextEnemy } });
+            } else {
               setCurrentRound((prev) => prev + 1);
             }
           } else {
+            // 通常ラウンド継続
             setCurrentRound((prev) => prev + 1);
           }
         }, 700);
@@ -176,7 +196,7 @@ const BattlePage = () => {
       <h1 className="text-xl font-bold text-center mb-1">
         {isSuddenDeath
           ? `サドンデス Round ${currentRound}`
-          : `バトル Round ${currentRound} / ${questionCount}`}
+          : `バトル Round ${currentRound} / ${maxRounds}`}
       </h1>
 
       {isSuddenDeath && (

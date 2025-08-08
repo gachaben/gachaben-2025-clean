@@ -4,13 +4,24 @@ const ItemCard = ({ item, owned, pwMode, onClick }) => {
   // ✅ 安全装置：itemが未定義なら何も表示しない
   if (!item) return null;
 
-  console.log("🧩 ItemCard 受け取り：", item); // ✅ 正しい場所に移動済み！
+  console.log("🧩 ItemCard 受け取り：", item);
 
-  const { itemId, imageName, name, pw = 0, cpt = 0, bpt = 0, stage, seriesId } = item;
+  // ✅ 分割代入にデフォルト値を設定して安全化
+  const { 
+    itemId = "",
+    imageName = "",
+    name = "",
+    pw = 0,
+    cpt = 0,
+    bpt = 0,
+    stage = 1,
+    seriesId = ""
+  } = item;
 
-  const isSRank = imageName.includes('_S_');
-  const isARank = imageName.includes('_A_');
-  const isBRank = imageName.includes('_B_');
+  // ✅ undefined安全化した .includes 判定
+  const isSRank = (imageName || "").includes('_S_');
+  const isARank = (imageName || "").includes('_A_');
+  const isBRank = (imageName || "").includes('_B_');
 
   let sparkVideo = null;
   if (isSRank) sparkVideo = 'S_spark.mp4';

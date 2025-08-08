@@ -30,8 +30,13 @@ const BattlePage = () => {
   const [battleLog, setBattleLog] = useState([]);
 
   // CPUの回答
-  const [enemyAnswer, setEnemyAnswer] = useState(null);
   const [myAnswer, setMyAnswer] = useState(null);
+  const [enemyAnswer, setEnemyAnswer] = useState(null);
+  
+  const [myCorrect, setMyCorrect] = useState(null);     // 自分が正解か
+  const [enemyCorrect, setEnemyCorrect] = useState(null); // 相手が正解か
+
+
 
   // ダミー問題
   const allQuestions = [
@@ -60,6 +65,8 @@ const BattlePage = () => {
     setMySelectedPw(null);
     setEnemyAnswer(null);
     setMyAnswer(null); 
+    setMyCorrect(null);        // ★追加
+    setEnemyCorrect(null);
     setPhase("enemyPick");
 
     const enemyChoices = PW_OPTIONS.filter((p) => p <= enemyTotalPw);
@@ -108,26 +115,29 @@ const BattlePage = () => {
     );
   };
 
- const handleAnswer = (option) => {
+ // 自分の回答 → 1秒後CPU → 0.8秒見せる → 0.7秒後に次へ
+const handleAnswer = (option) => {
   if (phase !== "question" || mySelectedPw == null || enemySelectedPw == null || !question) return;
 
-  setPhase("freeze");         // 表示は残すがボタンは無効化
-  setMyAnswer(option);        // 自分の選択をハイライト
+  setPhase("freeze");      // 表示は残してロック
+  setMyAnswer(option);     // 自分の選択ハイライト
 
   setTimeout(() => {
     const enemyPick = question.options[Math.floor(Math.random() * question.options.length)];
     setEnemyAnswer(enemyPick);
 
     setTimeout(() => {
-      const myCorrect = option === question.answer;
-      const enemyCorrect = enemyPick === question.answer;
+      const myIsCorrect = option === question.answer;
+      const enemyIsCorrect = enemyPick === question.answer;
+      setMyCorrect(myIsCorrect);
+      setEnemyCorrect(enemyIsCorrect);
 
-      if (myCorrect) setEnemyTotalPw((prev) => Math.max(prev - mySelectedPw, 0));
-      if (enemyCorrect && enemySelectedPw) setMyTotalPw((prev) => Math.max(prev - enemySelectedPw, 0));
+      if (myIsCorrect) setEnemyTotalPw((prev) => Math.max(prev - mySelectedPw, 0));
+      if (enemyIsCorrect && enemySelectedPw) setMyTotalPw((prev) => Math.max(prev - enemySelectedPw, 0));
 
       setBattleLog((prev) => [
         ...prev,
-        `Round ${currentRound}：あなた ${myCorrect ? "○" : "×"} / 相手 ${enemyCorrect ? "○" : "×"}`,
+        `Round ${currentRound}：あなた ${myIsCorrect ? "○" : "×"} / 相手 ${enemyIsCorrect ? "○" : "×"}`,
       ]);
 
       setTimeout(() => {
@@ -137,6 +147,7 @@ const BattlePage = () => {
     }, 800);
   }, 1000);
 };
+
 
 
   if (!selectedItem) {
@@ -165,27 +176,39 @@ const BattlePage = () => {
         </p>
         <p className="text-xs text-gray-700">🥊 攻撃力：—　💪 防御力：—</p>
 
+     
       {/* 相手側にも同じ問題表示（CPUの選択をハイライト） */}
-{/* 相手側にも同じ問題表示（CPUの選択をハイライト） */}
-{(phase === "question" || phase === "freeze") && question && (
+      {(phase === "question" || phase === "freeze") && question && (
   <div className="text-center mb-1 w-full mt-2">
     <p className="text-sm font-semibold mb-1">{question.text}</p>
     <div className="flex flex-col items-center gap-1">
-      {question.options.map((opt) => (
-        <button
-          key={opt}
-          disabled
-          className={`px-4 py-1 rounded shadow text-sm border
-            ${enemyAnswer === opt
-              ? "bg-purple-400 text-white border-purple-500"
-              : "bg-white text-gray-700 border-gray-300"}`}
-        >
-          {opt}
-        </button>
-      ))}
+      {question.options.map((opt) => {
+        const chosen = enemyAnswer === opt;
+        const isCorrectOpt = phase === "freeze" && opt === question.answer;
+        const isWrongChosen = phase === "freeze" && chosen && opt !== question.answer;
+        return (
+          <div key={opt} className="relative w-full max-w-xs">
+            <button
+              disabled
+              className={`w-full px-4 py-1 rounded shadow text-sm border transition
+                ${chosen ? "ring-2 ring-purple-400" : ""}
+                ${isCorrectOpt ? "bg-green-200 border-green-400" : isWrongChosen ? "bg-red-200 border-red-400" : "bg-white text-gray-700 border-gray-300"}`}
+            >
+              {opt}
+            </button>
+            {phase === "freeze" && isCorrectOpt && (
+              <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-green-600 font-bold">○</span>
+            )}
+            {phase === "freeze" && isWrongChosen && (
+              <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-red-600 font-bold">×</span>
+            )}
+          </div>
+        );
+      })}
     </div>
   </div>
 )}
+
 
 
       </div>
@@ -230,28 +253,40 @@ const BattlePage = () => {
           </div>
         )}
 
-        {/* 自分の問題・選択肢 */}
-{/* 自分の問題・選択肢 */}
+     
+       {/* 自分の問題・選択肢 */}
 {(phase === "question" || phase === "freeze") && question && (
   <div className="text-center mb-2 w-full">
     <p className="text-sm font-semibold mb-1">{question.text}</p>
     <div className="flex flex-col items-center gap-1">
-      {question.options.map((opt) => (
-        <button
-          key={opt}
-          onClick={() => handleAnswer(opt)}
-          disabled={phase !== "question"}  // 押した後はfreezeで無効化
-          className={`px-4 py-1 rounded shadow text-sm border
-            ${myAnswer === opt
-              ? "bg-blue-400 text-white border-blue-500"
-              : "bg-white hover:bg-blue-100 border-gray-300"}`}
-        >
-          {opt}
-        </button>
-      ))}
+      {question.options.map((opt) => {
+        const chosen = myAnswer === opt;
+        const isCorrectOpt = phase === "freeze" && opt === question.answer;
+        const isWrongChosen = phase === "freeze" && chosen && opt !== question.answer;
+        return (
+          <div key={opt} className="relative w-full max-w-xs">
+            <button
+              onClick={() => handleAnswer(opt)}
+              disabled={phase !== "question"}
+              className={`w-full px-4 py-1 rounded shadow text-sm border transition
+                ${chosen ? "ring-2 ring-blue-400" : ""}
+                ${isCorrectOpt ? "bg-green-200 border-green-400" : isWrongChosen ? "bg-red-200 border-red-400" : "bg-white hover:bg-blue-100 border-gray-300"}`}
+            >
+              {opt}
+            </button>
+            {phase === "freeze" && isCorrectOpt && (
+              <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-green-600 font-bold">○</span>
+            )}
+            {phase === "freeze" && isWrongChosen && (
+              <span className="absolute -right-8 top-1/2 -translate-y-1/2 text-red-600 font-bold">×</span>
+            )}
+          </div>
+        );
+      })}
     </div>
   </div>
 )}
+
 
 
       </div>

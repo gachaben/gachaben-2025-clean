@@ -97,3 +97,23 @@
   color: #facc15; /* Tailwind の yellow-400 */
   -webkit-text-stroke: 1px rgb(245, 241, 241);
 }
+
+@keyframes popInOut {
+  0%   { transform: translate(-50%, -6px) scale(0.8); opacity: 0; }
+  15%  { transform: translate(-50%, -10px) scale(1);   opacity: 1; }
+  70%  { transform: translate(-50%, -14px) scale(1);   opacity: 1; }
+  100% { transform: translate(-50%, -18px) scale(0.9); opacity: 0; }
+}
+.animate-pop {
+  animation: popInOut 0.9s ease-out both;
+}
+@keyframes popInOut {
+  0%   { transform: translate(-50%, -6px) scale(0.8); opacity: 0; }
+  15%  { transform: translate(-50%, -10px) scale(1);   opacity: 1; }
+  70%  { transform: translate(-50%, -14px) scale(1);   opacity: 1; }
+  100% { transform: translate(-50%, -18px) scale(0.9); opacity: 0; }
+}
+.animate-pop {
+  animation: popInOut 0.9s ease-out both;
+}
+

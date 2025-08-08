@@ -109,20 +109,30 @@ export default function BattleItemSelectPage() {
     return () => { aborted = true; };
   }, [db, uid, rank]);
 
-  const confirmAndGo = (e) => {
-    e?.preventDefault?.();
-    e?.stopPropagation?.();
-    if (!selected) return;
+ const confirmAndGo = (e) => {
+  e?.preventDefault?.();
+  e?.stopPropagation?.();
+  if (!selected) return;
 
-    navigate("/battle/play", {
-      state: {
-        battleId,
-        questionCount,
-        selectedItem: selected,
-        enemyItem: { id: "cpu", name: `${rank}ランクCPU` }, // ← 敵は仮
-      },
-    });
-  };
+  // 同ランク一覧から敵をランダム選択（自分と同じなら別のを選ぶ）
+  let pool = items && items.length ? items : [selected];
+  let enemy = pool[Math.floor(Math.random() * pool.length)];
+  if (enemy?.itemId === selected.itemId && pool.length > 1) {
+    const others = pool.filter((it) => it.itemId !== selected.itemId);
+    enemy = others[Math.floor(Math.random() * others.length)];
+  }
+
+  navigate("/battle/play", {
+    state: {
+      battleId,
+      questionCount,
+      selectedItem: selected, // 自分
+      enemyItem: enemy,       // ← 画像・PW入りで渡す！
+    },
+  });
+};
+
+
 
   return (
     <div className="p-6 bg-yellow-50 min-h-screen" onClick={(e) => e.stopPropagation()}>

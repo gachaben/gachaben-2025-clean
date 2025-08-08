@@ -1,5 +1,6 @@
 // src/App.jsx
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 /* ===== ユーザー認証・プロフィール関連 ===== */
 import Login from "./pages/Login";
@@ -18,21 +19,20 @@ import ZukanTopPage from "./pages/ZukanTopPage";
 import ZukanDetailPage from "./pages/ZukanDetailPage";
 import ZukanSeriesPage from "./pages/ZukanSeriesPage";
 import ItemDetailPage from "./pages/ItemDetailPage";
-// import ItemDetailPage2 from "./pages/ItemDetailPage2"; // ← 必要なら解除
+// import ItemDetailPage2 from "./pages/ItemDetailPage2";
 import ZukanInsectDetailPage from "./pages/ZukanInsectDetailPage";
 
 /* ===== バトル関連 ===== */
-import BattleItemSelectPage from "./pages/BattleItemSelectPage";  // アイテム選択
-import BattleSelectPage from "./pages/BattleSelectPage";          // ラウンド・PW選択
-import BattleStartPage from "./pages/BattleStartPage";            // スタート準備
-import BattlePage from "./pages/BattlePage";                      // 本バトル画面
-import BattleRankSelectPage from "./pages/BattleRankSelectPage";  // ランク選択（不要なら外す）
-import BattlePlayPage from "./pages/BattlePlayPage";              // プレイ画面
-import BattleResultPage from "./pages/BattleResultPage";          // 結果表示
+import BattleLanding from "./pages/BattleLanding";
+import BattleRankSelect from "./pages/BattleRankSelect";
+import BattleItemSelectPage from "./pages/BattleItemSelectPage";
+import BattlePlayPage from "./pages/BattlePlayPage";
+import BattleResultPage from "./pages/BattleResultPage";
 
-function App() {
+
+export default function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
         {/* デフォルトはログインへ */}
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -59,15 +59,12 @@ function App() {
         <Route path="/zukan-detail" element={<ZukanDetailPage />} />
 
         {/* バトル */}
-        <Route path="/battle/select-item" element={<BattleItemSelectPage />} />
-        <Route path="/battle-select" element={<BattleSelectPage />} />
-        <Route path="/battle" element={<BattlePage />} />
-        <Route path="/battle/item-select" element={<BattleRankSelectPage />} />
+        <Route path="/battle" element={<BattleLanding />} />
+        <Route path="/battle/rank" element={<BattleRankSelect />} />
         <Route path="/battle/play" element={<BattlePlayPage />} />
         <Route path="/battle/result" element={<BattleResultPage />} />
+        <Route path="/battle/item-select" element={<BattleItemSelectPage />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
-
-export default App;

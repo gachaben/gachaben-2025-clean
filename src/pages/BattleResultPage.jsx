@@ -1,200 +1,164 @@
 // src/pages/BattleResultPage.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { auth, db } from "../firebase";
 import {
   doc,
   runTransaction,
+  getDoc,
+  setDoc,
   increment,
-  serverTimestamp,
   arrayUnion,
+  serverTimestamp,
 } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
 const LS_BATTLE_KEY = "currentBattleId";
 
-const GACHA_TABLE = [
-  { reward: 10, weight: 1 },
-  { reward: 15, weight: 1 },
-  { reward: 30, weight: 1 },
-];
-
-function rollGacha(table) {
-  const total = table.reduce((s, t) => s + t.weight, 0);
-  let r = Math.random() * total;
-  for (const t of table) {
-    if ((r -= t.weight) <= 0) return t.reward;
-  }
-  return table[table.length - 1].reward;
-}
-
-function safeUUID() {
-  try {
-    // ブラウザに crypto があれば使う
-    return crypto.randomUUID();
-  } catch {
-    // ない環境向けのフォールバック
-    return `fb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  }
-}
-
-const BattleResultPage = () => {
+export default function BattleResultPage() {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  // 受け取り（入口が複数でも落ちないよう広めに）
+  // 可能な限り広く受け取り & フォールバック
   const myTotalPw = Number(state?.myTotalPw ?? 0);
   const enemyTotalPw = Number(state?.enemyTotalPw ?? 0);
-  const winnerFromState = state?.winner; // "player" | "cpu" | "draw"
   const myCorrect = Number(state?.myCorrect ?? 0);
   const cpuCorrect = Number(state?.cpuCorrect ?? 0);
+  const winnerFromState = state?.winner; // "player" | "cpu" | "draw" など
 
-  // ★ battleId：state優先 → localStorage → それでも無ければ生成して保存（スキップ撲滅）
-  const battleId =
-    state?.battleId ||
-    (typeof localStorage !== "undefined"
-      ? localStorage.getItem(LS_BATTLE_KEY)
-      : null) ||
-    (() => {
-      const id = safeUUID();
-      try {
-        localStorage.setItem(LS_BATTLE_KEY, id);
-      } catch {}
-      console.warn("battleId missing. generated fallback:", id);
-      return id;
-    })();
+  // battleId: state 優先 → localStorage
+  const battleId = useMemo(
+    () => state?.battleId || localStorage.getItem(LS_BATTLE_KEY) || null,
+    [state?.battleId]
+  );
 
   // 勝敗フォールバック（PW → winner → 正解数）
-  const isWinByPw = myTotalPw > enemyTotalPw;
-  const isLoseByPw = myTotalPw < enemyTotalPw;
-  const isWinByWinner = winnerFromState === "player";
-  const isLoseByWinner = winnerFromState === "cpu";
-  const isWinByCorrect = myCorrect > cpuCorrect;
-  const isLoseByCorrect = cpuCorrect > myCorrect;
+  const isWin =
+    (myTotalPw > enemyTotalPw) ||
+    (winnerFromState === "player") ||
+    (myCorrect > cpuCorrect);
 
-  const isWin = isWinByPw || isWinByWinner || isWinByCorrect;
-  const isLose = isLoseByPw || isLoseByWinner || isLoseByCorrect;
+  // baseEarnBpt: state を優先、無ければ勝敗から決定（敗戦=5, 勝利=15）
+  const baseEarnBpt = Number(
+    state?.baseEarnBpt != null ? state.baseEarnBpt : (isWin ? 15 : 5)
+  );
 
-  // 参加5 + 勝利加算10 = 15
-  const baseEarnBpt = useMemo(() => (isWin ? 15 : 5), [isWin]);
+  // ===== ここから付与処理（Tx + フォールバック、二重実行ロック付き） =====
+  const grantingRef = useRef(false);
 
-  const [gachaUsed, setGachaUsed] = useState(false);
-  const [adPlaying, setAdPlaying] = useState(false);
-  const [lastGachaReward, setLastGachaReward] = useState(null);
-
-  // 同一マウント内の保険
-  const grantedOnceRef = useRef(false);
-
-  // ★ battleId ごとに“一度だけ”付与（原子的）
-   useEffect(() => {
+  useEffect(() => {
     (async () => {
-      // ✅ StrictMode 対策：同一 battleId の重複実行を localStorage でもブロック
-      const grantKey = `bptGrant:${battleId}`;
-      if (grantedOnceRef.current) return;
-      if (localStorage.getItem(grantKey) === "done") {
+      if (grantingRef.current) return;
+
+      if (!battleId) {
+        console.warn("battleId not found; base Bpt grant skipped");
         return;
       }
-
       const user = auth.currentUser;
       if (!user) return;
 
+      // 同タブ内の二重実行ロック（StrictMode対策）
+      const lockKey = `granting:${battleId}`;
+      if (sessionStorage.getItem(lockKey)) return;
+      sessionStorage.setItem(lockKey, "1");
+      grantingRef.current = true;
+
+      const userRef = doc(db, "users", user.uid);
+
+      // 0) 事前確認：既にこの battleId で付与済みなら抜ける
       try {
-        await runTransaction(db, async (tx) => {
-          const userRef = doc(db, "users", user.uid);
-          const snap = await tx.get(userRef);
-          const data = snap.exists() ? snap.data() : {};
-
-          const granted = Array.isArray(data.grantedBattleIds)
-            ? data.grantedBattleIds
-            : [];
-
-          if (granted.includes(battleId)) {
-            // 二重防止：同じ battleId では付与しない
+        const pre = await getDoc(userRef);
+        if (pre.exists()) {
+          const d = pre.data() || {};
+          if (Array.isArray(d.grantedBattleIds) && d.grantedBattleIds.includes(battleId)) {
+            console.log("already granted for this battleId, skip:", battleId);
             return;
           }
+        }
+      } catch {}
 
-          tx.set(
-            userRef,
-            {
-              bpt: increment(baseEarnBpt),
-              grantedBattleIds: arrayUnion(battleId),
+      // 1) まずは Tx で安全に付与
+      try {
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(userRef);
+          const exists = snap.exists();
+          const data = exists ? snap.data() : {};
+          const granted = Array.isArray(data.grantedBattleIds) ? data.grantedBattleIds : [];
+
+          if (granted.includes(battleId)) return;
+
+          if (!exists) {
+            // 新規ユーザー doc 作成（transformを使わない）
+            tx.set(userRef, {
+              bpt: (data.bpt || 0) + baseEarnBpt,
+              grantedBattleIds: [battleId],
               lastGrantAt: serverTimestamp(),
-            },
-            { merge: true }
-          );
+              // あるなら初期値も維持
+              pw: data.pw || 0,
+              cpt: data.cpt || 0,
+            });
+          } else {
+            // 既存 doc に加算
+            tx.set(
+              userRef,
+              {
+                bpt: increment(baseEarnBpt),
+                grantedBattleIds: arrayUnion(battleId),
+                lastGrantAt: serverTimestamp(),
+              },
+              { merge: true }
+            );
+          }
         });
 
-        grantedOnceRef.current = true;
-         // ✅ 二重実行ガード（StrictModeや再マウントでも効く）
-          localStorage.setItem(grantKey, "done");
-
-          // 次バトルのために battleId を掃除
-        try {
-          localStorage.removeItem(LS_BATTLE_KEY);
-        } catch {}
-        console.log("✅ Bpt base grant done:", { battleId, baseEarnBpt });
+        console.log("Bpt base grant (txn) done:", { battleId, baseEarnBpt });
+        try { localStorage.removeItem(LS_BATTLE_KEY); } catch {}
+        return; // Tx 成功 → 終了
       } catch (e) {
-       // ✅ たまに dev 環境で出る "already committed" は無視して良い系
-        if (String(e?.message || e).includes("already committed")) {
+        console.warn("txn failed, fallback to setDoc path:", e?.code || e?.message);
+      }
 
-          console.warn("ℹ️ transaction double-fire ignored");
-          localStorage.setItem(grantKey, "done");
-        } else {
-          console.error("❌ grant transaction failed:", e);
+      // 2) フォールバック：get→setDoc(merge) で手動加算（必ず通す）
+      try {
+        const snap2 = await getDoc(userRef);
+        const data2 = snap2.exists() ? (snap2.data() || {}) : {};
+        const has = Array.isArray(data2.grantedBattleIds) && data2.grantedBattleIds.includes(battleId);
+        if (has) {
+          console.log("already granted (fallback precheck), skip:", battleId);
+          return;
         }
 
+        const nextBpt = (data2.bpt || 0) + baseEarnBpt;
+        const nextGranted = Array.isArray(data2.grantedBattleIds)
+          ? [...data2.grantedBattleIds, battleId]
+          : [battleId];
 
+        await setDoc(
+          userRef,
+          {
+            bpt: nextBpt,
+            grantedBattleIds: nextGranted,
+            lastGrantAt: serverTimestamp(),
+            pw: data2.pw || 0,
+            cpt: data2.cpt || 0,
+          },
+          { merge: true }
+        );
 
-
+        console.log("Bpt base grant (fallback) done:", { battleId, baseEarnBpt, nextBpt });
+        try { localStorage.removeItem(LS_BATTLE_KEY); } catch {}
+      } catch (e2) {
+        console.error("fallback grant failed:", e2);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [battleId, baseEarnBpt]);
 
-  const handleGacha = async () => {
-    if (gachaUsed || adPlaying) return;
-    setAdPlaying(true);
-
-    // 擬似広告
-    await new Promise((r) => setTimeout(r, 2000));
-    const reward = rollGacha(GACHA_TABLE);
-
-    try {
-      const user = auth.currentUser;
-      if (user) {
-        await runTransaction(db, async (tx) => {
-          const userRef = doc(db, "users", user.uid);
-          tx.set(
-            userRef,
-            { bpt: increment(reward), lastGachaAt: serverTimestamp() },
-            { merge: true }
-          );
-        });
-      }
-      setLastGachaReward(reward);
-      setGachaUsed(true);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setAdPlaying(false);
-    }
-  };
-
-  let resultText = "";
-  let resultColor = "";
-  if (isWin) {
-    resultText = "🏆 勝利！";
-    resultColor = "text-green-600";
-  } else if (isLose) {
-    resultText = "💥 敗北…";
-    resultColor = "text-red-600";
-  } else {
-    resultText = "🤝 引き分け";
-    resultColor = "text-gray-600";
-  }
-
+  // ===== 表示（シンプルでOK：本番UIは後で戻す） =====
   return (
-    <div className="min-h-screen bg-yellow-50 flex flex-col items-center justify-center p-4">
-      <h1 className={`text-3xl font-bold mb-4 ${resultColor}`}>{resultText}</h1>
+    <div className="min-h-screen bg-yellow-50 p-6">
+      <h1 className={`text-2xl font-bold mb-4 ${isWin ? "text-green-600" : "text-red-600"}`}>
+        {isWin ? "🏆 勝利！" : "💥 敗北…"}
+      </h1>
 
       <div className="bg-white rounded shadow p-4 w-full max-w-sm text-center mb-4">
         <p className="text-lg mb-1">
@@ -213,35 +177,13 @@ const BattleResultPage = () => {
       <div className="bg-white rounded shadow p-4 w-full max-w-sm text-center mb-4">
         <h2 className="font-bold mb-2">🎁 獲得Bpt</h2>
         <p className="text-base mb-1">
-          今回の基本付与：
-          <span className="font-bold">{baseEarnBpt}</span> Bpt（参加5 + {isWin ? "勝利10" : "勝利0"}）
+          今回の基本付与：<span className="font-bold">{baseEarnBpt}</span> Bpt（参加5 + {isWin ? "勝利10" : "勝利0"}）
         </p>
-
-        <div className="mt-3">
-          <button
-            onClick={handleGacha}
-            disabled={gachaUsed || adPlaying}
-            className={`px-4 py-2 rounded shadow font-bold ${
-              gachaUsed
-                ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                : adPlaying
-                ? "bg-gray-300 text-gray-700"
-                : "bg-pink-500 text-white hover:bg-pink-600"
-            }`}
-          >
-            {adPlaying
-              ? "広告視聴中…"
-              : gachaUsed
-              ? "Bptガチャ 済み"
-              : "広告視聴で Bptガチャ（10 / 15 / 30）"}
-          </button>
-
-          {lastGachaReward != null && (
-            <p className="mt-2 text-sm">
-              ガチャ結果：<span className="font-bold">{lastGachaReward}</span> Bpt を追加付与！
-            </p>
-          )}
-        </div>
+        {!battleId && (
+          <p className="text-xs text-red-600 mt-1">
+            ※ battleId が渡っていないため、基本付与はスキップされました
+          </p>
+        )}
       </div>
 
       <div className="flex gap-4">
@@ -262,6 +204,4 @@ const BattleResultPage = () => {
       <p className="mt-3 text-xs text-gray-600">※ ログインしていない場合はBptは加算されません。</p>
     </div>
   );
-};
-
-export default BattleResultPage;
+}

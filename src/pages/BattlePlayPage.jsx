@@ -50,7 +50,36 @@ const BattlePlayPage = () => {
     return { min, max };
   }, [myPwLeft, isFinalRound]);
 
-  // 敵ベットAI
+  // ==== CPU正答率ロジック ====
+  const cpuCorrectProb = useMemo(() => {
+    if (questionCount <= 1) return 0.55;
+    // 進行率（0→最初, 1→最後）
+    const progress = (currentRound - 1) / (questionCount - 1);
+
+    // ベース
+    let p = 0.55;
+
+    // ラウンド後半で強化（最大 +0.20）
+    p += 0.20 * progress;
+
+    // PW差で調整（優勢なら+、劣勢なら-）最大±0.15
+    const total = Math.max(1, myPwLeft + enemyPwLeft);
+    const diffRatio = (enemyPwLeft - myPwLeft) / total; // -1〜+1
+    p += clamp(diffRatio * 0.6, -0.15, 0.15);
+
+    // ローPWペナルティ（敵が150未満なら -0.10）
+    if (enemyPwLeft < 150) p -= 0.10;
+
+    // 微揺らぎ ±0.03
+    p += (Math.random() * 0.06 - 0.03);
+
+    // 0.15〜0.90へクランプ
+    return clamp(p, 0.15, 0.90);
+  }, [currentRound, questionCount, myPwLeft, enemyPwLeft]);
+
+  const rollCpuCorrect = () => Math.random() < cpuCorrectProb;
+
+  // ==== 敵ベットAI ====
   const decideEnemyBet = () => {
     if (isFinalRound) return enemyPwLeft; // 最終はALL-IN
     const enemyMax = Math.min(enemyPwLeft, MAX_BET);
@@ -85,7 +114,6 @@ const BattlePlayPage = () => {
       newMy += transfer;
       newEnemy -= transfer;
       addMy = 1;
-
       setGainSide("player");
       setGainAmount(transfer);
     } else if (!myCorrectAnswer && cpuCorrectAnswer) {
@@ -93,13 +121,15 @@ const BattlePlayPage = () => {
       newMy -= transfer;
       newEnemy += transfer;
       addCpu = 1;
-
       setGainSide("cpu");
       setGainAmount(transfer);
+    } else {
+      // 同時正解 or 同時不正解 ⇒ 移動なし
     }
+
     gainTimerRef.current = setTimeout(() => setGainSide(null), 900);
 
-    // 表示用ゲージは少し遅らせる
+    // ★ ゲージ更新を0.6秒遅らせる
     setTimeout(() => {
       setMyPwLeft(newMy);
       setEnemyPwLeft(newEnemy);
@@ -108,7 +138,6 @@ const BattlePlayPage = () => {
     const finalMyCorrect = myCorrect + addMy;
     const finalCpuCorrect = cpuCorrect + addCpu;
 
-    // ラウンド継続 or 結果
     if (currentRound < questionCount) {
       setTimeout(() => {
         setMyCorrect(finalMyCorrect);
@@ -118,13 +147,12 @@ const BattlePlayPage = () => {
         setEnemyBet(null);
       }, 900);
     } else {
-      // 最終判定（PW差優先 → 同PWなら正答数 → それでも同じなら引き分け）
+      // 最終判定（PW差優先 → 正答数 → 引き分け）
       const result =
         newMy > newEnemy ? "win" : newMy < newEnemy ? "lose" :
         finalMyCorrect > finalCpuCorrect ? "win" :
         finalMyCorrect < finalCpuCorrect ? "lose" : "draw";
 
-      // スローモーション → フェード → 遷移
       setTimeout(() => {
         setFadeOut(true);
         setTimeout(() => {
@@ -144,14 +172,15 @@ const BattlePlayPage = () => {
     }
   };
 
-  // --- デモ（本番は正誤確定の所で resolveRound を呼ぶ） ---
-  const demoWin = () => {
+  // === デモボタン（本番はあなたの正誤判定で rollCpuCorrect() を使って呼ぶ） ===
+  const demoDecide = (iAmCorrect) => {
     const safeBet = clamp(snap100(myBet ?? playerRange.min), playerRange.min, playerRange.max);
-    resolveRound({ myBet: safeBet, enemyBet, myCorrectAnswer: true, cpuCorrectAnswer: false });
-  };
-  const demoLose = () => {
-    const safeBet = clamp(snap100(myBet ?? playerRange.min), playerRange.min, playerRange.max);
-    resolveRound({ myBet: safeBet, enemyBet, myCorrectAnswer: false, cpuCorrectAnswer: true });
+    resolveRound({
+      myBet: safeBet,
+      enemyBet,
+      myCorrectAnswer: iAmCorrect,
+      cpuCorrectAnswer: rollCpuCorrect(),
+    });
   };
 
   // 入力UI
@@ -181,6 +210,9 @@ const BattlePlayPage = () => {
         )}
         <div className="mt-1 text-center text-xs text-gray-300">
           ベット: {enemyBet ?? "-"} PW
+        </div>
+        <div className="text-center text-[11px] text-gray-400 mt-0.5">
+          CPU正解率（推定）: {(cpuCorrectProb * 100).toFixed(0)}%
         </div>
       </div>
 
@@ -212,7 +244,7 @@ const BattlePlayPage = () => {
             <button
               onClick={decrement}
               disabled={playerRange.min === playerRange.max || (myBet ?? 0) <= playerRange.min}
-              className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-3 py-1 rounded bg白/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               -100
             </button>
@@ -232,7 +264,7 @@ const BattlePlayPage = () => {
             <button
               onClick={increment}
               disabled={playerRange.min === playerRange.max || (myBet ?? 0) >= playerRange.max}
-              className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-3 py-1 rounded bg-white/10 hover:bg白/20 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               +100
             </button>
@@ -267,8 +299,12 @@ const BattlePlayPage = () => {
 
       {/* デモ用（本番では削除） */}
       <div className="flex gap-4">
-        <button onClick={demoWin} className="px-4 py-2 rounded bg-green-600">勝ちテスト</button>
-        <button onClick={demoLose} className="px-4 py-2 rounded bg-red-600">負けテスト</button>
+        <button onClick={() => demoDecide(true)} className="px-4 py-2 rounded bg-green-600">
+          デモ：自分 正解
+        </button>
+        <button onClick={() => demoDecide(false)} className="px-4 py-2 rounded bg-red-600">
+          デモ：自分 不正解
+        </button>
       </div>
     </div>
   );

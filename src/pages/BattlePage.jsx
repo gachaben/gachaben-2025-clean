@@ -17,6 +17,9 @@ const BattlePage = () => {
   const [myTotalPw, setMyTotalPw] = useState(300);
   const [enemyTotalPw, setEnemyTotalPw] = useState(500);
 
+  // サドンデスフラグ
+  const [isSuddenDeath, setIsSuddenDeath] = useState(false);
+
   // 今ラウンドの賭け
   const [enemySelectedPw, setEnemySelectedPw] = useState(null);
   const [mySelectedPw, setMySelectedPw] = useState(null);
@@ -109,12 +112,12 @@ const BattlePage = () => {
     );
   };
 
-  // 自分の回答 → 1秒後CPU → 0.8秒見せる → 0.7秒後に次へ
+  // 自分の回答処理
   const handleAnswer = (option) => {
     if (phase !== "question" || mySelectedPw == null || enemySelectedPw == null || !question) return;
 
-    setPhase("freeze");      // 表示は残してロック
-    setMyAnswer(option);     // 自分の選択ハイライト
+    setPhase("freeze");
+    setMyAnswer(option);
 
     setTimeout(() => {
       const enemyPick = question.options[Math.floor(Math.random() * question.options.length)];
@@ -126,7 +129,6 @@ const BattlePage = () => {
         setMyCorrect(myIsCorrect);
         setEnemyCorrect(enemyIsCorrect);
 
-        // ✅ 両方正解ならノーダメージ
         if (!(myIsCorrect && enemyIsCorrect)) {
           if (myIsCorrect) setEnemyTotalPw((prev) => Math.max(prev - mySelectedPw, 0));
           if (enemyIsCorrect && enemySelectedPw) setMyTotalPw((prev) => Math.max(prev - enemySelectedPw, 0));
@@ -140,8 +142,19 @@ const BattlePage = () => {
         ]);
 
         setTimeout(() => {
-          if (currentRound < questionCount) setCurrentRound((prev) => prev + 1);
-          else navigate("/battle/result", { state: { myTotalPw, enemyTotalPw } });
+          const finishedNormal = currentRound >= questionCount && !isSuddenDeath;
+          const afterAnyRound = isSuddenDeath || finishedNormal;
+
+          if (afterAnyRound) {
+            if (myTotalPw !== enemyTotalPw) {
+              navigate("/battle/result", { state: { myTotalPw, enemyTotalPw } });
+            } else {
+              setIsSuddenDeath(true);
+              setCurrentRound((prev) => prev + 1);
+            }
+          } else {
+            setCurrentRound((prev) => prev + 1);
+          }
         }, 700);
       }, 800);
     }, 1000);
@@ -161,16 +174,26 @@ const BattlePage = () => {
   return (
     <div className="min-h-screen bg-yellow-50 p-2 flex flex-col">
       <h1 className="text-xl font-bold text-center mb-1">
-        バトル Round {currentRound} / {questionCount}
+        {isSuddenDeath
+          ? `サドンデス Round ${currentRound}`
+          : `バトル Round ${currentRound} / ${questionCount}`}
       </h1>
 
-      {/* 上：相手（カード＋ステータス＋PW選択＋問題の見た目） */}
+      {isSuddenDeath && (
+        <div className="text-center mb-1">
+          <span className="inline-block px-2 py-1 text-xs font-bold rounded-full bg-red-100 text-red-700 border border-red-300">
+            サドンデス
+          </span>
+        </div>
+      )}
+
+      {/* 上：相手 */}
       <div className="flex flex-col items-center bg-purple-50 p-2 rounded shadow">
         <ItemCard item={{ name: decodeURIComponent(enemy) }} owned />
         <p className="text-sm mt-1">👑 {decodeURIComponent(enemy)}</p>
         <p className="text-xs text-gray-700">🥊 攻撃力：—　💪 防御力：—</p>
 
-        {/* 相手のPW選択（見せるだけ・押せない） */}
+        {/* 相手のPW選択（見せるだけ） */}
         <div className="text-center my-2">
           <p className="text-purple-800 font-bold mb-1">
             {phase === "enemyPick" && enemySelectedPw == null ? "相手がPWを選択中…" : "相手の賭けPW"}
@@ -181,11 +204,9 @@ const BattlePage = () => {
                 key={pw}
                 disabled
                 className={`px-3 py-1 rounded-full border font-bold text-sm
-                  ${
-                    enemySelectedPw === pw
-                      ? "bg-purple-500 text-white border-purple-500"
-                      : "bg-white text-purple-600 border-purple-400"
-                  } opacity-90`}
+                  ${enemySelectedPw === pw
+                    ? "bg-purple-500 text-white border-purple-500"
+                    : "bg-white text-purple-600 border-purple-400"} opacity-90`}
               >
                 {pw} PW
               </button>
@@ -193,7 +214,7 @@ const BattlePage = () => {
           </div>
         </div>
 
-        {/* 相手の問題表示（CPUの選択をハイライト & ○×表示） */}
+        {/* 相手の問題表示 */}
         {(phase === "question" || phase === "freeze") && question && (
           <div className="text-center mb-1 w-full mt-2">
             <p className="text-sm font-semibold mb-1">{question.text}</p>
@@ -267,7 +288,7 @@ const BattlePage = () => {
           </div>
         )}
 
-        {/* 自分の問題・選択肢（ハイライト & ○×表示） */}
+        {/* 自分の問題表示 */}
         {(phase === "question" || phase === "freeze") && question && (
           <div className="text-center mb-2 w-full">
             <p className="text-sm font-semibold mb-1">{question.text}</p>

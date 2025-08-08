@@ -61,7 +61,6 @@ function App() {
         {/* バトル */}
         <Route path="/battle/select-item" element={<BattleItemSelectPage />} />
         <Route path="/battle-select" element={<BattleSelectPage />} />
-        <Route path="/battle/start" element={<BattleStartPage />} />
         <Route path="/battle" element={<BattlePage />} />
         <Route path="/battle/item-select" element={<BattleRankSelectPage />} />
         <Route path="/battle/play" element={<BattlePlayPage />} />

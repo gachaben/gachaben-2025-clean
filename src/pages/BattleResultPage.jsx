@@ -1,15 +1,22 @@
-import React, { useEffect, useMemo, useState } from "react";
+// src/pages/BattleResultPage.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { auth, db } from "../firebase";
-import { doc, updateDoc, increment } from "firebase/firestore";
+import {
+  doc,
+  runTransaction,
+  increment,
+  serverTimestamp,
+  arrayUnion,
+} from "firebase/firestore";
 
-// ▼ ガチャ設定（均等）— 後で確率を締めたい時は weights を変えるだけ
+const LS_BATTLE_KEY = "currentBattleId";
+
 const GACHA_TABLE = [
-  { reward: 10, weight: 1 }, // 1/3
-  { reward: 15, weight: 1 }, // 1/3
-  { reward: 30, weight: 1 }, // 1/3
+  { reward: 10, weight: 1 },
+  { reward: 15, weight: 1 },
+  { reward: 30, weight: 1 },
 ];
-// 例）控えめにしたい時：[{reward:10,weight:4},{reward:15,weight:4},{reward:30,weight:2}]
 
 function rollGacha(table) {
   const total = table.reduce((s, t) => s + t.weight, 0);
@@ -20,63 +27,148 @@ function rollGacha(table) {
   return table[table.length - 1].reward;
 }
 
+function safeUUID() {
+  try {
+    // ブラウザに crypto があれば使う
+    return crypto.randomUUID();
+  } catch {
+    // ない環境向けのフォールバック
+    return `fb-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+}
+
 const BattleResultPage = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  const myTotalPw = state?.myTotalPw ?? 0;
-  const enemyTotalPw = state?.enemyTotalPw ?? 0;
+  // 受け取り（入口が複数でも落ちないよう広めに）
+  const myTotalPw = Number(state?.myTotalPw ?? 0);
+  const enemyTotalPw = Number(state?.enemyTotalPw ?? 0);
+  const winnerFromState = state?.winner; // "player" | "cpu" | "draw"
+  const myCorrect = Number(state?.myCorrect ?? 0);
+  const cpuCorrect = Number(state?.cpuCorrect ?? 0);
 
-  const isWin = myTotalPw > enemyTotalPw;
-  const isLose = myTotalPw < enemyTotalPw;
+  // ★ battleId：state優先 → localStorage → それでも無ければ生成して保存（スキップ撲滅）
+  const battleId =
+    state?.battleId ||
+    (typeof localStorage !== "undefined"
+      ? localStorage.getItem(LS_BATTLE_KEY)
+      : null) ||
+    (() => {
+      const id = safeUUID();
+      try {
+        localStorage.setItem(LS_BATTLE_KEY, id);
+      } catch {}
+      console.warn("battleId missing. generated fallback:", id);
+      return id;
+    })();
 
-  // 基本付与：勝利15 / 敗北5
+  // 勝敗フォールバック（PW → winner → 正解数）
+  const isWinByPw = myTotalPw > enemyTotalPw;
+  const isLoseByPw = myTotalPw < enemyTotalPw;
+  const isWinByWinner = winnerFromState === "player";
+  const isLoseByWinner = winnerFromState === "cpu";
+  const isWinByCorrect = myCorrect > cpuCorrect;
+  const isLoseByCorrect = cpuCorrect > myCorrect;
+
+  const isWin = isWinByPw || isWinByWinner || isWinByCorrect;
+  const isLose = isLoseByPw || isLoseByWinner || isLoseByCorrect;
+
+  // 参加5 + 勝利加算10 = 15
   const baseEarnBpt = useMemo(() => (isWin ? 15 : 5), [isWin]);
 
-  const [granted, setGranted] = useState(false);
   const [gachaUsed, setGachaUsed] = useState(false);
   const [adPlaying, setAdPlaying] = useState(false);
   const [lastGachaReward, setLastGachaReward] = useState(null);
 
-  // 初回：基本Bptを付与
-  useEffect(() => {
-    const grant = async () => {
-      if (granted) return;
+  // 同一マウント内の保険
+  const grantedOnceRef = useRef(false);
+
+  // ★ battleId ごとに“一度だけ”付与（原子的）
+   useEffect(() => {
+    (async () => {
+      // ✅ StrictMode 対策：同一 battleId の重複実行を localStorage でもブロック
+      const grantKey = `bptGrant:${battleId}`;
+      if (grantedOnceRef.current) return;
+      if (localStorage.getItem(grantKey) === "done") {
+        return;
+      }
+
       const user = auth.currentUser;
       if (!user) return;
-      await updateDoc(doc(db, "users", user.uid), { bpt: increment(baseEarnBpt) });
-      setGranted(true);
-    };
-    grant().catch(console.error);
-  }, [granted, baseEarnBpt]);
 
-  let resultText = "";
-  let resultColor = "";
-  if (isWin) {
-    resultText = "🏆 勝利！";
-    resultColor = "text-green-600";
-  } else if (isLose) {
-    resultText = "💥 敗北…";
-    resultColor = "text-red-600";
-  } else {
-    // サドンデス仕様では来ない想定だが保険
-    resultText = "🤝 引き分け";
-    resultColor = "text-gray-600";
-  }
+      try {
+        await runTransaction(db, async (tx) => {
+          const userRef = doc(db, "users", user.uid);
+          const snap = await tx.get(userRef);
+          const data = snap.exists() ? snap.data() : {};
+
+          const granted = Array.isArray(data.grantedBattleIds)
+            ? data.grantedBattleIds
+            : [];
+
+          if (granted.includes(battleId)) {
+            // 二重防止：同じ battleId では付与しない
+            return;
+          }
+
+          tx.set(
+            userRef,
+            {
+              bpt: increment(baseEarnBpt),
+              grantedBattleIds: arrayUnion(battleId),
+              lastGrantAt: serverTimestamp(),
+            },
+            { merge: true }
+          );
+        });
+
+        grantedOnceRef.current = true;
+         // ✅ 二重実行ガード（StrictModeや再マウントでも効く）
+          localStorage.setItem(grantKey, "done");
+
+          // 次バトルのために battleId を掃除
+        try {
+          localStorage.removeItem(LS_BATTLE_KEY);
+        } catch {}
+        console.log("✅ Bpt base grant done:", { battleId, baseEarnBpt });
+      } catch (e) {
+       // ✅ たまに dev 環境で出る "already committed" は無視して良い系
+        if (String(e?.message || e).includes("already committed")) {
+
+          console.warn("ℹ️ transaction double-fire ignored");
+          localStorage.setItem(grantKey, "done");
+        } else {
+          console.error("❌ grant transaction failed:", e);
+        }
+
+
+
+
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [battleId, baseEarnBpt]);
 
   const handleGacha = async () => {
     if (gachaUsed || adPlaying) return;
     setAdPlaying(true);
 
-    // 🎬 広告視聴の疑似演出（2秒）
+    // 擬似広告
     await new Promise((r) => setTimeout(r, 2000));
-
     const reward = rollGacha(GACHA_TABLE);
 
     try {
       const user = auth.currentUser;
       if (user) {
-        await updateDoc(doc(db, "users", user.uid), { bpt: increment(reward) });
+        await runTransaction(db, async (tx) => {
+          const userRef = doc(db, "users", user.uid);
+          tx.set(
+            userRef,
+            { bpt: increment(reward), lastGachaAt: serverTimestamp() },
+            { merge: true }
+          );
+        });
       }
       setLastGachaReward(reward);
       setGachaUsed(true);
@@ -87,19 +179,42 @@ const BattleResultPage = () => {
     }
   };
 
+  let resultText = "";
+  let resultColor = "";
+  if (isWin) {
+    resultText = "🏆 勝利！";
+    resultColor = "text-green-600";
+  } else if (isLose) {
+    resultText = "💥 敗北…";
+    resultColor = "text-red-600";
+  } else {
+    resultText = "🤝 引き分け";
+    resultColor = "text-gray-600";
+  }
+
   return (
     <div className="min-h-screen bg-yellow-50 flex flex-col items-center justify-center p-4">
       <h1 className={`text-3xl font-bold mb-4 ${resultColor}`}>{resultText}</h1>
 
       <div className="bg-white rounded shadow p-4 w-full max-w-sm text-center mb-4">
-        <p className="text-lg mb-2">あなたの残りPW：<span className="font-bold">{myTotalPw}</span></p>
-        <p className="text-lg">相手の残りPW：<span className="font-bold">{enemyTotalPw}</span></p>
+        <p className="text-lg mb-1">
+          あなたの残りPW：<span className="font-bold">{myTotalPw}</span>
+        </p>
+        <p className="text-lg mb-1">
+          相手の残りPW：<span className="font-bold">{enemyTotalPw}</span>
+        </p>
+        {(state?.myCorrect != null || state?.cpuCorrect != null) && (
+          <p className="text-sm text-gray-600">
+            正解数：あなた {myCorrect} / 相手 {cpuCorrect}
+          </p>
+        )}
       </div>
 
       <div className="bg-white rounded shadow p-4 w-full max-w-sm text-center mb-4">
         <h2 className="font-bold mb-2">🎁 獲得Bpt</h2>
         <p className="text-base mb-1">
-          今回の基本付与：<span className="font-bold">{baseEarnBpt}</span> Bpt（参加5 + {isWin ? "勝利10" : "勝利0"}）
+          今回の基本付与：
+          <span className="font-bold">{baseEarnBpt}</span> Bpt（参加5 + {isWin ? "勝利10" : "勝利0"}）
         </p>
 
         <div className="mt-3">

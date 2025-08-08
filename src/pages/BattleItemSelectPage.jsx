@@ -1,106 +1,115 @@
-// src/pages/BattleSelectPage.jsx
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import ItemCard from "../components/ItemCard";
 
-const BattleSelectPage = () => {
+const LS_BATTLE_KEY = "currentBattleId";
+
+// 仮データ（あとでFirestore接続に差し替え）
+const DUMMY = {
+  S: [{ id: "s1", name: "カブト（S）" }, { id: "s2", name: "クワガタ（S）" }],
+  A: [{ id: "a1", name: "カブト（A）" }, { id: "a2", name: "クワガタ（A）" }],
+  B: [{ id: "b1", name: "カブト（B）" }, { id: "b2", name: "クワガタ（B）" }],
+};
+
+export default function BattleItemSelectPage() {
   const { state } = useLocation();
   const navigate = useNavigate();
 
-  const {
-    selectedItem,
-    questionCount: initialQuestionCount = 1,
-    initialSelectedPw = 100,
-    enemy = "CPU",
-  } = state || {};
+  const battleId = useMemo(
+    () => state?.battleId || localStorage.getItem(LS_BATTLE_KEY) || "",
+    [state?.battleId]
+  );
+  const questionCount = state?.questionCount ?? 3;
 
-  // 直打ち対策：アイテムが無ければ入口へ
-  useEffect(() => {
-    if (!selectedItem) {
-      navigate("/battle/select-item", { replace: true });
-    }
-  }, [selectedItem, navigate]);
+  const preSelected = state?.selectedItem || null;
+  const [rank, setRank] = useState("S");
+  const [selected, setSelected] = useState(preSelected);
 
-  if (!selectedItem) return null; // リダイレクト中
+  const onRankClick = (r, e) => {
+    // どんな wrap(Link/form) があっても、ここで止める
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    console.log("[ItemSelect] rank click:", r);
+    setRank(r);
+  };
 
-  // 画面内の選択状態
-  const [questionCount, setQuestionCount] = useState(initialQuestionCount);
-  const [selectedPw, setSelectedPw] = useState(initialSelectedPw);
+  const onPick = (it, e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    console.log("[ItemSelect] pick:", it);
+    setSelected(it);
+  };
 
-  // バトル開始
-  const startBattle = () => {
-    navigate("/battle", {
+  const confirmAndGo = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    if (!selected) return;
+    console.log("[ItemSelect] go play with:", { battleId, selected });
+    navigate("/battle/play", {
       state: {
-        selectedItem,
+        battleId,
         questionCount,
-        initialSelectedPw: selectedPw, // ← BattlePage 側で受ける名前
-        enemy,
+        selectedItem: selected,
+        enemyItem: { id: "cpu", name: `${rank}ランクCPU` }, // 仮の敵
       },
     });
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">バトル設定</h1>
+    <div className="p-6 bg-yellow-50 min-h-screen" onClick={(e)=>e.stopPropagation()}>
+      <h2 className="text-lg font-bold mb-3">ランクを選んでバトルキャラを決めよう！</h2>
 
-      {/* 選んだキャラの確認 */}
-      <div className="mb-6">
-        <p className="text-sm mb-2">選んだキャラ</p>
-        <div className="flex items-center gap-3">
-          <ItemCard item={selectedItem} owned pwMode={false} />
+      {preSelected && (
+        <div className="mb-4 p-3 rounded border bg-white">
+          <div className="text-sm text-gray-500">図鑑からの選択</div>
+          <div className="text-lg font-bold">{preSelected.name}</div>
           <button
-            className="px-3 py-2 border rounded"
-            onClick={() => navigate("/battle/select-item")}
+            type="button"
+            onClick={confirmAndGo}
+            className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
           >
-            変更する
+            このアイテムで対戦開始 →
           </button>
         </div>
+      )}
+
+      <div className="flex gap-2 mb-3">
+        {["S", "A", "B"].map((r) => (
+          <button
+            key={r}
+            type="button"
+            onClick={(e) => onRankClick(r, e)}
+            className={`px-3 py-2 rounded border ${rank === r ? "bg-yellow-300" : "bg-white"}`}
+          >
+            {r}ランクで戦う！
+          </button>
+        ))}
       </div>
 
-      {/* ラウンド数を選ぶ */}
-      <div className="mb-6">
-        <p className="mb-2">ラウンド数を選ぶ</p>
-        <div className="flex gap-3">
-          {[1, 3, 5].map((n) => (
-            <button
-              key={n}
-              className={`px-4 py-2 rounded border ${
-                questionCount === n ? "bg-blue-500 text-white" : "bg-white"
-              }`}
-              onClick={() => setQuestionCount(n)}
-            >
-              {n}回戦
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* かけるPWを選ぶ */}
-      <div className="mb-8">
-        <p className="mb-2">かけるPWを選ぶ</p>
-        <div className="flex gap-3 flex-wrap">
-          {[100, 200, 300, 400, 500].map((pw) => (
-            <button
-              key={pw}
-              className={`px-4 py-2 rounded border ${
-                selectedPw === pw ? "bg-green-500 text-white" : "bg-white"
-              }`}
-              onClick={() => setSelectedPw(pw)}
-            >
-              {pw}PW
-            </button>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 gap-2 mb-4">
+        {DUMMY[rank].map((it) => (
+          <button
+            key={it.id}
+            type="button"
+            onClick={(e) => onPick(it, e)}
+            className={`p-3 rounded border text-left bg-white ${
+              selected?.id === it.id ? "ring-2 ring-blue-500 bg-blue-50" : ""
+            }`}
+          >
+            {it.name}
+          </button>
+        ))}
       </div>
 
       <button
-        className="px-5 py-3 rounded bg-rose-400 text-white"
-        onClick={startBattle}
+        type="button"
+        onClick={confirmAndGo}
+        disabled={!selected}
+        className={`px-4 py-2 rounded ${
+          selected ? "bg-green-600 text-white" : "bg-gray-300 text-gray-500"
+        }`}
       >
-        ▶ バトルスタート
+        対戦開始 →
       </button>
     </div>
   );
-};
-
-export default BattleSelectPage;
+}

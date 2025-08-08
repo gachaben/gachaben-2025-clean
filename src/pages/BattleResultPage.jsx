@@ -1,205 +1,248 @@
-// src/pages/BattleResultPage.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import ItemCard from "../components/ItemCard";
+import useSE from "../hooks/useSE";
 
-// 0→target までカウントアップ
-function useCountUp(target = 0, ms = 800) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    let raf = 0;
-    const start = performance.now();
-    const tick = (t) => {
-      const p = Math.min(1, (t - start) / ms);
-      setVal(Math.round(target * (p * (2 - p)))); // easeOut
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, ms]);
-  return val;
-}
+const MIN_BET = 100;
+const MAX_BET = 500;
+const STEP = 100;
 
-// 簡易紙吹雪（勝利時のみ）
-function Confetti({ fire = false }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!fire) return;
-    const canvas = ref.current;
-    const ctx = canvas.getContext("2d");
-    let w = (canvas.width = window.innerWidth);
-    let h = (canvas.height = window.innerHeight);
-    const onResize = () => {
-      w = canvas.width = window.innerWidth;
-      h = canvas.height = window.innerHeight;
-    };
-    window.addEventListener("resize", onResize);
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(n, hi));
+const snap100 = (n) => Math.round(n / 100) * 100;
 
-    const N = 120;
-    const parts = Array.from({ length: N }, () => ({
-      x: Math.random() * w,
-      y: -20 - Math.random() * 40,
-      r: 4 + Math.random() * 6,
-      vy: 2 + Math.random() * 3,
-      vx: -1 + Math.random() * 2,
-      rot: Math.random() * Math.PI,
-      vr: -0.2 + Math.random() * 0.4,
-      s: 0.8 + Math.random() * 0.6,
-    }));
-
-    let raf = 0;
-    const colors = ["#60a5fa", "#f97316", "#10b981", "#f43f5e", "#f59e0b", "#a78bfa"];
-    const start = performance.now();
-    const dur = 1800; // 1.8sで終了
-
-    const draw = (t) => {
-      const p = Math.min(1, (t - start) / dur);
-      ctx.clearRect(0, 0, w, h);
-      parts.forEach((pt, i) => {
-        pt.vy += 0.02; // 重力
-        pt.x += pt.vx;
-        pt.y += pt.vy;
-        pt.rot += pt.vr;
-        if (pt.y > h + 30) {
-          pt.y = -20;
-          pt.vy = 2 + Math.random() * 3;
-          pt.x = Math.random() * w;
-        }
-        ctx.save();
-        ctx.translate(pt.x, pt.y);
-        ctx.rotate(pt.rot);
-        ctx.globalAlpha = 1 - p; // 時間でフェード
-        ctx.fillStyle = colors[i % colors.length];
-        ctx.fillRect(-pt.r * pt.s, -pt.r * 0.6 * pt.s, pt.r * 2 * pt.s, pt.r * 1.2 * pt.s);
-        ctx.restore();
-      });
-      if (p < 1) raf = requestAnimationFrame(draw);
-      else ctx.clearRect(0, 0, w, h);
-    };
-    raf = requestAnimationFrame(draw);
-
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", onResize);
-    };
-  }, [fire]);
-
-  return (
-    <canvas
-      ref={ref}
-      className="pointer-events-none fixed inset-0 z-40"
-      aria-hidden
-    />
-  );
-}
-
-const BattleResultPage = () => {
+const BattlePlayPage = () => {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const {
-    result, // 'win' | 'lose' | 'draw'
-    myPwLeft = 0,
-    enemyPwLeft = 0,
-    myCorrect = 0,
-    cpuCorrect = 0,
-    questionCount = 3,
-    battleId,
-  } = state || {};
+  const { selectedItem, enemyItem, questionCount = 3, battleId } = state || {};
 
-  // 後方互換：resultが無い場合はここで判定
-  const computed = useMemo(() => {
-    if (result) return result;
-    if (myPwLeft !== enemyPwLeft) return myPwLeft > enemyPwLeft ? "win" : "lose";
-    if (myCorrect !== cpuCorrect) return myCorrect > cpuCorrect ? "win" : "lose";
-    return "draw";
-  }, [result, myPwLeft, enemyPwLeft, myCorrect, cpuCorrect]);
+  const [myPwLeft, setMyPwLeft] = useState(300);
+  const [enemyPwLeft, setEnemyPwLeft] = useState(300);
+  const [myCorrect, setMyCorrect] = useState(0);
+  const [cpuCorrect, setCpuCorrect] = useState(0);
+  const [myBet, setMyBet] = useState(null);
+  const [enemyBet, setEnemyBet] = useState(null);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [gainSide, setGainSide] = useState(null);
+  const [gainAmount, setGainAmount] = useState(0);
+  const gainTimerRef = useRef(null);
+  const [fadeOut, setFadeOut] = useState(false);
 
-  // Bpt
-  const baseBpt = 5;
-  const winBonus = computed === "win" ? 10 : 0;
-  const gainedBpt = baseBpt + winBonus;
+  const { playClick } = useSE({ clickSrc: "/se/click.mp3", victorySrc: "/se/victory.mp3", volume: 0.8 });
 
-  // カウントアップ値
-  const dispMyPw = useCountUp(myPwLeft, 700);
-  const dispEnemyPw = useCountUp(enemyPwLeft, 700);
-  const dispBpt = useCountUp(gainedBpt, 900);
+  useEffect(() => {
+    return () => {
+      if (gainTimerRef.current) clearTimeout(gainTimerRef.current);
+    };
+  }, []);
 
-  // 勝利時に紙吹雪
-  const fireConfetti = computed === "win";
+  const isFinalRound = currentRound === questionCount;
 
-  // 遷移ボタン
-  const toBattle = () => navigate("/battle", { replace: true });
-  const toHome = () => navigate("/", { replace: true });
+  const playerRange = useMemo(() => {
+    const max = Math.min(myPwLeft, isFinalRound ? myPwLeft : MAX_BET);
+    const min = myPwLeft >= MIN_BET ? MIN_BET : 1;
+    return { min, max };
+  }, [myPwLeft, isFinalRound]);
 
-  const title =
-    computed === "win" ? "勝利！" : computed === "lose" ? "敗北…" : "引き分け";
-  const titleClass =
-    computed === "win"
-      ? "text-blue-400 drop-shadow-glow"
-      : computed === "lose"
-      ? "text-red-500"
-      : "text-gray-500";
+  // CPU正答率
+  const cpuCorrectProb = useMemo(() => {
+    if (questionCount <= 1) return 0.55;
+    const progress = (currentRound - 1) / (questionCount - 1);
+    let p = 0.55;
+    p += 0.20 * progress;
+    const total = Math.max(1, myPwLeft + enemyPwLeft);
+    const diffRatio = (enemyPwLeft - myPwLeft) / total;
+    p += clamp(diffRatio * 0.6, -0.15, 0.15);
+    if (enemyPwLeft < 150) p -= 0.10;
+    p += Math.random() * 0.06 - 0.03;
+    return clamp(p, 0.15, 0.90);
+  }, [currentRound, questionCount, myPwLeft, enemyPwLeft]);
+  const rollCpuCorrect = () => Math.random() < cpuCorrectProb;
+
+  // 敵ベットAI
+  const decideEnemyBet = () => {
+    if (isFinalRound) return enemyPwLeft;
+    const enemyMax = Math.min(enemyPwLeft, MAX_BET);
+    if (enemyPwLeft < MIN_BET) return enemyPwLeft;
+    let guess = enemyPwLeft * (0.2 + Math.random() * 0.3);
+    let bet = snap100(guess);
+    bet = clamp(bet, MIN_BET, enemyMax);
+    return bet;
+  };
+
+  useEffect(() => {
+    setEnemyBet(decideEnemyBet());
+    setMyBet((prev) => {
+      const base = prev ?? (playerRange.min >= 100 ? playerRange.min : myPwLeft);
+      const snapped = snap100(base);
+      return clamp(snapped, playerRange.min, playerRange.max);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRound, myPwLeft, enemyPwLeft]);
+
+  // ラウンド決着
+  const resolveRound = ({ myBet, enemyBet, myCorrectAnswer, cpuCorrectAnswer }) => {
+    let transfer = 0;
+    let newMy = myPwLeft;
+    let newEnemy = enemyPwLeft;
+    let addMy = 0;
+    let addCpu = 0;
+
+    if (myCorrectAnswer && !cpuCorrectAnswer) {
+      transfer = Math.min(enemyPwLeft, myBet);
+      newMy += transfer;
+      newEnemy -= transfer;
+      addMy = 1;
+      setGainSide("player");
+      setGainAmount(transfer);
+    } else if (!myCorrectAnswer && cpuCorrectAnswer) {
+      transfer = Math.min(myPwLeft, enemyBet);
+      newMy -= transfer;
+      newEnemy += transfer;
+      addCpu = 1;
+      setGainSide("cpu");
+      setGainAmount(transfer);
+    }
+
+    gainTimerRef.current = setTimeout(() => setGainSide(null), 900);
+
+    setTimeout(() => {
+      setMyPwLeft(newMy);
+      setEnemyPwLeft(newEnemy);
+    }, 600);
+
+    const finalMyCorrect = myCorrect + addMy;
+    const finalCpuCorrect = cpuCorrect + addCpu;
+
+    if (currentRound < questionCount) {
+      setTimeout(() => {
+        setMyCorrect(finalMyCorrect);
+        setCpuCorrect(finalCpuCorrect);
+        setCurrentRound((r) => r + 1);
+        setMyBet(null);
+        setEnemyBet(null);
+      }, 900);
+    } else {
+      const result =
+        newMy > newEnemy ? "win" : newMy < newEnemy ? "lose" :
+        finalMyCorrect > finalCpuCorrect ? "win" :
+        finalMyCorrect < finalCpuCorrect ? "lose" : "draw";
+
+      setTimeout(() => {
+        setFadeOut(true);
+        setTimeout(() => {
+          navigate("/battle/result", {
+            state: {
+              battleId,
+              result,
+              myPwLeft: newMy,
+              enemyPwLeft: newEnemy,
+              myCorrect: finalMyCorrect,
+              cpuCorrect: finalCpuCorrect,
+              questionCount,
+            },
+          });
+        }, 800);
+      }, 900);
+    }
+  };
+
+  // デモ（本番はあなたの正誤で呼ぶ）
+  const demoDecide = (iAmCorrect) => {
+    playClick();
+    const safeBet = clamp(snap100(myBet ?? playerRange.min), playerRange.min, playerRange.max);
+    resolveRound({
+      myBet: safeBet,
+      enemyBet,
+      myCorrectAnswer: iAmCorrect,
+      cpuCorrectAnswer: rollCpuCorrect(),
+    });
+  };
+
+  // UIハンドラ（全部クリックSE付き）
+  const increment = () => { playClick(); setMyBet((v) => clamp(snap100((v ?? 0) + STEP), playerRange.min, playerRange.max)); };
+  const decrement = () => { playClick(); setMyBet((v) => clamp(snap100(Math.max(0, (v ?? 0) - STEP)), playerRange.min, playerRange.max)); };
+  const setAllIn = () => { playClick(); setMyBet(playerRange.max); };
+  const setFixed = (amt) => { playClick(); setMyBet(() => clamp(amt, playerRange.min, playerRange.max)); };
+
+  const playerRangeText =
+    playerRange.min === playerRange.max
+      ? `今回のベット範囲: ${playerRange.max} PW（ALL-INのみ）`
+      : `今回のベット範囲: ${playerRange.min}〜${playerRange.max} PW ${isFinalRound ? "（最終）" : ""}`;
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-amber-50 to-amber-100 text-gray-900">
-      {/* 紙吹雪 */}
-      <Confetti fire={fireConfetti} />
-
-      <div className="mx-auto max-w-xl px-5 py-8 animate-fadeIn">
-        <h1 className={`text-3xl font-extrabold mb-6 ${titleClass}`}>{title}</h1>
-
-        {/* サマリーカード */}
-        <div className="bg-white/90 rounded-2xl shadow p-5 mb-6">
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div>
-              <div className="text-xs text-gray-500 mb-0.5">あなたの残りPW</div>
-              <div className="text-2xl font-bold">{dispMyPw}</div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-0.5">相手の残りPW</div>
-              <div className="text-2xl font-bold">{dispEnemyPw}</div>
-            </div>
-            <div className="col-span-2 text-sm text-gray-600">
-              正解数：あなた {myCorrect} / 相手 {cpuCorrect}（全 {questionCount} 問）
-            </div>
+    <div className={`flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white gap-8 transition-opacity duration-800 ${fadeOut ? "opacity-0" : "opacity-100"}`}>
+      {/* 上（相手） */}
+      <div className="relative">
+        <ItemCard item={enemyItem} />
+        {gainSide === "cpu" && (
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 animate-pop text-white text-sm font-bold px-3 py-1 rounded-full bg-red-600/90 shadow">
+            +{gainAmount} PW
           </div>
-        </div>
-
-        {/* 獲得Bpt */}
-        <div className="bg-white rounded-2xl shadow p-5 mb-8 flex items-center gap-3">
-          <div className="text-2xl">🎁</div>
-          <div className="flex-1">
-            <div className="text-sm text-gray-600">
-              今回の基本付与：{baseBpt} Bpt{computed === "win" ? "（＋勝利10）" : ""}
-            </div>
-            <div className="text-2xl font-extrabold">
-              合計：<span className="text-emerald-600">{dispBpt}</span> Bpt
-            </div>
-          </div>
-        </div>
-
-        {/* ボタン */}
-        <div className="flex gap-3">
-          <button
-            onClick={toBattle}
-            className="px-4 py-2 rounded-xl bg-blue-600 text-white font-semibold shadow hover:scale-[1.02] active:scale-[0.99] transition"
-          >
-            もう一度戦う
-          </button>
-          <button
-            onClick={toHome}
-            className="px-4 py-2 rounded-xl bg-gray-300 font-semibold shadow hover:scale-[1.02] active:scale-[0.99] transition"
-          >
-            ホームへ戻る
-          </button>
-        </div>
-
-        {/* デバッグ */}
-        {battleId && (
-          <div className="mt-4 text-xs text-gray-500">battleId: {battleId}</div>
         )}
+        <div className="mt-1 text-center text-xs text-gray-300">ベット: {enemyBet ?? "-"} PW</div>
+        <div className="text-center text-[11px] text-gray-400 mt-0.5">CPU正解率（推定）: {(cpuCorrectProb * 100).toFixed(0)}%</div>
+      </div>
+
+      {/* 中央ゲージ */}
+      <div className="w-72 h-6 bg-gray-700 rounded-full overflow-hidden relative">
+        <div className="h-full bg-blue-500 transition-all duration-500" style={{ width: `${(myPwLeft / Math.max(1, myPwLeft + enemyPwLeft)) * 100}%` }} />
+        <div className="absolute inset-0 flex justify-between items-center text-xs px-2 font-bold">
+          <span>{myPwLeft} PW</span><span>{enemyPwLeft} PW</span>
+        </div>
+      </div>
+
+      {/* 下（自分） */}
+      <div className="relative w-[280px] flex flex-col items-center">
+        <ItemCard item={selectedItem} />
+        {gainSide === "player" && (
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 animate-pop text-white text-sm font-bold px-3 py-1 rounded-full bg-blue-600/90 shadow">
+            +{gainAmount} PW
+          </div>
+        )}
+
+        {/* ベットUI */}
+        <div className="mt-3 w-full space-y-2">
+          <div className="text-center text-xs text-gray-300">{playerRangeText}</div>
+          <div className="flex items-center justify-center gap-2">
+            <button onClick={decrement} disabled={playerRange.min === playerRange.max || (myBet ?? 0) <= playerRange.min} className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed">-100</button>
+            <input
+              type="number"
+              inputMode="numeric"
+              step={STEP}
+              min={playerRange.min}
+              max={playerRange.max}
+              value={myBet ?? ""}
+              onChange={(e) => {
+                const val = Number(e.target.value || 0);
+                setMyBet(clamp(snap100(val), playerRange.min, playerRange.max));
+              }}
+              className="w-24 text-center rounded bg-white/10 px-2 py-1 outline-none"
+            />
+            <button onClick={increment} disabled={playerRange.min === playerRange.max || (myBet ?? 0) >= playerRange.max} className="px-3 py-1 rounded bg-white/10 hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed">+100</button>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-2">
+            {[100, 200, 300, 400, 500].map((amt) => {
+              const disabled = amt < playerRange.min || amt > playerRange.max;
+              return (
+                <button key={amt} onClick={() => setFixed(amt)} disabled={disabled}
+                  className={`px-3 py-1 rounded text-sm ${myBet === amt ? "bg-blue-500" : "bg-white/10 hover:bg-white/20"} ${disabled ? "opacity-30 cursor-not-allowed" : ""}`}>
+                  {amt}
+                </button>
+              );
+            })}
+            <button onClick={setAllIn} className={`px-3 py-1 rounded text-sm ${myBet === playerRange.max ? "bg-blue-500" : "bg-white/10 hover:bg-white/20"}`}>ALL-IN</button>
+          </div>
+        </div>
+      </div>
+
+      {/* デモ用（本番では削除） */}
+      <div className="flex gap-4">
+        <button onClick={() => demoDecide(true)} className="px-4 py-2 rounded bg-green-600">デモ：自分 正解</button>
+        <button onClick={() => demoDecide(false)} className="px-4 py-2 rounded bg-red-600">デモ：自分 不正解</button>
       </div>
     </div>
   );
 };
 
-export default BattleResultPage;
+export default BattlePlayPage;

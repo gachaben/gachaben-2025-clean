@@ -158,3 +158,4 @@ const BattlePlayPage = () => {
 };
 
 export default BattlePlayPage;
+console.log("🟣 LIVE BattlePlayPage.jsx", import.meta.url);

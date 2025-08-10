@@ -16,6 +16,7 @@ import ItemDetailPage from "./pages/ItemDetailPage";
 import ZukanTopPage from "./pages/ZukanTopPage"; // ✅ 追加（シリーズ選択ページ）
 import ZukanInsectDetailPage from "./pages/ZukanInsectDetailPage"; // ←これ！
 import BattleStartPage from "./pages/BattleStartPage"; // ← 追加するページ
+import BattleItemSelectPage from "./pages/BattleItemSelectPage";
 import BattlePage from "./pages/BattlePage";           // ← 本バトル画面（あとで作る）
 import BattleRankSelectPage from "./pages/BattleRankSelectPage";
 import BattlePlayPage from "./pages/BattlePlayPage"; // ← 追記！

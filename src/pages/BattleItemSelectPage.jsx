@@ -1,71 +1,75 @@
 // src/pages/BattleItemSelectPage.jsx
+import React from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import ItemCard from "../components/ItemCard";
 
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase"; // ← あなたのプロジェクトに合わせて調整
+export default function BattleItemSelectPage() {
+  const navigate = useNavigate();          // ← ここが重要（nav を作る or navigate を使う）
+  const { state } = useLocation();
 
-const BattleItemSelectPage = () => {
-  const navigate = useNavigate();
-  const [items, setItems] = useState([]);
+  const items = state?.items || [];
+  const preselected = state?.preselectedItem || null;
 
-  // Firestoreからitemsを取得
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "items"));
-        const itemList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+  const pickEnemy = (my) => {
+    const pool = items.filter(
+      (it) => (it.id || it.itemId) !== (my.id || my.itemId)
+    );
+    return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+  };
 
-        // フィルタしたければここでできる（例：stage === 3のみなど）
-        setItems(itemList);
-      } catch (error) {
-        console.error("アイテム取得エラー:", error);
-      }
-    };
-
-    fetchItems();
-  }, []);
-
-  const handleSelect = (item) => {
-    navigate("/battle/start", {
+  const onSelect = (it) => {
+    navigate("/battle", {
       state: {
-        selectedItem: item,
+        selectedItem: it,
+        enemyItem: pickEnemy(it),
+        round: 1,
+        totalRounds: 3,
+        myPwLeft: 300,
+        enemyPwLeft: 300,
       },
     });
   };
 
+  if (!items.length) {
+    return (
+      <div className="max-w-5xl mx-auto p-6">
+        <p className="mb-3">選べるアイテムが渡ってきていません。</p>
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 py-2 rounded-xl bg-white shadow hover:shadow-md"
+        >
+          戻る
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-blue-50 flex flex-col items-center justify-center p-6">
-      <h1 className="text-2xl font-bold mb-4">⚔️ バトルに使うキャラを選ぼう！</h1>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {items.map((item) => {
-          const imagePath = `/images/${item.seriesId}/stage${item.stage}/${item.imageName}.png`;
-
+    <div className="max-w-5xl mx-auto p-4">
+      <h1 className="text-lg font-bold mb-3">バトルするアイテムを選んでね</h1>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        {items.map((it) => {
+          const key = it.id || it.itemId;
+          const isPre =
+            preselected && (preselected.id || preselected.itemId) === key;
           return (
-            <div
-              key={item.id}
-              className="bg-white rounded-xl shadow-md p-4 cursor-pointer hover:shadow-lg"
-              onClick={() => handleSelect(item)}
+            <button
+              key={key}
+              onClick={() => onSelect(it)}
+              className={`rounded-2xl bg-white shadow hover:shadow-md p-2 relative ${
+                isPre ? "ring-2 ring-blue-500 ring-offset-2" : ""
+              }`}
             >
-              <img
-                src={imagePath}
-                alt={item.name}
-                className="w-32 h-32 object-contain mx-auto mb-2"
-              />
-              <h2 className="text-lg font-semibold text-center">{item.name}</h2>
-              <p className="text-center text-sm text-gray-600">
-                所持PW：{item.pw ?? 0}
-              </p>
-            </div>
+              <ItemCard item={it} />
+              {isPre && (
+                <span className="absolute top-2 right-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                  おすすめ
+                </span>
+              )}
+            </button>
           );
         })}
       </div>
     </div>
   );
-};
-
-export default BattleItemSelectPage;
+}

@@ -1,207 +1,65 @@
-import React, { useEffect, useState } from "react";
+// src/pages/BattlePage.jsx
+import React, { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ItemCard from "../components/ItemCard";
+export default function BattlePage() {
+console.log("🔵 LIVE BattlePage.jsx", import.meta.url);
+  const nav = useNavigate();
+  const loc = useLocation();
 
-const BattlePage = () => {
-  const { state } = useLocation();
-  const navigate = useNavigate();
-  const { enemy, questionCount } = state || {};
+  // Zukan/選択ページから受け取り
+  const selectedItem = loc.state?.selectedItem || null; // 自分
+  const items = loc.state?.items || [];
+  const enemyItem = loc.state?.enemyItem ?? (
+  items.find(x => (x.id||x.itemId)!==(selectedItem?.id||selectedItem?.itemId)) || null
+);
+  const round        = loc.state?.round        ?? 1;
+  const totalRounds  = loc.state?.totalRounds  ?? 3;
 
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [selectedPw, setSelectedPw] = useState(null);
-  const [currentRound, setCurrentRound] = useState(1);
-  const [myTotalPw, setMyTotalPw] = useState(300);
-  const [enemyTotalPw, setEnemyTotalPw] = useState(500);
-  const [battleLog, setBattleLog] = useState([]);
-  const [question, setQuestion] = useState(null);
+  // 残PW（あなたの既存state/propsに合わせて必要なら差し替えOK）
+  const myPwLeft    = loc.state?.myPwLeft    ?? 300;
+  const enemyPwLeft = loc.state?.enemyPwLeft ?? 300;
 
+  // 直URL侵入ガード
   useEffect(() => {
-    console.log("📦 location.state:", state);
-    console.log("🧩 state.selectedItem:", state?.selectedItem);
+    if (!selectedItem) nav("/battle/item-select", { replace: true });
+  }, [selectedItem, nav]);
+  if (!selectedItem) return null;
 
-    if (!state?.selectedItem) return;
-
-    const raw = state.selectedItem;
-    const merged = {
-      ...raw,
-      pw: raw.pw ?? 0,
-      cpt: raw.cpt ?? 0,
-      bpt: raw.bpt ?? 0,
+  // 中央ゲージ表示用の割合（あなたのロジックで上書きOK）
+  const { myPct, enemyPct } = useMemo(() => {
+    const total = Math.max(1, myPwLeft + enemyPwLeft);
+    return {
+      myPct:    Math.round((myPwLeft    / total) * 100),
+      enemyPct: Math.round((enemyPwLeft / total) * 100),
     };
+  }, [myPwLeft, enemyPwLeft]);
 
-    setSelectedItem(merged);
-    setSelectedPw(null);
-    setMyTotalPw(merged.pw ?? 0);
-    console.log("✅ selectedItemの中身（BattlePage）:", merged);
-  }, [state]);
+// src/pages/BattlePage.jsx の return 内をこの形に
+return (
+  <div className="min-h-[calc(100vh-64px)] w-full mx-auto max-w-5xl px-4 py-6
+                grid grid-rows-[auto_1fr_auto_1fr_auto] gap-4">
+  <header className="row-start-1 text-center">…</header>
 
-  const allQuestions = [
-    {
-      text: "カブトムシの幼虫が食べるものは？",
-      options: ["木の葉", "腐葉土", "果物"],
-      answer: "腐葉土",
-    },
-    {
-      text: "セミの鳴き声は？",
-      options: ["ミーンミーン", "チュンチュン", "ケロケロ"],
-      answer: "ミーンミーン",
-    },
-    {
-      text: "トンボの羽はいくつ？",
-      options: ["2枚", "4枚", "6枚"],
-      answer: "4枚",
-    },
-  ];
+  {/* 上=相手 */}
+  <section className="row-start-2 flex items-center justify-center">
+    {enemyItem ? <ItemCard item={enemyItem} owned /> : <div className="text-gray-500">相手を準備中…</div>}
+  </section>
 
-  useEffect(() => {
-    setQuestion(allQuestions[(currentRound - 1) % allQuestions.length]);
-  }, [currentRound]);
+  {/* 中央=ゲージ（あなたの紫バーDOMをここへ） */}
+  <section className="row-start-3">…紫バーDOM…</section>
 
-  const handleAnswer = (option) => {
-    if (!selectedPw || !question) return;
+  {/* 下=自分 */}
+  <section className="row-start-4 flex items-center justify-center">
+    <ItemCard item={selectedItem} owned />
+  </section>
 
-    const correct = option === question.answer;
-    const log = correct
-      ? `✅ 正解！${selectedPw}PW分 相手にダメージ！`
-      : `❌ 不正解…攻撃できなかった`;
+  {/* 操作＆ログ */}
+  <footer className="row-start-5">…PWボタン/ログ…</footer>
+</div>
 
-    if (correct) {
-      setEnemyTotalPw((prev) => Math.max(prev - selectedPw, 0));
-    }
+);
 
-    setBattleLog((prev) => [...prev, `Round ${currentRound}：${log}`]);
+}
 
-    if (currentRound < questionCount) {
-      setCurrentRound((prev) => prev + 1);
-      setSelectedPw(null);
-    } else {
-      setTimeout(() => {
-        navigate("/battle/result", {
-          state: {
-            myTotalPw,
-            enemyTotalPw,
-          },
-        });
-      }, 1000);
-    }
-  };
 
-  const renderUnifiedGauge = (myPw, enemyPw) => {
-    const total = myPw + enemyPw;
-    const myRatio = total === 0 ? 0.5 : myPw / total;
-    const enemyRatio = total === 0 ? 0.5 : enemyPw / total;
-
-    return (
-      <div className="text-center w-full max-w-md mx-auto mb-4">
-        <div className="flex justify-between text-sm font-bold px-2 mb-1">
-          <span>🧑 あなた：{myPw} PW</span>
-          <span>👑 {decodeURIComponent(enemy)}：{enemyPw} PW</span>
-        </div>
-        <div className="w-full h-4 bg-gray-300 rounded-full overflow-hidden relative flex">
-          <div
-            className="bg-blue-400 h-full"
-            style={{ width: `${myRatio * 100}%` }}
-          ></div>
-          <div
-            className="bg-purple-400 h-full"
-            style={{ width: `${enemyRatio * 100}%` }}
-          ></div>
-        </div>
-      </div>
-    );
-  };
-
-  if (!selectedItem) {
-    return (
-      <div className="min-h-screen bg-yellow-100 flex flex-col items-center justify-center p-4">
-        <p className="text-xl font-bold text-red-600 mb-4">
-          ⚠️ キャラが選ばれていません
-        </p>
-        <button
-          className="px-4 py-2 bg-blue-500 text-white rounded shadow"
-          onClick={() => navigate("/battle/item-select")}
-        >
-          キャラを選びに行く
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-yellow-50 p-4">
-      <h1 className="text-2xl font-bold text-center mb-2">
-        バトル Round {currentRound} / {questionCount}
-      </h1>
-
-      <p className="text-center text-lg mb-2">
-        🧑 あなた vs 👑 {decodeURIComponent(enemy)}
-      </p>
-
-      {renderUnifiedGauge(myTotalPw, enemyTotalPw)}
-
-      <div className="flex justify-center my-4">
-        <ItemCard item={selectedItem} owned={true} />
-      </div>
-
-      <div className="text-center text-sm text-gray-700 mb-4">
-        <p>
-          🥊 <span className="text-red-500 font-bold">攻撃力：</span> {selectedItem.cpt ?? 0}　
-          💪 <span className="text-blue-500 font-bold">防御力：</span> {selectedItem.bpt ?? 0}
-        </p>
-      </div>
-
-      {selectedPw == null && (
-        <div className="text-center my-4">
-          <p className="text-blue-800 font-bold mb-2">
-            あなたのターン！まず PW を選んでください
-          </p>
-          <div className="flex justify-center flex-wrap gap-2">
-            {[100, 200, 300, 400, 500].map((pw) => {
-              const isDisabled = pw > myTotalPw;
-              return (
-                <button
-                  key={pw}
-                  onClick={() => !isDisabled && setSelectedPw(pw)}
-                  disabled={isDisabled}
-                  className={`px-4 py-2 rounded-full border font-bold ${
-                    isDisabled
-                      ? "bg-gray-200 text-gray-400 border-gray-300 cursor-not-allowed"
-                      : "bg-white text-blue-500 border-blue-500 hover:bg-blue-100"
-                  }`}
-                >
-                  {pw} PW
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {selectedPw != null && question && (
-        <div className="text-center mb-4">
-          <p className="text-lg font-semibold mb-2">{question.text}</p>
-          <div className="flex flex-col items-center gap-2">
-            {question.options.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => handleAnswer(opt)}
-                className="bg-white hover:bg-blue-100 px-6 py-2 rounded shadow"
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="mt-6 bg-white rounded p-4 shadow">
-        <h2 className="font-bold mb-2">📜 バトルログ：</h2>
-        {battleLog.map((log, idx) => (
-          <p key={idx} className="text-sm">{log}</p>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default BattlePage;

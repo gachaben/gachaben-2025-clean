@@ -1,7 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { doc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { itemNames } from "./itemNames.js"; // ← 相対パス注意
-import { db } from "../firebase";
 
 // Firebase設定（あなたのままでOK）
 const firebaseConfig = {
@@ -15,7 +14,7 @@ const firebaseConfig = {
 
 // Firebase 初期化
 const app = initializeApp(firebaseConfig);
-
+const db = getFirestore(app);
 
 // nameフィールドを追加 or 更新
 async function updateAllNames() {

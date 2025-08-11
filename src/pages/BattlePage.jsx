@@ -1,90 +1,65 @@
 // src/pages/BattlePage.jsx
-import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
-// import ItemCard from "../components/ItemCard"; // あれば使ってOK
-
+import React, { useEffect, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import ItemCard from "../components/ItemCard";
 export default function BattlePage() {
-  const { id } = useParams();
-  const [battle, setBattle] = useState(null);
-  const [item, setItem] = useState(null);
-  const [loading, setLoading] = useState(true);
+console.log("🔵 LIVE BattlePage.jsx", import.meta.url);
+  const nav = useNavigate();
+  const loc = useLocation();
 
-  // 1) battle doc をポーリングで取得
+  // Zukan/選択ページから受け取り
+  const selectedItem = loc.state?.selectedItem || null; // 自分
+  const items = loc.state?.items || [];
+  const enemyItem = loc.state?.enemyItem ?? (
+  items.find(x => (x.id||x.itemId)!==(selectedItem?.id||selectedItem?.itemId)) || null
+);
+  const round        = loc.state?.round        ?? 1;
+  const totalRounds  = loc.state?.totalRounds  ?? 3;
+
+  // 残PW（あなたの既存state/propsに合わせて必要なら差し替えOK）
+  const myPwLeft    = loc.state?.myPwLeft    ?? 300;
+  const enemyPwLeft = loc.state?.enemyPwLeft ?? 300;
+
+  // 直URL侵入ガード
   useEffect(() => {
-    if (!id) return;
-    const ref = doc(db, "battles", id);
-    let cancel = false;
+    if (!selectedItem) nav("/battle/item-select", { replace: true });
+  }, [selectedItem, nav]);
+  if (!selectedItem) return null;
 
-    const tick = async () => {
-      try {
-        const snap = await getDoc(ref);
-        if (cancel) return;
-        if (snap.exists()) {
-          const data = { id: snap.id, ...snap.data() };
-          setBattle(data);
-          setLoading(false);
-        } else {
-          setBattle(null);
-          setLoading(false);
-        }
-      } catch (e) {
-        console.error("getDoc(battles) error:", e);
-        setLoading(false);
-      }
+  // 中央ゲージ表示用の割合（あなたのロジックで上書きOK）
+  const { myPct, enemyPct } = useMemo(() => {
+    const total = Math.max(1, myPwLeft + enemyPwLeft);
+    return {
+      myPct:    Math.round((myPwLeft    / total) * 100),
+      enemyPct: Math.round((enemyPwLeft / total) * 100),
     };
+  }, [myPwLeft, enemyPwLeft]);
 
-    tick();
-    const t = setInterval(tick, 1500);
-    return () => { cancel = true; clearInterval(t); };
-  }, [id]);
+// src/pages/BattlePage.jsx の return 内をこの形に
+return (
+  <div className="min-h-[calc(100vh-64px)] w-full mx-auto max-w-5xl px-4 py-6
+                grid grid-rows-[auto_1fr_auto_1fr_auto] gap-4">
+  <header className="row-start-1 text-center">…</header>
 
-  // 2) アイテム情報を取得（items/<selectedItemId> を想定）
-  useEffect(() => {
-    const loadItem = async () => {
-      if (!battle?.selectedItemId) return;
-      try {
-        const ref = doc(db, "items", battle.selectedItemId);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          setItem({ id: snap.id, ...snap.data() });
-        } else {
-          // Firestoreに無ければ、IDから画像パスを推測（暫定）
-          // ex) 2508_S_002_ageha_stage4 → /images/kontyu/stage4/2508_S_002_ageha.png など
-          setItem({
-            id: battle.selectedItemId,
-            name: battle.selectedItemId,
-            imageSrcGuess: `/images/kontyu/stage4/${battle.selectedItemId.replace(/_stage\d+$/,'')}.png`,
-          });
-        }
-      } catch (e) {
-        console.error("getDoc(items) error:", e);
-      }
-    };
-    loadItem();
-  }, [battle?.selectedItemId]);
+  {/* 上=相手 */}
+  <section className="row-start-2 flex items-center justify-center">
+    {enemyItem ? <ItemCard item={enemyItem} owned /> : <div className="text-gray-500">相手を準備中…</div>}
+  </section>
 
-  if (loading) return <p>読み込み中...</p>;
-  if (!battle)  return <p>バトルが見つかりません（id: {id}）。</p>;
+  {/* 中央=ゲージ（あなたの紫バーDOMをここへ） */}
+  <section className="row-start-3">…紫バーDOM…</section>
 
-  return (
-    <div style={{ padding: 16 }}>
-      <h1>Battle: {id}</h1>
+  {/* 下=自分 */}
+  <section className="row-start-4 flex items-center justify-center">
+    <ItemCard item={selectedItem} owned />
+  </section>
 
-      <section style={{ margin: "12px 0" }}>
-        <h3>あなたのアイテム</h3>
-        {/* ItemCard があるなら <ItemCard item={item} /> でOK */}
-        {item?.image || item?.imageSrc ? (
-          <img src={item.image || item.imageSrc} alt={item.name || item.id} style={{ width: 160 }} />
-        ) : item?.imageSrcGuess ? (
-          <img src={item.imageSrcGuess} alt={item.name || item.id} style={{ width: 160 }} />
-        ) : (
-          <div>{item ? (item.name || item.id) : "読み込み中..."}</div>
-        )}
-      </section>
+  {/* 操作＆ログ */}
+  <footer className="row-start-5">…PWボタン/ログ…</footer>
+</div>
 
-      <pre>{JSON.stringify(battle, null, 2)}</pre>
-    </div>
-  );
+);
+
 }
+
+

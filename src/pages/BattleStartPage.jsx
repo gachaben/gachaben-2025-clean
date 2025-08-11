@@ -1,135 +1,127 @@
-// src/pages/BattleStartPage.jsx
-import React, { useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { callCreateBattle } from "../firebase";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { getAuth } from "firebase/auth";
+import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import ItemCard from "../components/ItemCard";
 
-/**
- * 期待する遷移元:
- *  - navigate("/battle/start", { state: { selectedItemId, enemyItemId? } })
- *  - または URL に ?itemId=xxxx を付与
- */
-export default function BattleStartPage() {
-  const nav = useNavigate();
-  const { state } = useLocation();
+const BattleStartPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // 1) 優先: location.state.selectedItemId
-  // 2) 次点: URLクエリ ?itemId=...
-  const selectedItemIdFromState = state?.selectedItemId ?? null;
-  const selectedItemIdFromQuery = useMemo(() => {
-    const p = new URLSearchParams(window.location.search);
-    return p.get("itemId");
-  }, []);
-  const selectedItemId = selectedItemIdFromState || selectedItemIdFromQuery || null;
+  const [userItems, setUserItems] = useState([]);
+  const [userItemPowers, setUserItemPowers] = useState({});
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [questionCount, setQuestionCount] = useState(3);
+  const enemy = "カブトムシくん";
 
-  const [loading, setLoading] = useState(false);
-  const [qCount, setQCount] = useState(3); // デフォ3問
-
-  const goSelectItem = () => {
-    // あなたのルーティングに合わせてどちらか：
-    // nav("/battle/rank-select");
-    nav("/battle/item-select");
-  };
-
-  const start = async () => {
-    if (!selectedItemId) {
-      alert("まずアイテムを選んでね！");
-      return goSelectItem();
+  // 🔹 locationから初期選択反映
+  useEffect(() => {
+    if (location.state?.selectedItem) {
+      setSelectedItem(location.state.selectedItem);
+      
+      setUserItems((prev) => [
+    location.state.selectedItem,
+    ...prev.filter((item) => item.itemId !== location.state.selectedItem.itemId)
+  ]); 
     }
-    setLoading(true);
-    try {
-      // ★ Cloud Functions (callable) 呼び出し
-      const payload = {
-        selectedItemId,                 // ← 関数側の期待キー名に合わせる
-        questionCount: Number(qCount),  // ← 数値で渡す
-      };
-      console.log("[createBattle] payload:", payload);
+  }, [location.state]);
 
-      const res = await callCreateBattle(payload);
-      console.log("[createBattle] response:", res);
+  // 🔹 アイテム & パワー取得
+  useEffect(() => {
+    const fetchAll = async () => {
+      const user = getAuth().currentUser;
+      if (!user) return;
 
-      // 返却は {"data":{"battleId":"..."}}
-      // もしくは {"data":{"result":{"battleId":"..."} }}
-      const battleId = res?.data?.battleId || res?.data?.result?.battleId;
-      if (!battleId) throw new Error("battleId が返ってきていない");
+      const itemSnap = await getDoc(doc(db, "userItems", user.uid));
+      const rawItems = itemSnap.exists() ? itemSnap.data() : {};
 
-      // ★ 自動遷移（子どもはIDを見ない）
-      nav(`/battle/${battleId}`, {
-        state: {
-          battleId,
-          selectedItemId,
-          questionCount: Number(qCount),
-        },
-        replace: true,
+      const powersSnap = await getDocs(collection(db, "userItemPowers", user.uid, "items"));
+      const powers = {};
+      powersSnap.forEach((doc) => {
+        powers[doc.id] = doc.data();
       });
-    } catch (e) {
-      console.error(e);
-      alert("バトル作成に失敗しました: " + (e.message ?? String(e)));
-    } finally {
-      setLoading(false);
-    }
+
+      setUserItemPowers(powers);
+
+      const itemList = Object.entries(rawItems).map(([id, data]) => ({
+        itemId: id,
+        ...data,
+        ...powers[id],
+      }));
+
+      setUserItems(itemList);
+    };
+
+    fetchAll();
+  }, []);
+
+  const handleStartBattle = () => {
+    if (!selectedItem) return;
+
+    navigate("/battle", {
+  state: {
+    selectedItem,
+    enemy,
+    questionCount,
+  },
+});
+
   };
 
   return (
-    <div style={{ padding: 16, display: "grid", gap: 12 }}>
-      <h1>バトル開始</h1>
+    <div className="min-h-screen bg-yellow-50 p-6">
+      <h1 className="text-2xl font-bold text-center mb-4">⚔️ バトル準備</h1>
 
-      {/* 選択中アイテムの確認（IDは子どもに見せないUIでもOK） */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span>えらんだアイテム：</span>
-        {selectedItemId ? (
-          <span style={{ fontWeight: 600 }}>{/* 子どもUIなら名前/画像に置換 */}
-            {selectedItemId}
-          </span>
-        ) : (
-          <span style={{ color: "#999" }}>（まだ未選択）</span>
-        )}
-        <button onClick={goSelectItem} style={{ marginLeft: 8 }}>
-          アイテムをえらぶ
-        </button>
-      </div>
-
-      {/* 試合数ボタン（ワンタップ） */}
-      <div style={{ display: "flex", gap: 8 }}>
-        {[1, 3, 5].map(n => (
+      {/* 🔸 問題数選択 */}
+      <div className="text-center mb-6">
+        <p className="mb-2 font-bold">バトルの問題数をえらんでね</p>
+        {[1, 3, 5].map((num) => (
           <button
-            key={n}
-            onClick={() => setQCount(n)}
-            disabled={loading}
-            style={{
-              padding: "8px 14px",
-              border: qCount === n ? "2px solid #000" : "1px solid #ccc",
-              fontWeight: qCount === n ? 700 : 400,
-              cursor: "pointer",
-            }}
+            key={num}
+            onClick={() => setQuestionCount(num)}
+            className={`mx-2 px-4 py-2 rounded-full border font-bold ${
+              questionCount === num
+                ? "bg-green-500 text-white"
+                : "bg-white text-green-500 border-green-500"
+            }`}
           >
-            {n}問
+            {num}問
           </button>
         ))}
       </div>
 
-      <div>
-        <button
-          onClick={start}
-          disabled={loading || !selectedItemId}
-          style={{
-            padding: "10px 18px",
-            fontSize: 16,
-            fontWeight: 700,
-            opacity: loading || !selectedItemId ? 0.6 : 1,
-            cursor: loading || !selectedItemId ? "not-allowed" : "pointer",
-          }}
-        >
-          {loading ? "つくっています…" : "バトルスタート"}
-        </button>
+      {/* 🔸 アイテム選択 */}
+      <div className="flex flex-wrap justify-center">
+        {userItems.map((item) => (
+          <div
+            key={item.itemId}
+            onClick={() => setSelectedItem(item)}
+            className={`cursor-pointer ${
+              selectedItem?.itemId === item.itemId ? "ring-4 ring-blue-400" : ""
+            }`}
+          >
+            <ItemCard item={item} owned={true} />
+          </div>
+        ))}
       </div>
 
-      {/* デバッグ用（大人向け）：本番では消してOK */}
-      <details>
-        <summary>開発者メモ</summary>
-        <pre style={{ background: "#f7f7f7", padding: 8 }}>
-{JSON.stringify({ selectedItemId, qCount }, null, 2)}
-        </pre>
-      </details>
+      {/* 🔸 バトル開始 */}
+      <div className="text-center mt-6">
+        <button
+          onClick={handleStartBattle}
+          disabled={!selectedItem}
+          className={`px-6 py-3 rounded-lg font-bold shadow ${
+            selectedItem
+              ? "bg-blue-500 text-white"
+              : "bg-gray-400 text-white cursor-not-allowed"
+          }`}
+        >
+          バトルスタート！
+        </button>
+      </div>
     </div>
   );
-}
+};
+
+export default BattleStartPage;

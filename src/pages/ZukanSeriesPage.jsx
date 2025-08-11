@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
+  getFirestore,
   collection,
   query,
   where,
@@ -15,7 +16,6 @@ import ItemCard from "../components/ItemCard";
 import PwUseModal from "../components/PwUseModal";
 import CptUseModal from "../components/CptUseModal";
 import BptUseModal from "../components/BptUseModal";
-import { db } from "../firebase";
 
 const ZukanSeriesPage = () => {
   const { seriesId, rank } = useParams();

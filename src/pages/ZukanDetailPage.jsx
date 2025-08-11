@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { getFirestore, doc, getDoc, collection, getDocs } from "firebase/firestore";
 import ItemCard from "../components/ItemCard";
-import { db } from "../firebase";
 
 const ZukanDetailPage = () => {
   const { seriesId } = useParams(); // 例: "kontyu"

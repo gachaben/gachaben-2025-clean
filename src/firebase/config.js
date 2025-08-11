@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app"; // ←ここが重要！
-import { getFirestore } from "firebase/firestore";
+import { db } from "../firebase"; // or "./firebase"
+
 
 // あなたの Firebase 設定をここに記入
 const firebaseConfig = {
@@ -15,4 +16,3 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Firestoreのインスタンスを取得
-export const db = getFirestore(app);

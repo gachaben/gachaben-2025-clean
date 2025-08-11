@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { itemNames } from "./itemNames.js";
+import { db } from "../firebase";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCV8UNRLnbdoeWkLA_azeMWJyflw0iw",
@@ -12,7 +13,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+
 
 const getMetaFromId = (itemId) => {
   const parts = itemId.split("_");

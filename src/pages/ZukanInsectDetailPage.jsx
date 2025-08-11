@@ -1,11 +1,12 @@
 // ⬆️ ファイル：src/pages/ZukanInsectDetailPage.jsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, increment, updateDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, getDoc, increment, updateDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import ItemCard from "../components/ItemCard";
 import PwUseModal from "../components/PwUseModal";
 import GachaVideoModal from "../components/GachaVideoModal";
+import { db } from "../firebase";
 
 const ZukanInsectDetailPage = () => {
   const { seriesId, rank, name: encodedName } = useParams();

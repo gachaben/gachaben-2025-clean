@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
+import { db } from "../firebase";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCV8UNRLnbdoeWkLA_azeMWJyflw0iw",
@@ -11,7 +12,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 const addSeriesIdToItems = async () => {
   const snapshot = await getDocs(collection(db, "items"));

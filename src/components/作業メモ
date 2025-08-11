@@ -1,0 +1,307 @@
+✅ 今日の作業メモ（2025年8月6日）
+🎯 進めたこと
+BattlePage.jsx にて selectedItem のマージ処理を確認・強化
+
+Firestore の userItemPowers とマージして pw, cpt, bpt を反映
+
+console.log("✅ merged:") で内容の確認を実施
+
+ItemCard.jsx 側に console.log("🧩 ItemCard 受け取り：", item) を設置
+
+正しく受け取れているかログ確認を実施
+
+BattlePage 上での PWベットボタンが表示されない不具合を調査
+
+selectedPw === null が初期化されていない可能性に注目
+
+それでも表示されない状態継続中
+
+ItemCard 表示において、画像・演出は出るが PW や 攻撃力 表示がされないケースを確認
+
+🔍 明日やること（優先順）
+Firestore の userItemPowers に対象アイテムの pw, cpt, bpt が入っているか確認
+
+特に itemId が key になっているか（例： "xxxxxxx": { pw: 200, ... }）
+
+BattlePage.jsx の console.log("✅ merged:", merged); で中身を確認
+
+pw: 0 になっていないかチェック
+
+ItemCard.jsx 側に渡ってくる item の pw・cpt・bpt がどうなっているかログ確認
+
+ベットPWボタンが表示されない原因を特定
+
+myTotalPw の初期値 / selectedPw の初期化順 / selectedItem の反映タイミングなどを確認
+
+☕ 長期的な判断（方向性メモ）
+データ構造は案B（userItemPowers に強化情報を集約）で進めるのが整理・運用面で◎
+
+表示系のバグ回避・安定性を重視して、**「軽くてシンプルな設計」**を優先
+
+
+
+
+
+
+✅ 2025/08/07 作業メモ
+🔨 今日の進捗まとめ
+① /battle においてアイテムが「選ばれていない」問題
+原因：
+
+BattlePage.jsx で useLocation().state から selectedItem を受け取っていたが、
+
+同じ名前の selectedPw を useState で 再定義して上書きしてしまっていた。
+
+結果：
+
+console.log("BattlePage受信") に undefined が表示されていた。
+
+解決策：
+
+useLocation().state で受け取る値を initialSelectedPw に変更し、競合を回避。
+
+✅ selectedItem, questionCount, initialSelectedPw, enemy を正しく受信！
+
+② 画面に「アイテムが選ばれていません」と出る問題
+上記の原因と連動。!selectedItem によって return されていた。
+
+🧠 明日の再開ポイント
+▶ 次にやることリスト：
+バトルの出題処理
+
+選んだアイテム・かけたPW・ラウンド数をもとに、問題を出す。
+
+QuestionComponent に1問ずつ出す（既存の仕組み活用）。
+
+プレイヤーとCPUの回答UI + ロジック
+
+上下分割で自分と相手を表示。
+
+自分が回答 → 少し遅れてCPUが回答。
+
+正誤判定 → ダメージ計算（PW減少）へ。
+
+最終結果ページ /battle/result を作成
+
+勝敗・報酬（Bpt）・使用アイテム表示。
+
+そのまま図鑑やトップに戻れるボタンを設置。
+
+💪 今日の山場突破ポイント
+🧠 state の受け取りと useState の変数名かぶりに注意！
+
+✅ 一歩ずつ確実に進めていけば、バトル完成まであとわずか。
+
+8/9 作業メモ
+✅ 今日やったこと
+バトル自体は正常に進行できるようになった
+
+ただし、バトル終了後に結果ページへ行かず再びバトルページへ戻る現象あり
+
+Firestore 保存時に uid 未設定のエラーを確認
+
+logRound / finishBattle で uid: undefined が送信されている
+
+Firestore のセキュリティルールで弾かれる
+
+紙吹雪と吹き出し（+100 など）の演出が消えている
+
+画像がくるくるリロード（再描画）が多発
+
+⚠ 現状の問題点
+Firestore書き込み失敗
+
+uid が undefined のまま battles / rounds に送られている
+
+保存できずページ遷移がうまくいかない
+
+結果ページへ遷移しない
+
+書き込み失敗が原因で navigate("/battle/result") が呼ばれない
+
+演出非表示
+
+紙吹雪 & 吹き出し(+100) が表示されない
+
+表示のトリガーがバトル終了時のイベントに依存しているため
+
+画像再描画が多い
+
+ItemCard の key や src が毎レンダーで変わっている可能性あり
+
+💡 明日の作業手順（完璧版）
+Firestore の不要データ削除
+
+battles コレクションで uid フィールドが無いドキュメントを全削除
+
+コード修正で uid を常にセット
+
+logRound / finishBattle の呼び出しで
+
+js
+コードをコピーする
+uid: auth.currentUser?.uid
+を必ず渡す
+
+もし auth.currentUser が無ければ処理中断
+
+結果ページへの正常遷移確認
+
+新バトルを実行し、結果ページ /battle/result に移動するかチェック
+
+Firestore に uid が入っているか確認
+
+演出復活
+
+紙吹雪 → 結果ページ表示時に Confetti コンポーネント発火
+
+吹き出し(+100) → BattlePlayPage の正解時にステートで表示
+
+画像くるくる問題修正
+
+ItemCard の key に固定の一意な値を使う
+
+src の生成方法を毎レンダーで変えないようにする
+
+このメモがあれば、明日そのまま作業再開できるはず。
+明日は①Firestoreの掃除→②uid修正→③結果ページ遷移確認→④演出復活、の順で進めるのがベスト。
+
+
+明日のタスク（サクッと順番）
+演出（spark.mp4）が出ない問題の完全決着
+
+カードの中央寄せ＆サイズ微調整
+
++100 吹き出しの仕上げ（位置・時間）
+
+仕上げチェック（バトル→結果→Firestore）
+
+1) 演出が出ない（spark.mp4）デバッグ手順
+現状: 画像はOK、動画演出だけ出ない。以前 ERR_CACHE_OPERATION_NOT_SUPPORTED あり。
+
+ 配置を一本化
+public/effects/spark.mp4 に置く（他の場所は一旦消す or リネーム）
+
+ 直アクセス確認
+ブラウザで http://localhost:5173/effects/spark.mp4 を開いて再生できるか確認
+→ できなければ ファイル名/拡張子/大文字小文字を見直し
+
+ キャッシュ殺す
+ファイル名を一度 spark2.mp4 に変更 → ItemCard の fxSources 先頭を /effects/spark2.mp4 に変更
+その後 Ctrl+F5（ハードリロード） or DevServer再起動
+
+ Networkタブ確認
+/effects/spark2.mp4 が Status 200 / Type: video/mp4 で返るか
+
+ 判定確認
+Firestoreのアイテムに rank: "S" が入ってるか（rarity でもOK）
+→ ItemCard は isS = rarity==="S" || rank==="S" で発火する設定
+
+ まだ出ないとき
+ItemCard の <video> に一時的に controls を付けて表示されるか確認
+それでもNGなら、onError で出ているログ（src/err）を教えて
+
+※ ItemCard.jsx の fxSources は先頭を /effects/spark*.mp4 に。旧 /images/effects/** はフォールバック用に残す。
+
+2) カードの位置とサイズ
+ 敵カードが左寄り
+BattlePlayPage.jsx の相手側ラッパーを確実に中央寄せ
+
+jsx
+コードをコピーする
+<div className="relative flex justify-center">
+  <ItemCard item={enemyItem} withFx size="md" />
+</div>
+まだ寄るなら <div className="mx-auto"> で包む。
+
+ サイズ微調整
+ItemCard の size で調整（xs=120px, sm=140px, md=180px）。
+一覧は xs、バトルは md が見やすい想定。必要なら w-[***px] を好みの値に。
+
+3) +100 吹き出し（明日やる）
+表示位置: アイテムカードの真上センター（absolute left-1/2 -translate-x-1/2 -top-3）
+
+表示時間: 1100ms（今900ms → 少し長く）
+
+出現アニメ: scale 0.8 → 1.0, opacity 0 → 1 → 0, translateY -8px
+（今の実装に duration 1100ms・easing を合わせるだけでOK）
+
+4) 最終チェック
+ バトル3問 → 結果へ即遷移
+
+ Firestore battles/{id} に uid あり／rounds/{01..} に保存あり
+
+ 結果ページで紙吹雪OK
+
+参考：ItemCard.jsx の要点
+isS = rarity==="S" || rank==="S" で演出判定
+
+fxSources の先頭は /effects/spark.mp4（または spark2.mp4）
+
+<video> に key={fxSources.map(s=>s.src).join(",")} を付けて再読込を確実化
+
+画像は object-contain、演出は object-cover、枠は aspect-[3/4] で安定
+
+今日はここまでで十分ナイス！
+明日は①の動画パス＆キャッシュだけ決め切れば、演出はほぼ勝ち確。
+おやすみ〜 🌙
+
+
+
+
+
+
+
+作業メモ（2025/08/10 時点）
+現状
+バトル画面（上下分割構成）は表示できている。
+
+上に相手のカード、下に自分のカードが出る状態。
+
+Firebase のパーミッションエラー（Missing or insufficient permissions.）が発生している。
+
+PW選択や進行のUIは一部実装済みだが、相手側の動きやPWゲージは未構築。
+
+見た目は以前の良い形をほぼ維持できている。
+
+今日までにできたこと
+上下分割レイアウトのベース復元。
+
+ItemCard の表示（攻撃力・防御力・PW表示）動作確認。
+
+過去の良いコミット（89aef75 / ded47e5）を参考に復元。
+
+ローカルで /battle ページのレンダリングまで確認。
+
+次回やること
+Firebase パーミッションエラー修正
+
+Firestore のルールを確認し、/battle 関連の読み込み権限を付与。
+
+読み込み対象コレクション（例：userItemPowers, users）を特定。
+
+PW選択 → 問題出題 の流れ復活
+
+現状はUIは出ているが、相手がPWを選ぶ→自分がPWを選ぶ→問題へ進む処理が未実装または未連動。
+
+PWゲージ中央表示
+
+上下の境界部分に双方のPW残量ゲージを追加（相手と自分で色を変える）。
+
+初期値は各300PW、正解で相手のPWを減らす仕様を適用。
+
+アイテム選択画面の復元
+
+/battle 開始時に「自分のアイテム選択 → 試合数選択 → バトル開始」へ。
+
+見た目調整
+
+上下のカード位置や背景色の統一。
+
+中央ゲージやテキストがスマホでも見やすいようにレスポンシブ対応。
+
+参考コミット
+構築面で最高 → 89aef75
+
+見た目で好印象 → ded47e5
+→ 明日の実装時に差分確認して活用予定。

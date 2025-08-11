@@ -1,6 +1,7 @@
 // scripts/registerEggs.js
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../firebase"
 
 // ✅ あなたの Firebase 設定に差し替えてください
 const firebaseConfig = {
@@ -13,7 +14,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 // 🥚 登録したい卵の情報をここに並べていきます（imageNameは必ず .png付き！）
 const eggDataList = [

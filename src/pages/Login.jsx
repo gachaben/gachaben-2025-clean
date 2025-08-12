@@ -1,39 +1,70 @@
+// src/pages/Login.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 
-function Login() {
-  const [email, setEmail] = useState("");
+export default function Login() {
+  const [email, setEmail]     = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError]     = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
 
+    const emailNorm = email.trim().toLowerCase(); // emailは整形
+    const passRaw   = password;                   // passwordは触らない
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // 1) サインイン
+      const { user } = await signInWithEmailAndPassword(auth, emailNorm, passRaw);
 
-      // Firestoreからユーザーデータを取得
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      const userData = userDoc.data();
+      // 2) users/{uid} を必ず用意（初回は作成、既存でも不足があれば補完）
+      const ref  = doc(db, "users", user.uid);
+      let snap   = await getDoc(ref);
 
-      // ロールに応じて遷移
-      if (userData.role === "parent") {
-        navigate("/parent-home");
-      } else if (userData.role === "child") {
-        navigate("/child-home");
-      } else if (userData.role === "admin") {
-        navigate("/admin-reward"); // ← 管理者専用ページへ
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          email: emailNorm,
+          role: "child",              // 既定
+          createdAt: serverTimestamp()
+        });
+        snap = await getDoc(ref);
       } else {
-        setError("ユーザーの種類が不明です");
+        const d = snap.data() || {};
+        if (!d.role) {
+          await setDoc(ref, { role: "child" }, { merge: true });
+          snap = await getDoc(ref);
+        }
       }
+
+      // 3) 安全に role を取得して遷移
+      const data = snap.data() || {};
+      const role = data?.role ?? "child";
+
+      if (role === "parent")      navigate("/parent-home");
+      else if (role === "admin")  navigate("/admin-reward");
+      else                        navigate(data?.parentId ? "/child-home" : "/link-family");
+
     } catch (err) {
-      setError("ログインに失敗しました: " + err.message);
+      // よく出るエラーをわかりやすく
+      if (err?.code === "auth/wrong-password" || err?.message === "INVALID_PASSWORD") {
+        setError("パスワードが違います。");
+      } else if (err?.code === "auth/user-not-found") {
+        setError("このメールは未登録です。");
+      } else if (err?.code === "auth/too-many-requests") {
+        setError("試行回数が多すぎます。しばらくしてからお試しください。");
+      } else {
+        setError("ログインに失敗しました: " + (err?.message ?? ""));
+      }
     }
   };
 
@@ -69,5 +100,3 @@ function Login() {
     </div>
   );
 }
-
-export default Login;

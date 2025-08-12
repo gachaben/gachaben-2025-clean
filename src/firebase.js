@@ -1,26 +1,35 @@
-// src/firebase.js
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { initializeApp } from "firebase/app";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 
-const firebaseConfig = {
-  apiKey: 'AIzaSyCYoonUtU7leRNcHx0lKA_azeMWvjFYTuo',
-  authDomain: 'gachaben-2025.firebaseapp.com',
-  projectId: 'gachaben-2025',
-  storageBucket: 'gachaben-2025.appspot.com',
-  messagingSenderId: '929513375207',
-  appId: '1:929513375207:web:94167d7e05eff28b7f2942',
-};
+const projectId = "gachaben-2025"; // ← 任意（UIに出ているプロジェクト名でOK）
+const firebaseConfig =
+  import.meta.env.PROD
+    ? {
+        // ★本番ビルド用（後で本物を入れる）
+        apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+        authDomain: `${projectId}.firebaseapp.com`,
+        projectId,
+        storageBucket: `${projectId}.appspot.com`,
+      }
+    : {
+        // ★開発（エミュ）用：ダミーでもOK
+        apiKey: "fake-api-key",
+        authDomain: "localhost",
+        projectId,
+        storageBucket: `${projectId}.appspot.com`,
+      };
 
-// Firebaseアプリを初期化
 const app = initializeApp(firebaseConfig);
 
-// Firebaseサービスを初期化
-export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const firestore = getFirestore(app);
+export const db = getFirestore(app);
+export const storage = getStorage(app);
 
-// 🔐 iOS対策：認証の永続化を localStorage に固定
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Firebase Auth 永続化エラー:", error);
-});
+// エミュに接続（あなたのポートに合わせて）
+if (import.meta.env.DEV) {
+  connectAuthEmulator(auth, "http://127.0.0.1:9097", { disableWarnings: true });
+  connectFirestoreEmulator(db, "127.0.0.1", 8082);
+  connectStorageEmulator(storage, "127.0.0.1", 9197);
+}

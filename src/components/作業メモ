@@ -1,0 +1,54 @@
+今日の進捗・状況
+Firebase Emulator を起動しようとしたが、複数ポートがすでに使用中で起動できない。
+
+ログに出ている該当ポート：
+
+Auth Emulator → 9097
+
+Firestore Emulator → 8082
+
+Storage Emulator → 9197
+
+Emulator UI → 4000
+
+Logging Emulator → 4500
+
+Could not start Emulator UI, port taken というエラーあり。
+
+原因は 古いプロセスが残っていてポートを占有している状態。
+
+明日やる手順（おすすめ）
+古いプロセスをまとめて停止
+
+bash
+コピーする
+編集する
+npx kill-port 3000 4000 5001 8080 8082 9097 9197 4500
+※ 実行時に Need to install the following packages: kill-port と出たら、y を押して Enter
+
+Emulator 再起動
+
+bash
+コピーする
+編集する
+firebase emulators:start
+→ エラーが消えるはず
+
+フロントエンドも起動
+
+bash
+コピーする
+編集する
+npm run dev
+または vite を使っている場合はそのコマンド
+
+もしまだポート競合が出たら
+
+エラーで表示されたポート番号を確認
+
+その番号を npx kill-port <番号> で追加停止
+
+これで確実に「ポートの取り合い問題」を解消して再起動できるはずです。
+
+この流れでいきますか？
+明日は①を先にやればすぐ再開できる状態です。

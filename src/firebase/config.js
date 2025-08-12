@@ -1,7 +1,16 @@
-import { initializeApp, getApps, getApp } from "firebase/app"; // ←ここが重要！
-import { getFirestore } from "firebase/firestore";
+// src/firebase/config.js
+import { initializeApp, getApps, getApp } from "firebase/app";
+import {
+  getFirestore,
+  connectFirestoreEmulator,
+} from "firebase/firestore";
+import {
+  getAuth,
+  signInAnonymously, // 開発中の簡易ログイン
+  // connectAuthEmulator,  // 使いたくなったら有効化
+} from "firebase/auth";
 
-// あなたの Firebase 設定をここに記入
+// ★ あなたのFirebase設定
 const firebaseConfig = {
   apiKey: "AIzaSyCYoonUtU7leRNcHx0lKA_azeMWvjFYTuo",
   authDomain: "gachaben-2025.firebaseapp.com",
@@ -11,8 +20,17 @@ const firebaseConfig = {
   appId: "1:929513375207:web:94167d7e05eff28b7f2942",
 };
 
-// すでに初期化されているかを確認してから初期化
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// --- Appはシングルトン ---
+export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// Firestoreのインスタンスを取得
+// --- Firestore/ Auth ---
 export const db = getFirestore(app);
+export const auth = getAuth(app);
+
+// --- 開発中は自動でエミュに接続 ---
+if (import.meta.env.DEV) {
+  try { connectFirestoreEmulator(db, "localhost", 8080); } catch {}
+  // try { connectAuthEmulator(auth, "http://localhost:9099"); } catch {}
+  // 匿名ログイン（ルールが auth 必須でも動くように）
+  signInAnonymously(auth).catch(console.error);
+}

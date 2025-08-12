@@ -1,90 +1,33 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
+import { useLocation, useNavigate } from "react-router-dom";
 import ItemCard from "../components/ItemCard";
 
-const BattleStartPage = () => {
+// /zukan から { state: { selectedItem } } を受け取る前提
+export default function BattleStartPage() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const loc = useLocation();
 
-  const [authReady, setAuthReady] = useState(false);
-  const [userItems, setUserItems] = useState([]);
-  const [userItemPowers, setUserItemPowers] = useState({});
-  const [selectedItem, setSelectedItem] = useState(null);
+  // 前画面から来た選択アイテム（なければnull）
+  const [selectedItem, setSelectedItem] = useState(loc.state?.selectedItem ?? null);
+
+  // 試合数（1/3/5問）
   const [questionCount, setQuestionCount] = useState(3);
-  const enemy = "カブトムシくん";
 
-  // ✅ 未ログインなら匿名ログイン → 認証準備完了フラグを立てる
+  // 一応、直接アクセス時はダミーでも動くようにする
   useEffect(() => {
-    const auth = getAuth();
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        console.log("🔐 no user -> signInAnonymously()");
-        try {
-          await signInAnonymously(auth);
-        } catch (e) {
-          console.error("❌ signInAnonymously error:", e);
-        }
-      } else {
-        console.log("👤 logged in uid:", user.uid);
-        setAuthReady(true);
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  // 🔹 locationから初期選択反映
-  useEffect(() => {
-    if (location.state?.selectedItem) {
-      setSelectedItem(location.state.selectedItem);
-      setUserItems((prev) => [
-        location.state.selectedItem,
-        ...prev.filter(
-          (item) => item.itemId !== location.state.selectedItem.itemId
-        ),
-      ]);
-    }
-  }, [location.state]);
-
-  // 🔹 アイテム & パワー取得（認証準備ができてから）
-  useEffect(() => {
-    if (!authReady) return;
-
-    const fetchAll = async () => {
-      const user = getAuth().currentUser;
-      if (!user) return;
-      console.log("📥 fetch for uid:", user.uid);
-
-      const itemSnap = await getDoc(doc(db, "userItems", user.uid));
-      const rawItems = itemSnap.exists() ? itemSnap.data() : {};
-      console.log("🧾 rawItems:", rawItems);
-
-      const powersSnap = await getDocs(
-        collection(db, "userItemPowers", user.uid, "items")
-      );
-      const powers = {};
-      powersSnap.forEach((docu) => {
-        powers[docu.id] = docu.data();
+    if (!selectedItem) {
+      setSelectedItem({
+        itemId: "kabuto_S_01",
+        name: "カブト（S）",
+        pw: 300,
+        rank: "S",
+        imageName: "kabuto_S_aomushi",
+        seriesId: "kontyu",
       });
-      setUserItemPowers(powers);
-      console.log("🔋 powers:", powers);
+    }
+  }, [selectedItem]);
 
-      const itemList = Object.entries(rawItems).map(([id, data]) => ({
-        itemId: id,
-        ...data,
-        ...powers[id],
-      }));
-      setUserItems(itemList);
-      console.log("📦 itemList:", itemList);
-    };
-
-    fetchAll();
-  }, [authReady]);
-
-  // ✅ バトル開始：/battle/play に state で渡す
-  const handleStartBattle = () => {
+  const handleStart = () => {
     if (!selectedItem) return;
 
     const initialMyPw = selectedItem?.pw ?? 300;
@@ -92,7 +35,7 @@ const BattleStartPage = () => {
 
     const enemyItem = {
       id: "cpu001",
-      name: enemy,
+      name: "カブトムシくん",
       power: initialEnemyPw,
     };
 
@@ -107,61 +50,56 @@ const BattleStartPage = () => {
     });
   };
 
-  // まだログイン確定前はローディング
-  if (!authReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-gray-500">ログイン準備中…</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-yellow-50 p-6">
-      <h1 className="text-2xl font-bold text-center mb-4">⚔️ バトル準備</h1>
+    <div className="min-h-screen p-6">
+      <header className="flex items-center justify-between mb-4">
+        <button onClick={() => navigate(-1)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">
+          ← 戻る
+        </button>
+        <h1 className="text-2xl font-bold">バトル準備</h1>
+        <div />
+      </header>
 
-      {/* 🔸 問題数選択 */}
-      <div className="text-center mb-6">
-        <p className="mb-2 font-bold">バトルの問題数をえらんでね</p>
-        {[1, 3, 5].map((num) => (
-          <button
-            key={num}
-            onClick={() => setQuestionCount(num)}
-            className={`mx-2 px-4 py-2 rounded-full border font-bold ${
-              questionCount === num
-                ? "bg-green-500 text-white"
-                : "bg-white text-green-500 border-green-500"
-            }`}
-          >
-            {num}問
-          </button>
-        ))}
-      </div>
-
-      {/* 🔸 アイテム選択 */}
-      <div className="flex flex-wrap justify-center">
-        {userItems.map((item) => (
-          <div
-            key={item.itemId}
-            onClick={() => setSelectedItem(item)}
-            className={`cursor-pointer ${
-              selectedItem?.itemId === item.itemId ? "ring-4 ring-blue-400" : ""
-            }`}
-          >
-            <ItemCard item={item} owned={true} />
+      {/* あなたの代表 */}
+      <section className="mb-6">
+        <div className="text-sm text-gray-600 mb-2">あなたの代表アイテム</div>
+        <div className="flex items-center gap-4">
+          {selectedItem ? (
+            <ItemCard item={selectedItem} owned={true} />
+          ) : (
+            <div className="p-3 rounded border bg-gray-50 text-gray-500">アイテム未選択</div>
+          )}
+          <div className="text-sm text-gray-600">
+            残PW 初期値: <span className="font-semibold">{selectedItem?.pw ?? 300}</span>
           </div>
-        ))}
-      </div>
+        </div>
+      </section>
 
-      {/* 🔸 バトル開始 */}
-      <div className="text-center mt-6">
+      {/* 試合数 */}
+      <section className="mb-8">
+        <div className="text-sm font-bold mb-2">バトルの問題数をえらんでね</div>
+        <div className="flex gap-2">
+          {[1, 3, 5].map((n) => (
+            <button
+              key={n}
+              onClick={() => setQuestionCount(n)}
+              className={`px-4 py-2 rounded-full border font-bold ${
+                questionCount === n ? "bg-green-600 text-white border-green-600" : "bg-white text-green-700 border-green-600"
+              }`}
+            >
+              {n}問
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* 開始ボタン */}
+      <div>
         <button
-          onClick={handleStartBattle}
+          onClick={handleStart}
           disabled={!selectedItem}
           className={`px-6 py-3 rounded-lg font-bold shadow ${
-            selectedItem
-              ? "bg-blue-500 text-white"
-              : "bg-gray-400 text-white cursor-not-allowed"
+            selectedItem ? "bg-blue-600 text-white hover:bg-blue-700" : "bg-gray-400 text-white cursor-not-allowed"
           }`}
         >
           バトルスタート！
@@ -169,6 +107,4 @@ const BattleStartPage = () => {
       </div>
     </div>
   );
-};
-
-export default BattleStartPage;
+}

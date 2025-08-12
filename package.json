@@ -2,7 +2,10 @@
   "name": "gachaben-2025",
   "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
+    "dev:web": "vite",
+    "dev:emu": "firebase emulators:start --only auth,firestore",
+    "start:dev": "concurrently -k -n EMU,WEB -c magenta,cyan \"npm:dev:emu\" \"wait-on tcp:8080 && npm:dev:web\"",
+    "seed": "node seed.js",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -10,9 +13,11 @@
     "@tailwindcss/postcss": "^4.1.11",
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "wait-on": "^8.0.4"
   },
   "dependencies": {
     "axios": "^1.10.0",

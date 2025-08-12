@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import ItemCard from "../components/ItemCard";
@@ -9,65 +9,112 @@ const BattleStartPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [authReady, setAuthReady] = useState(false);
   const [userItems, setUserItems] = useState([]);
   const [userItemPowers, setUserItemPowers] = useState({});
   const [selectedItem, setSelectedItem] = useState(null);
   const [questionCount, setQuestionCount] = useState(3);
   const enemy = "カブトムシくん";
 
+  // ✅ 未ログインなら匿名ログイン → 認証準備完了フラグを立てる
+  useEffect(() => {
+    const auth = getAuth();
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        console.log("🔐 no user -> signInAnonymously()");
+        try {
+          await signInAnonymously(auth);
+        } catch (e) {
+          console.error("❌ signInAnonymously error:", e);
+        }
+      } else {
+        console.log("👤 logged in uid:", user.uid);
+        setAuthReady(true);
+      }
+    });
+    return () => unsub();
+  }, []);
+
   // 🔹 locationから初期選択反映
   useEffect(() => {
     if (location.state?.selectedItem) {
       setSelectedItem(location.state.selectedItem);
-      
       setUserItems((prev) => [
-    location.state.selectedItem,
-    ...prev.filter((item) => item.itemId !== location.state.selectedItem.itemId)
-  ]); 
+        location.state.selectedItem,
+        ...prev.filter(
+          (item) => item.itemId !== location.state.selectedItem.itemId
+        ),
+      ]);
     }
   }, [location.state]);
 
-  // 🔹 アイテム & パワー取得
+  // 🔹 アイテム & パワー取得（認証準備ができてから）
   useEffect(() => {
+    if (!authReady) return;
+
     const fetchAll = async () => {
       const user = getAuth().currentUser;
       if (!user) return;
+      console.log("📥 fetch for uid:", user.uid);
 
       const itemSnap = await getDoc(doc(db, "userItems", user.uid));
       const rawItems = itemSnap.exists() ? itemSnap.data() : {};
+      console.log("🧾 rawItems:", rawItems);
 
-      const powersSnap = await getDocs(collection(db, "userItemPowers", user.uid, "items"));
+      const powersSnap = await getDocs(
+        collection(db, "userItemPowers", user.uid, "items")
+      );
       const powers = {};
-      powersSnap.forEach((doc) => {
-        powers[doc.id] = doc.data();
+      powersSnap.forEach((docu) => {
+        powers[docu.id] = docu.data();
       });
-
       setUserItemPowers(powers);
+      console.log("🔋 powers:", powers);
 
       const itemList = Object.entries(rawItems).map(([id, data]) => ({
         itemId: id,
         ...data,
         ...powers[id],
       }));
-
       setUserItems(itemList);
+      console.log("📦 itemList:", itemList);
     };
 
     fetchAll();
-  }, []);
+  }, [authReady]);
 
+  // ✅ バトル開始：/battle/play に state で渡す
   const handleStartBattle = () => {
     if (!selectedItem) return;
 
-    navigate("/battle", {
-  state: {
-    selectedItem,
-    enemy,
-    questionCount,
-  },
-});
+    const initialMyPw = selectedItem?.pw ?? 300;
+    const initialEnemyPw = 300;
 
+    const enemyItem = {
+      id: "cpu001",
+      name: enemy,
+      power: initialEnemyPw,
+    };
+
+    navigate("/battle/play", {
+      state: {
+        selectedItem,
+        enemyItem,
+        myPwLeft: initialMyPw,
+        enemyPwLeft: initialEnemyPw,
+        questionCount,
+      },
+    });
   };
+
+  // まだログイン確定前はローディング
+  if (!authReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-gray-500">ログイン準備中…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-yellow-50 p-6">

@@ -1,337 +1,166 @@
-import React, { useEffect, useState } from "react";
+// src/pages/ZukanSeriesPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  getDoc,
-  updateDoc,
-  increment,
-} from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+import { db } from "../firebase";
 import ItemCard from "../components/ItemCard";
-import PwUseModal from "../components/PwUseModal";
-import CptUseModal from "../components/CptUseModal";
-import BptUseModal from "../components/BptUseModal";
 
-const ZukanSeriesPage = () => {
-  const { seriesId, rank } = useParams();
+export default function ZukanSeriesPage() {
   const navigate = useNavigate();
+  const { seriesId = "kontyu", rank = "S" } = useParams();
 
-  const [filteredItems, setFilteredItems] = useState([]);
-  const [userItems, setUserItems] = useState({});
-  const [userPw, setUserPw] = useState(0);
-  const [userCpt, setUserCpt] = useState(0);
-  const [userBpt, setUserBpt] = useState(0);
-  const [oshiId, setOshiId] = useState(null);
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [highestZones, setHighestZones] = useState({});
-
-  const [isPwMode, setIsPwMode] = useState(false);
-  const [isCptMode, setIsCptMode] = useState(false);
-  const [isBptMode, setIsBptMode] = useState(false);
-  const [isBattleMode, setIsBattleMode] = useState(false);
-
+  const [authReady, setAuthReady] = useState(false);
+  const [userItems, setUserItems] = useState([]);
+  const [userItemPowers, setUserItemPowers] = useState({});
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
 
+  // 未ログインなら匿名ログイン
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        setLoading(false);
-        return;
+        try { await signInAnonymously(auth); } catch (e) { console.error(e); }
+      } else {
+        setAuthReady(true);
       }
-
-      const db = getFirestore();
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      const userData = userDoc.exists() ? userDoc.data() : {};
-      const ownedItems = userData.items || {};
-
-      setUserItems(ownedItems);
-      setUserPw(userData.pw || 0);
-      setUserCpt(userData.cpt || 0);
-      setUserBpt(userData.bpt || 0);
-      setOshiId(userData.oshiCharacterId || null);
-
-      const itemsRef = collection(db, "items");
-      const q = query(itemsRef, where("seriesId", "==", seriesId), where("rank", "==", rank));
-      const snapshot = await getDocs(q);
-      const allItems = snapshot.docs.map(doc => ({ ...doc.data(), itemId: doc.id }));
-
-      const maxStageMap = {};
-      allItems.forEach(item => {
-        const key = item.name;
-        const userStats = ownedItems[item.itemId] || {};
-        const userPw = userStats.pw || 0;
-        const userCpt = userStats.cpt || 0;
-        const userBpt = userStats.bpt || 0;
-
-        if (!maxStageMap[key] || item.stage > maxStageMap[key].stage) {
-          maxStageMap[key] = {
-            ...item,
-            pw: userPw,
-            cpt: userCpt,
-            bpt: userBpt,
-          };
-        }
-      });
-      setFilteredItems(Object.values(maxStageMap).slice(0, 10));
-      setLoading(false);
     });
-    return () => unsubscribe();
-  }, [seriesId, rank]);
+    return () => unsub();
+  }, []);
 
-  const handleUsePw = async (amount) => {
-    if (!selectedItem) return;
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) return;
-    const db = getFirestore();
-    const userRef = doc(db, "users", user.uid);
-    const itemId = selectedItem.itemId;
-
+  // 取得
+  const fetchAll = async () => {
+    setLoading(true);
     try {
-      await updateDoc(userRef, {
-        [`items.${itemId}.pw`]: increment(amount),
-        pw: increment(-amount),
-      });
+      const user = getAuth().currentUser;
+      if (!user) { setUserItems([]); setLoading(false); return; }
 
-      setUserItems((prev) => ({
-        ...prev,
-        [itemId]: {
-          ...(prev[itemId] || {}),
-          pw: (prev[itemId]?.pw || 0) + amount,
-        },
+      const itemSnap = await getDoc(doc(db, "userItems", user.uid));
+      const rawItems = itemSnap.exists() ? itemSnap.data() : {};
+
+      const powersSnap = await getDocs(collection(db, "userItemPowers", user.uid, "items"));
+      const powers = {};
+      powersSnap.forEach((d) => { powers[d.id] = d.data(); });
+      setUserItemPowers(powers);
+
+      const itemList = Object.entries(rawItems).map(([id, data]) => ({
+        itemId: id,
+        ...data,
+        ...powers[id],
       }));
+      setUserItems(itemList);
+    } catch (e) {
+      console.error("load error:", e);
+      setUserItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      setFilteredItems((prevItems) =>
-        prevItems.map((item) =>
-          item.itemId === itemId
-            ? { ...item, pw: (item.pw || 0) + amount }
-            : item
-        )
+  useEffect(() => { if (authReady) fetchAll(); }, [authReady]);
+
+  // フィルタ
+  const filteredItems = useMemo(
+    () =>
+      userItems.filter(
+        (it) =>
+          String(it.seriesId || "").toLowerCase() === String(seriesId).toLowerCase() &&
+          String(it.rank || "").toUpperCase() === String(rank).toUpperCase()
+      ),
+    [userItems, seriesId, rank]
+  );
+
+  // Seed（エミュに1件だけ投入）
+  const handleSeed = async () => {
+    try {
+      setSeeding(true);
+      const user = getAuth().currentUser;
+      if (!user) return;
+
+      await setDoc(
+        doc(db, "userItems", user.uid),
+        {
+          kabuto_S_01: {
+            seriesId: "kontyu",
+            rank: "S",
+            name: "カブト（S）",
+            stage: 3,
+            imageName: "kabuto_S_aomushi",
+            pw: 300,
+          },
+        },
+        { merge: true }
       );
 
-      setUserPw((prev) => prev - amount);
-    } catch (error) {
-      alert("PWの使用に失敗しました。");
+      await setDoc(
+        doc(db, "userItemPowers", user.uid, "items", "kabuto_S_01"),
+        { pw: 300, cpt: 0, bpt: 0 },
+        { merge: true }
+      );
+
+      await fetchAll();
+    } catch (e) {
+      console.error("seed error:", e);
+    } finally {
+      setSeeding(false);
     }
-    setSelectedItem(null);
   };
 
-  const handleUseCpt = async (amount) => {
-    if (!selectedItem) return;
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) return;
-    const db = getFirestore();
-    const userRef = doc(db, "users", user.uid);
-    const itemId = selectedItem.itemId;
-
-    try {
-      await updateDoc(userRef, {
-        [`items.${itemId}.cpt`]: increment(amount),
-        cpt: increment(-amount),
-      });
-
-      setUserItems((prev) => ({
-        ...prev,
-        [itemId]: {
-          ...(prev[itemId] || {}),
-          cpt: (prev[itemId]?.cpt || 0) + amount,
-        },
-      }));
-
-      setUserCpt((prev) => prev - amount);
-    } catch (error) {
-      alert("Cptの使用に失敗しました。");
-    }
-    setSelectedItem(null);
+  // このアイテムでバトルへ（カード全体がボタン）
+  const goBattleWith = (item) => {
+    navigate("/battle", { state: { selectedItem: item } });
   };
 
-  const handleUseBpt = async (amount) => {
-    if (!selectedItem) return;
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) return;
-    const db = getFirestore();
-    const userRef = doc(db, "users", user.uid);
-    const itemId = selectedItem.itemId;
-
-    try {
-      await updateDoc(userRef, {
-        [`items.${itemId}.bpt`]: increment(amount),
-        bpt: increment(-amount),
-      });
-
-      setUserItems((prev) => ({
-        ...prev,
-        [itemId]: {
-          ...(prev[itemId] || {}),
-          bpt: (prev[itemId]?.bpt || 0) + amount,
-        },
-      }));
-
-      setUserBpt((prev) => prev - amount);
-    } catch (error) {
-      alert("Bptの使用に失敗しました。");
-    }
-    setSelectedItem(null);
-  };
-
-  const oshiImagePath = oshiId ? `/images/oshi/oshi_${oshiId}.png` : null;
+  if (!authReady) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-3">{seriesId} シリーズ・{rank} ランクのアイテム一覧</h1>
+        <p>ログイン準備中…</p>
+      </div>
+    );
+  }
+  if (loading) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-3">{seriesId} シリーズ・{rank} ランクのアイテム一覧</h1>
+        <p>読み込み中…</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">
-        {seriesId} シリーズ・{rank} ランクのアイテム一覧
-      </h2>
+    <div className="min-h-screen p-6">
+      <h1 className="text-2xl font-bold mb-4">{seriesId} シリーズ・{rank} ランクのアイテム一覧</h1>
 
-      <div className="mb-2 text-right text-gray-700 font-bold">
-        あなたの所持PW：<span className="text-blue-600">{userPw}</span><br />
-        あなたの所持Cpt：<span className="text-red-500">{userCpt}</span><br />
-        あなたの所持Bpt：<span className="text-blue-500">{userBpt}</span>
-      </div>
-
-      <div className="flex gap-4 mb-4 flex-wrap">
+      <div className="flex flex-wrap gap-3 mb-4">
         <button
-          className={`px-4 py-2 rounded font-bold text-white ${isPwMode ? "bg-red-500" : "bg-blue-500"}`}
-          onClick={() => {
-            setIsPwMode(!isPwMode);
-            setIsCptMode(false);
-            setIsBptMode(false);
-            setIsBattleMode(false);
-          }}
+          onClick={handleSeed}
+          disabled={seeding}
+          className="px-3 py-2 rounded bg-emerald-600 text-white disabled:opacity-60"
         >
-          {isPwMode ? "PW使用中！" : "PWを使う"}
-        </button>
-
-        <button
-          className={`px-4 py-2 rounded font-bold text-white ${isCptMode ? "bg-red-500" : "bg-blue-500"}`}
-          onClick={() => {
-            setIsCptMode(!isCptMode);
-            setIsPwMode(false);
-            setIsBptMode(false);
-            setIsBattleMode(false);
-          }}
-        >
-          {isCptMode ? "Cpt使用中！" : "Cptを使う"}
-        </button>
-
-        <button
-          className={`px-4 py-2 rounded font-bold text-white ${isBptMode ? "bg-red-500" : "bg-blue-500"}`}
-          onClick={() => {
-            setIsBptMode(!isBptMode);
-            setIsPwMode(false);
-            setIsCptMode(false);
-            setIsBattleMode(false);
-          }}
-        >
-          {isBptMode ? "Bpt使用中！" : "Bptを使う"}
-        </button>
-
-        <button
-          className={`px-4 py-2 rounded font-bold text-white ${isBattleMode ? "bg-yellow-500" : "bg-gray-700"}`}
-          onClick={() => {
-            setIsBattleMode(!isBattleMode);
-            setIsPwMode(false);
-            setIsCptMode(false);
-            setIsBptMode(false);
-          }}
-        >
-          {isBattleMode ? "バトル選択中！" : "バトルで使う！"}
+          {seeding ? "Seeding…" : "Seed（1件追加）"}
         </button>
       </div>
 
-      {loading ? (
-        <p>読み込み中...</p>
+      {filteredItems.length === 0 ? (
+        <p className="text-gray-600">このランクのアイテムは見つかりません。</p>
       ) : (
-        <div className="flex flex-wrap gap-4">
-          {filteredItems.length > 0 ? (
-            filteredItems.map(item => {
-              const imageName = item.imageName || item.name;
-              const imagePath = `/images/${item.seriesId}/stage${item.stage}/${imageName}.png`;
-
-              return (
-                <div
-                  key={item.itemId}
-                  onClick={() => {
-                    if (isPwMode || isCptMode || isBptMode) {
-                      setSelectedItem(item);
-                    } else if (isBattleMode) {
-                      const selected = {
-                        ...item,
-                        imagePath,
-                        imageName,
-                        rank: item.rank,
-                        pw: item.pw || 0,
-                        cpt: item.cpt || 0,
-                        bpt: item.bpt || 0,
-                      };
-                      navigate("/battle/start", { state: { selectedItem: selected } });
-                    } else {
-                      navigate(`/zukan/${seriesId}/${rank}/${item.name}`);
-                    }
-                  }}
-                >
-                  <ItemCard
-                    key={item.itemId}
-                    item={item}
-                    owned={userItems[item.itemId]}
-                    highestZone={highestZones[item.itemId]}
-                    onClick={() => {}}
-                    pwMode={isPwMode}
-                    cptMode={isCptMode}
-                    bptMode={isBptMode}
-                  />
-                </div>
-              );
-            })
-          ) : (
-            <p>このランクのアイテムは見つかりません。</p>
-          )}
+        <div className="flex flex-wrap gap-3">
+          {filteredItems.map((item) => (
+            <button
+              key={item.itemId}
+              type="button"
+              onClick={() => goBattleWith(item)}
+              aria-label={`${item.name}でバトルする`}
+              className="border rounded p-2 hover:shadow transition text-left cursor-pointer focus:outline-none focus:ring-4 focus:ring-blue-300"
+              title="カードをクリックでバトルへ"
+            >
+              <ItemCard item={item} owned={true} />
+            </button>
+          ))}
         </div>
-      )}
-
-      {oshiImagePath && (
-        <img
-          src={oshiImagePath}
-          alt="ナビキャラ"
-          className="fixed bottom-4 right-4 w-24 h-24 object-contain z-50"
-        />
-      )}
-
-      {selectedItem && isPwMode && (
-        <PwUseModal
-          item={selectedItem}
-          userPw={userPw}
-          onClose={() => setSelectedItem(null)}
-          onConfirm={handleUsePw}
-        />
-      )}
-
-      {selectedItem && isCptMode && (
-        <CptUseModal
-          item={selectedItem}
-          userCpt={userCpt}
-          onClose={() => setSelectedItem(null)}
-          onConfirm={handleUseCpt}
-        />
-      )}
-
-      {selectedItem && isBptMode && (
-        <BptUseModal
-          item={selectedItem}
-          userBpt={userBpt}
-          onClose={() => setSelectedItem(null)}
-          onConfirm={handleUseBpt}
-        />
       )}
     </div>
   );
-};
-
-export default ZukanSeriesPage;
+}

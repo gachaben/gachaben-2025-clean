@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { db } from "../firebase";
+import { recordMistakes } from "../lib/recordMistakes";
 
 // ベット候補
 const PW_OPTIONS = [50, 100, 200, 300, 400, 500];
@@ -106,6 +107,10 @@ export default function BattlePlayPage() {
   const [myCorrect, setMyCorrect] = useState(null);
   const [cpuCorrect, setCpuCorrect] = useState(null);
 
+  // 復習用：各問の結果ログ（←今回追加）
+  // 形: { id, correct, snapshot:{ text, choices:[{label}], answerIndex } }
+  const [questionLog, setQuestionLog] = useState([]);
+
   // 演出
   const cpuTimerRef = useRef(null);
   const revealTimerRef = useRef(null);
@@ -153,23 +158,18 @@ export default function BattlePlayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, sudden, enemyLeft, round, suddenCount]);
 
-
-
-// 追加：テスト書き込み関数
-const writeTest = async () => {
-  try {
-    const ref = await addDoc(collection(db, "battles_test"), {
-      ok: true,
-      at: serverTimestamp(),
-    });
-    console.log("🧪 test write ok:", ref.id);
-  } catch (e) {
-    console.error("🧪 test write NG:", e);
-  }
-};
-
-
-
+  // テスト書き込み（任意）
+  const writeTest = async () => {
+    try {
+      const ref = await addDoc(collection(db, "battles_test"), {
+        ok: true,
+        at: serverTimestamp(),
+      });
+      console.log("🧪 test write ok:", ref.id);
+    } catch (e) {
+      console.error("🧪 test write NG:", e);
+    }
+  };
 
   // 「試合終了」になったら一度だけ保存
   useEffect(() => {
@@ -224,6 +224,24 @@ const writeTest = async () => {
     setFloatMy("");
     setFloatEnemy("");
 
+    // === 復習用ログに1件追加（今回追加） ===
+    if (q) {
+      const answerIndex = q.options.indexOf(q.answer);
+      const itemId = `r${round}${sudden ? `-sd${suddenCount + 1}` : ""}`;
+      setQuestionLog((prev) => [
+        ...prev,
+        {
+          id: itemId,
+          correct: !!meOK,
+          snapshot: {
+            text: q.text,
+            choices: q.options.map((label) => ({ label })),
+            answerIndex: Math.max(0, answerIndex),
+          },
+        },
+      ]);
+    }
+
     if (meOK && !cpuOK) {
       const amt = myBet || 0;
       setEnemyLeft((prev) => Math.max(0, prev - amt));
@@ -258,7 +276,7 @@ const writeTest = async () => {
     setTimeout(() => setFlash(false), 180);
   };
 
-  // ★ 試合結果をFirestoreに記録
+  // ★ 試合結果をFirestoreに記録 + 誤答を mistakes へ記録
   const saveBattleRecord = async () => {
     try {
       const uid = getAuth().currentUser?.uid ?? "anon";
@@ -281,8 +299,19 @@ const writeTest = async () => {
       };
       console.log("📝 saveBattleRecord payload:", payload);
 
+      // battles へ保存
       const ref = await addDoc(collection(db, "battles"), payload);
       console.log("✅ battles written docId:", ref.id);
+
+      // ❗誤答だけ mistakes へ（questionLog が空でも安全）
+      const wrongs = Array.isArray(questionLog)
+        ? questionLog.filter((x) => !x.correct).map((x) => ({
+            questionId: x.id,
+            snapshot: x.snapshot ?? null,
+          }))
+        : [];
+
+      await recordMistakes({ uid, wrongs, source: "battle" });
       setSaved(true);
     } catch (e) {
       console.error("❌ save battle failed:", e);
@@ -319,6 +348,7 @@ const writeTest = async () => {
     setEnemyBet(null);
     setPhase("bet");
     setSaved(false);
+    setQuestionLog([]); // 復習ログもリセット
   };
 
   const myValidOptions = PW_OPTIONS.filter((p) => p > 0 && p <= myLeft);
@@ -504,9 +534,8 @@ const writeTest = async () => {
                 準備画面へ戻る
               </button>
               <button onClick={writeTest} className="px-4 py-2 rounded bg-emerald-500 text-white">
-  テスト書き込み
-</button>
-
+                テスト書き込み
+              </button>
             </div>
           </div>
         )}

@@ -1,21 +1,40 @@
-import { initializeApp } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+// src/firebase.js
+import { initializeApp, getApp, getApps } from "firebase/app";
+import {
+  getAuth, connectAuthEmulator
+} from "firebase/auth";
+import {
+  initializeFirestore, connectFirestoreEmulator, setLogLevel
+} from "firebase/firestore";
+
+const PROJECT_ID = "demo-gachaben";
 
 const firebaseConfig = {
-  apiKey: "dummy-api-key", // エミュ用のダミー
-  authDomain: "localhost",
-  projectId: "demo-project", // エミュ用プロジェクトID
+  apiKey: "demo",
+  authDomain: `${PROJECT_ID}.firebaseapp.com`,
+  projectId: PROJECT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// エミュレーターに接続
-if (location.hostname === "localhost") {
+// 👇 ここがポイント：Long Polling & fetch streams off
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  useFetchStreams: false,
+});
+
+export const auth = getAuth(app);
+
+// ローカル or 環境変数で切替
+const isLocal =
+  typeof location !== "undefined" &&
+  (location.hostname === "localhost" || location.hostname === "127.0.0.1");
+const useEmu = isLocal || import.meta?.env?.VITE_USE_EMU === "true";
+
+if (useEmu) {
   connectAuthEmulator(auth, "http://localhost:9099");
   connectFirestoreEmulator(db, "localhost", 8080);
+  setLogLevel("debug");
+  console.log("[EMU] connected → Auth:9099 / Firestore:8080");
+  console.log("[EMU] projectId =", app.options.projectId);
 }
-
-export { auth, db };

@@ -1,6 +1,9 @@
 // src/pages/BattlePlayPage.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { db } from "../firebase";
 
 // ベット候補
 const PW_OPTIONS = [50, 100, 200, 300, 400, 500];
@@ -111,15 +114,18 @@ export default function BattlePlayPage() {
   const [floatMy, setFloatMy] = useState("");
   const [floatEnemy, setFloatEnemy] = useState("");
 
+  // 保存済みフラグ
+  const [saved, setSaved] = useState(false);
+
   // %（中央ゲージ）
   const { myPct, enemyPct } = useMemo(() => {
     const total = Math.max(1, myLeft + enemyLeft);
     return { myPct: (myLeft / total) * 100, enemyPct: (enemyLeft / total) * 100 };
   }, [myLeft, enemyLeft]);
 
-  // ラウンド開始
+  // ラウンド開始時のセットアップ（bet/サドンデス切替にも反応）
   useEffect(() => {
-    if (phase !== "bet" && !sudden) return;
+    if (phase !== "bet") return;
 
     if (!sudden) {
       setPickBet(null);
@@ -145,7 +151,34 @@ export default function BattlePlayPage() {
 
     if (sudden) setPhase("question");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, sudden]);
+  }, [phase, sudden, enemyLeft, round, suddenCount]);
+
+
+
+// 追加：テスト書き込み関数
+const writeTest = async () => {
+  try {
+    const ref = await addDoc(collection(db, "battles_test"), {
+      ok: true,
+      at: serverTimestamp(),
+    });
+    console.log("🧪 test write ok:", ref.id);
+  } catch (e) {
+    console.error("🧪 test write NG:", e);
+  }
+};
+
+
+
+
+  // 「試合終了」になったら一度だけ保存
+  useEffect(() => {
+    if (phase === "end" && !saved) {
+      console.log("🏁 phase is 'end' & not saved yet → saving...");
+      saveBattleRecord();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, saved]);
 
   // タイマー掃除
   useEffect(() => {
@@ -225,6 +258,37 @@ export default function BattlePlayPage() {
     setTimeout(() => setFlash(false), 180);
   };
 
+  // ★ 試合結果をFirestoreに記録
+  const saveBattleRecord = async () => {
+    try {
+      const uid = getAuth().currentUser?.uid ?? "anon";
+      const payload = {
+        uid,
+        me: {
+          name: selectedItem?.name ?? "unknown",
+          start: loc.state?.myPwLeft ?? 300,
+          end: myLeft,
+        },
+        enemy: {
+          name: enemyItem?.name ?? "CPU",
+          start: loc.state?.enemyPwLeft ?? 300,
+          end: enemyLeft,
+        },
+        roundsPlayed: round,
+        questionCount,
+        winner: myLeft > enemyLeft ? "me" : (myLeft < enemyLeft ? "enemy" : "draw"),
+        createdAt: serverTimestamp(),
+      };
+      console.log("📝 saveBattleRecord payload:", payload);
+
+      const ref = await addDoc(collection(db, "battles"), payload);
+      console.log("✅ battles written docId:", ref.id);
+      setSaved(true);
+    } catch (e) {
+      console.error("❌ save battle failed:", e);
+    }
+  };
+
   const nextStep = () => {
     const isFinished = myLeft <= 0 || enemyLeft <= 0 || round >= questionCount;
     if (isFinished) {
@@ -234,6 +298,7 @@ export default function BattlePlayPage() {
           winSound.current.play();
         } catch {}
       }
+      // ここでは保存しない（phaseが'end'になったらuseEffectで一度だけ保存）
       setPhase("end");
       return;
     }
@@ -253,6 +318,7 @@ export default function BattlePlayPage() {
     setMyBet(null);
     setEnemyBet(null);
     setPhase("bet");
+    setSaved(false);
   };
 
   const myValidOptions = PW_OPTIONS.filter((p) => p > 0 && p <= myLeft);
@@ -429,7 +495,7 @@ export default function BattlePlayPage() {
             <div className="mb-2">
               あなた {myLeft} PW / 相手 {enemyLeft} PW
             </div>
-            <div className="mb-4 text-lg">{myLeft > enemyLeft ? "あなたの勝ち！" : "あなたの負け…"}</div>
+            <div className="mb-4 text-lg">{myLeft > enemyLeft ? "あなたの勝ち！" : (myLeft < enemyLeft ? "あなたの負け…" : "引き分け")}</div>
             <div className="flex flex-wrap gap-2 justify-center">
               <button onClick={resetMatch} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">
                 もう一度
@@ -437,6 +503,10 @@ export default function BattlePlayPage() {
               <button onClick={() => navigate(-1)} className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600">
                 準備画面へ戻る
               </button>
+              <button onClick={writeTest} className="px-4 py-2 rounded bg-emerald-500 text-white">
+  テスト書き込み
+</button>
+
             </div>
           </div>
         )}

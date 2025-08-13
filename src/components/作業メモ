@@ -52,3 +52,96 @@ npm run dev
 
 この流れでいきますか？
 明日は①を先にやればすぐ再開できる状態です。
+
+
+作業メモ（2025-08-12）
+1. 状況
+バトル終了時に saveBattleRecord() が正しく呼ばれ、コンソールには
+📝 saveBattleRecord payload: → ✅ battles written docId: が出ている
+
+つまり書き込みは成功している
+
+しかし Firestore Emulator UI に battles コレクションが表示されない
+
+2. 判明した原因候補
+Emulator UI が見ている ProjectId と、アプリの接続 ProjectId が違う
+
+Emulator Overview では gachaben-2025
+
+アプリの firebase.js は demo-gachaben
+
+そのため UI の URL を切り替えても一致せずデータが見えない
+
+Firebase App named '[DEFAULT]' already exists... エラー（duplicate-app）
+
+initializeApp() が複数回走っている
+
+firebase_old.js や複数 import の影響の可能性あり
+
+3. 今日試したこと
+Firestore UI のURLを .../firestore/{projectId}/(default)/data に変更して確認
+
+.firebaserc を作って "default": "demo-gachaben" に設定
+
+Requests タブでの確認も試みたが、リクエストが表示されず
+
+コンソールログで ✅ battles written docId: は毎回出ていることを確認
+
+4. 次回やること（優先順）
+firebase.js の修正（duplicate-app対策＆projectId統一）
+
+js
+コピーする
+編集する
+import { initializeApp, getApp, getApps } from "firebase/app";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "demo",
+  authDomain: "demo.firebaseapp.com",
+  projectId: "demo-gachaben", // ← .firebaserc と合わせる
+};
+
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+  connectAuthEmulator(auth, "http://127.0.0.1:9099");
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  console.log("[EMU] connected → Auth:9099 / Firestore:8080");
+  console.log("[EMU] projectId =", getApp().options.projectId);
+}
+.firebaserc を以下の内容にする（プロジェクト直下）
+
+json
+コピーする
+編集する
+{
+  "projects": {
+    "default": "demo-gachaben"
+  }
+}
+Vite と Emulator を一度停止して再起動
+
+firebase emulators:start
+
+npm run dev
+
+ブラウザで [EMU] projectId = demo-gachaben が出ているか確認
+
+Firestore UI のURLを
+http://localhost:4001/firestore/demo-gachaben/(default)/data にして確認
+
+もし表示されなければ
+
+Logsタブで ProjectId を確認
+
+Requestsタブで行が出るか確認
+
+firebase_old.js の import が残っていないか検索
+
+この続きは「firebase.js の修正版」と「.firebaserc の設定確認」から始めればOK。
+ここまで直れば、Emulator UI に battles コレクションが出るはず。

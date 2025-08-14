@@ -1,10 +1,21 @@
 // src/firebase.js
 import { initializeApp, getApp, getApps } from "firebase/app";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import {
+  getAuth,
+  connectAuthEmulator,
+  // ↓ LoginPage で使うのでここでまとめて re-export します
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInAnonymously,
+  signOut,
+  onAuthStateChanged,
+} from "firebase/auth";
 import {
   initializeFirestore,
   connectFirestoreEmulator,
   setLogLevel,
+  // Firestore ヘルパを re-export 用に import
+  setDoc, doc, serverTimestamp, updateDoc, collection, getDocs,
 } from "firebase/firestore";
 
 // ▶ 本番用プロジェクトIDは必要になった時に差し替え
@@ -31,7 +42,20 @@ export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   useFetchStreams: false,
 });
+
+// Firestore ヘルパを使いやすく re-export
+export { setDoc, doc, serverTimestamp, updateDoc, collection, getDocs };
+
 export const auth = getAuth(app);
+
+// Auth 関数もまとめて re-export（LoginPage から import しやすく）
+export {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInAnonymously,
+  signOut,
+  onAuthStateChanged,
+};
 
 if (useEmu) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });

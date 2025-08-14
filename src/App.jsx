@@ -5,6 +5,7 @@ import ZukanSeriesPage from "./pages/ZukanSeriesPage.jsx";
 import BattleStartPage from "./pages/BattleStartPage.jsx";
 import BattlePlayPage from "./pages/BattlePlayPage.jsx";
 import { writeTestBattle } from "./debug/writeTestBattle";
+import AdminDataPage from "./pages/AdminDataPage.jsx";
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Route path="/zukan/:seriesId/:rank" element={<ZukanSeriesPage />} />
         <Route path="/battle" element={<BattleStartPage />} />
         <Route path="/battle/play" element={<BattlePlayPage />} />
+        <Route path="/admin/data" element={<AdminDataPage />} />
       </Routes>
 
       <div style={{ padding: "1rem" }}>

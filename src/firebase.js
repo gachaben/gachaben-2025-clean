@@ -2,13 +2,21 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAuth, connectAuthEmulator } from "firebase/auth";
 import {
-  getFirestore,
   initializeFirestore,
   connectFirestoreEmulator,
   setLogLevel,
 } from "firebase/firestore";
 
-const PROJECT_ID = "demo-gachaben";
+// ▶ 本番用プロジェクトIDは必要になった時に差し替え
+const PROD_PROJECT_ID = ""; // 例: "gachaben-prod"
+const EMU_PROJECT_ID  = "demo-gachaben";
+
+const useEmu =
+  (typeof location !== "undefined" &&
+    (location.hostname === "localhost" || location.hostname === "127.0.0.1")) ||
+  import.meta?.env?.VITE_USE_EMU === "true";
+
+const PROJECT_ID = useEmu ? EMU_PROJECT_ID : (import.meta.env.VITE_FIREBASE_PROJECT_ID || PROD_PROJECT_ID);
 
 const firebaseConfig = {
   apiKey: "demo",
@@ -18,25 +26,18 @@ const firebaseConfig = {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// 👇 Safari 対策：Long Polling / fetch streams 無効
+// Safari 安定化
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   useFetchStreams: false,
 });
-
 export const auth = getAuth(app);
-
-// 開発時 or ENVで切り替え
-const isLocal =
-  typeof location !== "undefined" &&
-  (location.hostname === "localhost" || location.hostname === "127.0.0.1");
-const useEmu = isLocal || import.meta?.env?.VITE_USE_EMU === "true";
 
 if (useEmu) {
   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
-  connectFirestoreEmulator(db, "127.0.0.1", 8088); // ← firebase.json と同じ 8088
+  connectFirestoreEmulator(db, "127.0.0.1", Number(import.meta.env.VITE_FIRESTORE_PORT || 8088));
   setLogLevel("debug");
-  console.log("[EMU] connected → Auth:9099 / Firestore:8088");
+  console.log("[EMU] connected → Auth:9099 / Firestore:", import.meta.env.VITE_FIRESTORE_PORT || 8088);
   console.log("[EMU] projectId =", app.options.projectId);
 }
 

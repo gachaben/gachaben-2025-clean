@@ -1,3 +1,4 @@
+// まずは緩め（エミュだけで使用）
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {

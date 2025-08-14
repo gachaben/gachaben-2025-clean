@@ -2,10 +2,12 @@
   "emulators": {
     "firestore": { "host": "127.0.0.1", "port": 8088 },
     "auth": { "host": "127.0.0.1", "port": 9099 },
-    "functions": { "host": "127.0.0.1", "port": 5001 },
-    "ui": { "host": "127.0.0.1", "port": 4001 },
-    "singleProjectMode": true
+    "ui": { "host": "127.0.0.1", "port": 4002 },
+    "singleProjectMode": true,
+    "import": ".emulator-data",
+    "exportOnExit": ".emulator-data"
   },
+
   "functions": [
     {
       "source": "functions",

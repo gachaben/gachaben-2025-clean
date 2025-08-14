@@ -1,52 +1,23 @@
 // src/lib/saveBattleRecord.js
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  waitForPendingWrites,
-} from "firebase/firestore";
 
-/** 入力チェック & 正規化 */
-function buildBattlePayload(raw) {
-  if (!raw) throw new Error("payload is required");
-
-  const { uid = "anon", me, enemy, roundsPlayed, questionCount, winner } = raw;
-
-  if (!me || !enemy) throw new Error("me/enemy required");
-  const num = (v) => Number.isFinite(v);
-  if (![me.start, me.end, enemy.start, enemy.end].every(num)) {
-    throw new Error("start/end must be number");
-  }
-  if (![roundsPlayed, questionCount].every(num)) {
-    throw new Error("roundsPlayed/questionCount must be number");
-  }
-  if (!["me", "enemy", "draw"].includes(winner)) {
-    throw new Error("winner invalid");
-  }
-
-  return {
-    uid,
-    me: { name: me.name ?? "", start: me.start, end: me.end },
-    enemy: { name: enemy.name ?? "", start: enemy.start, end: enemy.end },
-    roundsPlayed,
-    questionCount,
-    winner,
-  };
-}
-
-/** battles に記録（サーバ反映まで待つ） */
-export async function saveBattleRecord(rawPayload) {
-  const payload = buildBattlePayload(rawPayload);
-
-  const ref = await addDoc(collection(db, "battles"), {
-    ...payload,
+/**
+ * バトル結果を保存
+ * @param {{start:number,end:number,roundsPlayed:number,winner:"you"|"enemy", userId?:string}} payload
+ * @returns {Promise<string>} battleId
+ */
+export async function saveBattleRecord(payload) {
+  const safe = {
+    start: payload.start ?? 0,
+    end: payload.end ?? 0,
+    roundsPlayed: payload.roundsPlayed ?? 0,
+    winner: payload.winner ?? "enemy",
+    userId: payload.userId ?? null,
     createdAt: serverTimestamp(),
-  });
-
-  // エミュ/本番どちらでも確実にサーバ反映されるまで待機
-  await waitForPendingWrites(db);
-
+  };
+  const ref = await addDoc(collection(db, "battles"), safe);
   console.log("✅ battles written docId:", ref.id);
   return ref.id;
 }
+

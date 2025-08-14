@@ -5,13 +5,12 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
-    "dev:web": "vite",
     "dev:emu": "node --no-warnings ./node_modules/firebase-tools/lib/bin/firebase.js emulators:start --only auth,firestore --project demo-gachaben",
-    "start:dev": "concurrently -k -n EMU,WEB -c magenta,cyan \"npm:dev:emu\" \"wait-on tcp:8088 && npm:dev:web\"",
-    "seed": "node seed.js",
+    "start:dev": "concurrently -k -n EMU,WEB -c magenta,cyan \"npm run dev:emu\" \"wait-on tcp:8088 && npm run dev\"",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "dev:emu:functions": "node --no-warnings ./node_modules/firebase-tools/lib/bin/firebase.js emulators:start --only auth,firestore,functions --project demo-gachaben"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
@@ -32,10 +31,5 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.3"
-  },
-  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
-  "main": "eslint.config.js",
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }

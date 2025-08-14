@@ -4,15 +4,17 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { db } from "../firebase";
+import { saveBattleRecord } from "../lib/saveBattleRecord";
+import { recordMistake } from "../lib/recordMistakes";
 
 // ベット候補
 const PW_OPTIONS = [50, 100, 200, 300, 400, 500];
 
-// ダミー問題
+// ダミー問題（id を追加）
 const QUESTIONS = [
-  { text: "カブトムシの幼虫がよく食べるものは？", options: ["木の葉", "腐葉土", "花の蜜", "昆虫ゼリー"], answer: "腐葉土" },
-  { text: "クワガタの大アゴが一番発達しているステージは？", options: ["卵", "幼虫", "さなぎ", "成虫"], answer: "成虫" },
-  { text: "アゲハの幼虫の擬態で有名なのは？", options: ["鳥のフン", "枝", "石", "花びら"], answer: "鳥のフン" },
+  { id: "Q-001", text: "カブトムシの幼虫がよく食べるものは？", options: ["木の葉", "腐葉土", "花の蜜", "昆虫ゼリー"], answer: "腐葉土" },
+  { id: "Q-002", text: "クワガタの大アゴが一番発達しているステージは？", options: ["卵", "幼虫", "さなぎ", "成虫"], answer: "成虫" },
+  { id: "Q-003", text: "アゲハの幼虫の擬態で有名なのは？", options: ["鳥のフン", "枝", "石", "花びら"], answer: "鳥のフン" },
 ];
 
 // 演出の“間”
@@ -114,8 +116,12 @@ export default function BattlePlayPage() {
   const [floatMy, setFloatMy] = useState("");
   const [floatEnemy, setFloatEnemy] = useState("");
 
-  // 保存済みフラグ
+  // 保存フラグ/ID
   const [saved, setSaved] = useState(false);
+  const battleIdRef = useRef(null);
+
+  // ミス一時バッファ（バトル終了後に battleId を付けて保存）
+  const mistakesBufferRef = useRef([]);
 
   // %（中央ゲージ）
   const { myPct, enemyPct } = useMemo(() => {
@@ -153,40 +159,18 @@ export default function BattlePlayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, sudden, enemyLeft, round, suddenCount]);
 
-
-
-// 追加：テスト書き込み関数
-const writeTest = async () => {
-  try {
-    const ref = await addDoc(collection(db, "battles_test"), {
-      ok: true,
-      at: serverTimestamp(),
-    });
-    console.log("🧪 test write ok:", ref.id);
-  } catch (e) {
-    console.error("🧪 test write NG:", e);
-  }
-};
-
-
-
-
-  // 「試合終了」になったら一度だけ保存
-  useEffect(() => {
-    if (phase === "end" && !saved) {
-      console.log("🏁 phase is 'end' & not saved yet → saving...");
-      saveBattleRecord();
+  // 追加：テスト書き込み関数
+  const writeTest = async () => {
+    try {
+      const ref = await addDoc(collection(db, "battles_test"), {
+        ok: true,
+        at: serverTimestamp(),
+      });
+      console.log("🧪 test write ok:", ref.id);
+    } catch (e) {
+      console.error("🧪 test write NG:", e);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, saved]);
-
-  // タイマー掃除
-  useEffect(() => {
-    return () => {
-      if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current);
-      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
-    };
-  }, []);
+  };
 
   // ベット確定
   const confirmBetAndStart = () => {
@@ -202,6 +186,17 @@ const writeTest = async () => {
     const meOK = opt === q.answer;
     setMyAnswer(opt);
     setMyCorrect(meOK);
+
+    // ✍️ 自分が間違えたらミスをバッファに積む（battleId は後で付与）
+    if (!meOK) {
+      mistakesBufferRef.current.push({
+        questionId: q.id,
+        round,
+        choice: opt,
+        correct: q.answer,
+        difficulty: null,
+      });
+    }
 
     cpuTimerRef.current = setTimeout(() => {
       const cpuIsCorrect = Math.random() < 0.6;
@@ -258,36 +253,50 @@ const writeTest = async () => {
     setTimeout(() => setFlash(false), 180);
   };
 
-  // ★ 試合結果をFirestoreに記録
-  const saveBattleRecord = async () => {
-    try {
-      const uid = getAuth().currentUser?.uid ?? "anon";
-      const payload = {
-        uid,
-        me: {
-          name: selectedItem?.name ?? "unknown",
-          start: loc.state?.myPwLeft ?? 300,
-          end: myLeft,
-        },
-        enemy: {
-          name: enemyItem?.name ?? "CPU",
-          start: loc.state?.enemyPwLeft ?? 300,
-          end: enemyLeft,
-        },
-        roundsPlayed: round,
-        questionCount,
-        winner: myLeft > enemyLeft ? "me" : (myLeft < enemyLeft ? "enemy" : "draw"),
-        createdAt: serverTimestamp(),
-      };
-      console.log("📝 saveBattleRecord payload:", payload);
+  // 「試合終了」になったら一度だけ保存（battle→mistakes の順で）
+  useEffect(() => {
+    if (phase !== "end" || saved) return;
 
-      const ref = await addDoc(collection(db, "battles"), payload);
-      console.log("✅ battles written docId:", ref.id);
+    (async () => {
+      console.log("🏁 phase is 'end' & not saved yet → saving...");
+
+      // 1) battle 保存（util を使う）
+      const battleId = await saveBattleRecord({
+        start: loc.state?.myPwLeft ?? 300,
+        end: myLeft,
+        roundsPlayed: round,
+        winner: myLeft > enemyLeft ? "you" : myLeft < enemyLeft ? "enemy" : "draw",
+        userId: getAuth().currentUser?.uid ?? null,
+      });
+      battleIdRef.current = battleId;
+
+      // 2) mistakes を flush
+      const buf = mistakesBufferRef.current || [];
+      for (const m of buf) {
+        await recordMistake({
+          battleId,
+          questionId: m.questionId,
+          round: m.round,
+          choice: m.choice,
+          correct: m.correct,
+          difficulty: m.difficulty ?? null,
+          userId: getAuth().currentUser?.uid ?? null,
+        });
+      }
+      console.log("🧾 mistakes flushed:", buf.length);
       setSaved(true);
-    } catch (e) {
-      console.error("❌ save battle failed:", e);
-    }
-  };
+    })().catch((e) => console.error("❌ save sequence failed:", e));
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, saved]);
+
+  // タイマー掃除
+  useEffect(() => {
+    return () => {
+      if (cpuTimerRef.current) clearTimeout(cpuTimerRef.current);
+      if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+    };
+  }, []);
 
   const nextStep = () => {
     const isFinished = myLeft <= 0 || enemyLeft <= 0 || round >= questionCount;
@@ -298,8 +307,7 @@ const writeTest = async () => {
           winSound.current.play();
         } catch {}
       }
-      // ここでは保存しない（phaseが'end'になったらuseEffectで一度だけ保存）
-      setPhase("end");
+      setPhase("end"); // ← useEffectが保存処理を起動
       return;
     }
     setRound((r) => r + 1);
@@ -319,6 +327,8 @@ const writeTest = async () => {
     setEnemyBet(null);
     setPhase("bet");
     setSaved(false);
+    mistakesBufferRef.current = [];
+    battleIdRef.current = null;
   };
 
   const myValidOptions = PW_OPTIONS.filter((p) => p > 0 && p <= myLeft);
@@ -504,9 +514,8 @@ const writeTest = async () => {
                 準備画面へ戻る
               </button>
               <button onClick={writeTest} className="px-4 py-2 rounded bg-emerald-500 text-white">
-  テスト書き込み
-</button>
-
+                テスト書き込み
+              </button>
             </div>
           </div>
         )}

@@ -1,9 +1,26 @@
 {
   "emulators": {
-    "firestore": { "host": "127.0.0.1", "port": 8080 },
+    "firestore": { "host": "127.0.0.1", "port": 8088 },
     "auth": { "host": "127.0.0.1", "port": 9099 },
     "functions": { "host": "127.0.0.1", "port": 5001 },
-    "ui": { "host": "127.0.0.1", "port": 4001 }, 
+    "ui": { "host": "127.0.0.1", "port": 4001 },
     "singleProjectMode": true
-  }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ]
 }
+

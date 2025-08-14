@@ -18,7 +18,7 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/review" element={<ReviewPage />} />
-        <Route path="/review/play/:mistakeId" element={<ReviewPlayPage />} />
+        <Route path="/review/play/:id" element={<ReviewPlayPage />} />
         <Route path="/zukan/:seriesId/:rank" element={<ZukanSeriesPage />} />
         <Route path="/battle" element={<BattleStartPage />} />
         <Route path="/battle/play" element={<BattlePlayPage />} />

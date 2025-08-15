@@ -24,9 +24,19 @@ function shuffle(arr) {
 }
 
 export default function ReviewPlayPage() {
-  const { id: questionId } = useParams(); // URLの :id = questionId
+  const { id: questionId } = useParams();
   const navigate = useNavigate();
   const loc = useLocation();
+
+  // セッション情報（あれば連続出題）
+  const session = loc.state?.queue
+    ? {
+        queue: loc.state.queue,
+        index: Number(loc.state.index) || 0,
+        correctCount: Number(loc.state.correctCount) || 0,
+        startedAt: Number(loc.state.startedAt) || Date.now(),
+      }
+    : null;
 
   // 画面状態
   const [state, setState] = useState("loading"); // loading | ready | empty | error
@@ -36,7 +46,6 @@ export default function ReviewPlayPage() {
   const [mistake, setMistake] = useState(null);
 
   // UI状態
-  const [revealed, setRevealed] = useState(false);
   const [choices, setChoices] = useState([]);       // 残っている選択肢
   const [picked, setPicked] = useState(null);       // 直近にクリックした選択肢
   const [isCorrect, setIsCorrect] = useState(null); // null | true | false
@@ -103,33 +112,28 @@ export default function ReviewPlayPage() {
   // 選択肢の初期化（mistakeが入ったら）
   useEffect(() => {
     if (!mistake) return;
-    // options が保存/受け渡しされていればそれを、なければ最小限のフォールバック
     const baseOpts = Array.isArray(mistake.options) && mistake.options.length > 0
       ? [...mistake.options]
       : (mistake.correct ? [mistake.correct] : []);
-    // 念のため正解を含める
     if (mistake.correct && !baseOpts.includes(mistake.correct)) baseOpts.push(mistake.correct);
     setChoices(shuffle(baseOpts));
-    setRevealed(false);
     setPicked(null);
     setIsCorrect(null);
     setTries(0);
-  }, [mistake?.id]); // 新しい問題に来たらリセット
+  }, [mistake?.id]);
 
   const onPick = (opt) => {
     if (!mistake) return;
-    if (isCorrect === true) return;        // 既に正解ならロック
-    if (!choices.includes(opt)) return;    // もう消された選択肢は無視
+    if (isCorrect === true) return;
+    if (!choices.includes(opt)) return;
 
     setPicked(opt);
     setTries((t) => t + 1);
 
     if (opt === mistake.correct) {
       setIsCorrect(true);
-      setRevealed(true);
     } else {
       setIsCorrect(false);
-      // 不正解ならその選択肢を取り除いて再挑戦
       setChoices((prev) => prev.filter((c) => c !== opt));
     }
   };
@@ -146,6 +150,42 @@ export default function ReviewPlayPage() {
       console.error("markDone failed:", e);
       alert("完了にできませんでした");
     }
+  };
+
+  const goNextInSession = () => {
+    if (!session) return navigate("/review");
+    const nextIndex = session.index + 1;
+    const total = session.queue.length;
+    const nextCorrect = session.correctCount + (isCorrect ? 1 : 0);
+
+    if (nextIndex >= total) {
+      // 結果へ
+      return navigate("/review/result", {
+        state: {
+          total,
+          correct: nextCorrect,
+          elapsed: Date.now() - (session.startedAt || Date.now()),
+        },
+      });
+    }
+
+    // 次の問題へ
+    const next = session.queue[nextIndex];
+    navigate(`/review/play/${encodeURIComponent(next.questionId)}`, {
+      state: {
+        queue: session.queue,
+        index: nextIndex,
+        correctCount: nextCorrect,
+        startedAt: session.startedAt,
+        // 先読み用シード（即表示用）
+        text: next.text,
+        correct: next.correct,
+        subject: next.subject,
+        unit: next.unit,
+        options: next.options,
+        mistakeId: next.mistakeId,
+      },
+    });
   };
 
   if (state === "loading") {
@@ -171,25 +211,28 @@ export default function ReviewPlayPage() {
   }
 
   const canChoice = Array.isArray(choices) && choices.length >= 2;
+  const inSession = !!session;
+  const pos = inSession ? `${session.index + 1}/${session.queue.length}` : null;
 
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-4">
-      <button onClick={() => navigate(-1)} className="text-sm underline">← 戻る</button>
-
-      <div className="text-xs text-gray-500">
-        問題ID: <b>{mistake?.questionId}</b>
+      <div className="text-sm text-gray-600 flex items-center gap-2">
+        <button onClick={() => navigate(inSession ? "/review/start" : "/review")} className="underline">
+          ← 戻る
+        </button>
+        {inSession && <span className="px-2 py-0.5 rounded bg-gray-100">連続復習 {pos}</span>}
         {mistake?.subject && (
-          <span className="ml-2 px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
             科目: {mistake.subject}
           </span>
         )}
         {mistake?.unit && (
-          <span className="ml-2 px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+          <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
             単元: {mistake.unit}
           </span>
         )}
         {mistake?.done && (
-          <span className="ml-2 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
             完了済み
           </span>
         )}
@@ -226,20 +269,11 @@ export default function ReviewPlayPage() {
           </div>
         ) : (
           <>
-            {!revealed ? (
-              <button
-                onClick={() => setRevealed(true)}
-                className="px-4 py-2 rounded bg-emerald-600 text-white"
-              >
-                答えを見る
-              </button>
-            ) : (
-              <div className="mt-3 p-3 rounded bg-emerald-50 border border-emerald-200">
-                正解：<b>{mistake?.correct || "（未登録）"}</b>
-              </div>
-            )}
+            <div className="mt-3 p-3 rounded bg-emerald-50 border border-emerald-200">
+              正解：<b>{mistake?.correct || "（未登録）"}</b>
+            </div>
             <div className="text-xs text-gray-500 mt-2">
-              ※ この問題には選択肢が未登録です（保存時に options を付けると4択で出せます）
+              ※ この問題には選択肢が未登録です（mistakes.options が無い場合のフォールバック表示）
             </div>
           </>
         )}
@@ -252,7 +286,7 @@ export default function ReviewPlayPage() {
         )}
         {isCorrect === false && (
           <div className="mt-3 p-2 text-sm rounded bg-red-50 border border-red-200">
-            不正解… 別の選択肢を選んでみよう（選んだ肢は消えました）
+            不正解… 選んだ肢は消えました。別の選択肢を選んでみよう！
           </div>
         )}
 
@@ -266,12 +300,24 @@ export default function ReviewPlayPage() {
               この問題は完了にする
             </button>
           )}
-          <button
-            onClick={() => navigate("/review")}
-            className="px-4 py-2 rounded bg-blue-600 text-white"
-          >
-            一覧へ戻る
-          </button>
+
+          {inSession ? (
+            <button
+              onClick={goNextInSession}
+              disabled={isCorrect !== true}
+              className="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+              title="正解に到達すると次へ進めます"
+            >
+              次の問題へ
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate("/review")}
+              className="px-4 py-2 rounded bg-blue-600 text-white"
+            >
+              一覧へ戻る
+            </button>
+          )}
         </div>
       </div>
     </div>

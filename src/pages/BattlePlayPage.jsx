@@ -222,6 +222,7 @@ export default function BattlePlayPage() {
         choice: opt,
         correct: q.answer,
         text: q.text,
+        options: q.options,      // ← 追加
         subject: q.subject,
         unit: q.unit,
         difficulty: null,
@@ -311,6 +312,7 @@ export default function BattlePlayPage() {
           choice: m.choice,
           correct: m.correct,
           text: m.text ?? null,
+          options: m.options ?? null,
           subject: m.subject ?? null,
           unit: m.unit ?? null,
           difficulty: m.difficulty ?? null,

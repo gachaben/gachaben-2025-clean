@@ -2,18 +2,39 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db, auth, ensureSignedIn } from "../firebase"; // ← ここから uid を取得
+import { db, auth, ensureSignedIn } from "../firebase";
 import { saveBattleRecord } from "../lib/saveBattleRecord";
 import { recordMistake } from "../lib/recordMistakes";
 
 // ベット候補
 const PW_OPTIONS = [50, 100, 200, 300, 400, 500];
 
-// ダミー問題（id を追加）
+// ② ダミー問題：subject / unit を付与
 const QUESTIONS = [
-  { id: "Q-001", text: "カブトムシの幼虫がよく食べるものは？", options: ["木の葉", "腐葉土", "花の蜜", "昆虫ゼリー"], answer: "腐葉土" },
-  { id: "Q-002", text: "クワガタの大アゴが一番発達しているステージは？", options: ["卵", "幼虫", "さなぎ", "成虫"], answer: "成虫" },
-  { id: "Q-003", text: "アゲハの幼虫の擬態で有名なのは？", options: ["鳥のフン", "枝", "石", "花びら"], answer: "鳥のフン" },
+  {
+    id: "Q-001",
+    subject: "理科",
+    unit: "昆虫の成長",
+    text: "カブトムシの幼虫がよく食べるものは？",
+    options: ["木の葉", "腐葉土", "花の蜜", "昆虫ゼリー"],
+    answer: "腐葉土",
+  },
+  {
+    id: "Q-002",
+    subject: "理科",
+    unit: "昆虫の成長",
+    text: "クワガタの大アゴが一番発達しているステージは？",
+    options: ["卵", "幼虫", "さなぎ", "成虫"],
+    answer: "成虫",
+  },
+  {
+    id: "Q-003",
+    subject: "理科",
+    unit: "擬態",
+    text: "アゲハの幼虫の擬態で有名なのは？",
+    options: ["鳥のフン", "枝", "石", "花びら"],
+    answer: "鳥のフン",
+  },
 ];
 
 // 演出の“間”
@@ -193,7 +214,7 @@ export default function BattlePlayPage() {
     setMyAnswer(opt);
     setMyCorrect(meOK);
 
-    // ✍️ 自分が間違えたらミスをバッファに積む（battleId は後で付与）
+    // ③ ✍️ 自分が間違えたら subject / unit もバッファに積む
     if (!meOK) {
       mistakesBufferRef.current.push({
         questionId: q.id,
@@ -201,6 +222,8 @@ export default function BattlePlayPage() {
         choice: opt,
         correct: q.answer,
         text: q.text,
+        subject: q.subject,
+        unit: q.unit,
         difficulty: null,
       });
     }
@@ -278,7 +301,7 @@ export default function BattlePlayPage() {
       });
       battleIdRef.current = battleId;
 
-      // 2) mistakes を flush
+      // 2) mistakes を flush（subject / unit も渡す）
       const buf = mistakesBufferRef.current || [];
       for (const m of buf) {
         await recordMistake({
@@ -288,8 +311,10 @@ export default function BattlePlayPage() {
           choice: m.choice,
           correct: m.correct,
           text: m.text ?? null,
+          subject: m.subject ?? null,
+          unit: m.unit ?? null,
           difficulty: m.difficulty ?? null,
-          // userId は省略可（ヘルパ内で currentUser を拾う）
+          // userId は省略（ヘルパ内で currentUser を拾う）
         });
       }
       console.log("🧾 mistakes flushed:", buf.length);
@@ -381,7 +406,7 @@ export default function BattlePlayPage() {
 
         {/* 相手の問題選択（表示用） */}
         {phase === "question" && q && (
-          <div className="flex flex-wrap gap-2 justify中心">
+          <div className="flex flex-wrap gap-2 justify-center mt-1">
             {q.options.map((opt) => {
               const active = cpuAnswer === opt;
               const showCorrect =

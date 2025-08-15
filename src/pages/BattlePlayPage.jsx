@@ -2,8 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { db } from "../firebase";
+import { db, auth, ensureSignedIn } from "../firebase"; // ← ここから uid を取得
 import { saveBattleRecord } from "../lib/saveBattleRecord";
 import { recordMistake } from "../lib/recordMistakes";
 
@@ -129,6 +128,11 @@ export default function BattlePlayPage() {
     return { myPct: (myLeft / total) * 100, enemyPct: (enemyLeft / total) * 100 };
   }, [myLeft, enemyLeft]);
 
+  // ★ 画面マウント時に必ず匿名サインインを確保
+  useEffect(() => {
+    ensureSignedIn().catch((e) => console.error("Anonymous sign-in failed:", e));
+  }, []);
+
   // ラウンド開始時のセットアップ（bet/サドンデス切替にも反応）
   useEffect(() => {
     if (phase !== "bet") return;
@@ -159,12 +163,14 @@ export default function BattlePlayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, sudden, enemyLeft, round, suddenCount]);
 
-  // 追加：テスト書き込み関数
+  // 追加：テスト書き込み関数（任意）
   const writeTest = async () => {
     try {
+      await ensureSignedIn();
       const ref = await addDoc(collection(db, "battles_test"), {
         ok: true,
         at: serverTimestamp(),
+        uid: auth.currentUser?.uid ?? null,
       });
       console.log("🧪 test write ok:", ref.id);
     } catch (e) {
@@ -194,6 +200,7 @@ export default function BattlePlayPage() {
         round,
         choice: opt,
         correct: q.answer,
+        text: q.text,
         difficulty: null,
       });
     }
@@ -258,15 +265,16 @@ export default function BattlePlayPage() {
     if (phase !== "end" || saved) return;
 
     (async () => {
+      await ensureSignedIn(); // ← まずは必ずログイン確保
       console.log("🏁 phase is 'end' & not saved yet → saving...");
 
-      // 1) battle 保存（util を使う）
+      // 1) battle 保存
       const battleId = await saveBattleRecord({
         start: loc.state?.myPwLeft ?? 300,
         end: myLeft,
         roundsPlayed: round,
         winner: myLeft > enemyLeft ? "you" : myLeft < enemyLeft ? "enemy" : "draw",
-        userId: getAuth().currentUser?.uid ?? null,
+        userId: auth.currentUser?.uid ?? null,
       });
       battleIdRef.current = battleId;
 
@@ -279,14 +287,14 @@ export default function BattlePlayPage() {
           round: m.round,
           choice: m.choice,
           correct: m.correct,
+          text: m.text ?? null,
           difficulty: m.difficulty ?? null,
-          userId: getAuth().currentUser?.uid ?? null,
+          // userId は省略可（ヘルパ内で currentUser を拾う）
         });
       }
       console.log("🧾 mistakes flushed:", buf.length);
       setSaved(true);
     })().catch((e) => console.error("❌ save sequence failed:", e));
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, saved]);
 
@@ -373,7 +381,7 @@ export default function BattlePlayPage() {
 
         {/* 相手の問題選択（表示用） */}
         {phase === "question" && q && (
-          <div className="flex flex-wrap gap-2 justify-center mt-1">
+          <div className="flex flex-wrap gap-2 justify中心">
             {q.options.map((opt) => {
               const active = cpuAnswer === opt;
               const showCorrect =

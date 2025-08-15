@@ -7,7 +7,6 @@
     "import": ".emulator-data",
     "exportOnExit": ".emulator-data"
   },
-
   "functions": [
     {
       "source": "functions",
@@ -25,4 +24,3 @@
     }
   ]
 }
-

@@ -1,0 +1,16 @@
+[33mcommit da7bcbcf46c427c8284218cce49aa29838e9ff9a[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mreset-card[m[33m)[m
+Author: Yamaguchi Natsuko <gachaben2025@gmail.com>
+Date:   Sun Aug 17 17:59:23 2025 +0900
+
+    feat: ItemCard を最終化（画像パス/重ね順/名前2行化）& バトル準備でのカード表示連携
+    
+    ・画像パスを /images/2508/stage/.png に統一
+    ・動画エフェクトを plus-lighter で合成、黒下地を完全排除
+    ・S/A/B ランク表示と色味を整理
+    ・名前を中央上に表示（ヘラクレスのみ2行固定、長文は自動2分割）
+    ・PW/攻撃/防御アイコンを透過文字＋テキストシャドウで視認性UP
+    ・BattleStartPage で ItemCard を採用、未選択時フォールバックを用意
+    ・図鑑ページからの受け渡し前提でも直接アクセスで動作
+
+ src/pages/BattlePlayPage.jsx | 697 [32m+++++++++++[m[31m--------------------------------[m
+ 1 file changed, 169 insertions(+), 528 deletions(-)

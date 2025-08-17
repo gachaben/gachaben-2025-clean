@@ -1,0 +1,16 @@
+[33mcommit c686923149b55d70ceb99cf20bf1d91d9d36f203[m
+Author: Yamaguchi Natsuko <gachaben2025@gmail.com>
+Date:   Wed Aug 13 09:24:38 2025 +0900
+
+    feat(emulator): Firestore/Auth エミュ接続を安定化し、battles を UI で確認
+
+ firebase.json                                      |   18 [32m+[m[31m-[m
+ package-lock.json                                  | 7668 [32m++++++++++++++++++[m[31m--[m
+ package.json                                       |    3 [32m+[m[31m-[m
+ src/.firebaserc                                    |    5 [32m+[m
+ src/App.jsx                                        |   19 [32m+[m[31m-[m
+ ...44\275\234\346\245\255\343\203\241\343\203\242" |   95 [32m+[m[31m-[m
+ src/debug/writeTestBattle.js                       |   24 [32m+[m
+ src/firebase.js                                    |   45 [32m+[m[31m-[m
+ src/pages/BattlePlayPage.jsx                       |   78 [32m+[m[31m-[m
+ 9 files changed, 7316 insertions(+), 639 deletions(-)

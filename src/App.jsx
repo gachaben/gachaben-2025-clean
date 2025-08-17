@@ -3,11 +3,12 @@ import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
 
 import LinkAccountPage from "./pages/LinkAccountPage";
-import ZukanTopPage from "./pages/ZukanTopPage.jsx";      // ★ 追加
-import ZukanListPage from "./pages/ZukanListPage.jsx";    // ★ 追加
+import ZukanTopPage from "./pages/ZukanTopPage.jsx";
+import ZukanListPage from "./pages/ZukanListPage.jsx";
 import ZukanSeriesPage from "./pages/ZukanSeriesPage.jsx";
 import BattleStartPage from "./pages/BattleStartPage.jsx";
 import BattlePlayPage from "./pages/BattlePlayPage.jsx";
+import BattleResultPage from "./pages/BattleResultPage.jsx"; // ★ 追加
 import AdminDataPage from "./pages/AdminDataPage.jsx";
 
 // 復習まわり
@@ -18,10 +19,12 @@ import ReviewResultPage from "./pages/ReviewResultPage.jsx";
 
 import LoginPage from "./pages/LoginPage.jsx";
 import { writeTestBattle } from "./debug/writeTestBattle";
-// 追加の import
+
+// 図鑑関連
 import ZukanDebugCheck from "./pages/ZukanDebugCheck.jsx";
 import ZukanRankPage from "./pages/ZukanRankPage.jsx";
 import ZukanSpeciesPage from "./pages/ZukanSpeciesPage.jsx";
+import DarkLayout from "./layouts/DarkLayout.jsx";
 
 export default function App() {
   return (
@@ -38,17 +41,60 @@ export default function App() {
         <Route path="/review/result" element={<ReviewResultPage />} />
         <Route path="/review/play/:id" element={<ReviewPlayPage />} />
 
-        {/* 図鑑 */}
-        <Route path="/zukan" element={<ZukanTopPage />} />                 {/* ★ 図鑑トップ */}
-        <Route path="/zukan/list" element={<ZukanListPage />} />           {/* ★ 図鑑一覧（任意） */}
-        <Route path="/zukan/:seriesId/:rank" element={<ZukanSeriesPage />} /> {/* 既存：シリーズ詳細 */}
-        <Route path="/debug/zukan-check" element={<ZukanDebugCheck />} />
-        <Route path="/zukan/rank/:rank" element={<ZukanRankPage />} />
-        <Route path="/zukan/:rank/:species" element={<ZukanSpeciesPage />} />
+        {/* 図鑑（全部 DarkLayout で黒背景に統一） */}
+        <Route
+          path="/zukan"
+          element={
+            <DarkLayout>
+              <ZukanTopPage />
+            </DarkLayout>
+          }
+        />
+        <Route
+          path="/zukan/list"
+          element={
+            <DarkLayout>
+              <ZukanListPage />
+            </DarkLayout>
+          }
+        />
+        <Route
+          path="/zukan/:seriesId/:rank"
+          element={
+            <DarkLayout>
+              <ZukanSeriesPage />
+            </DarkLayout>
+          }
+        />
+        <Route
+          path="/zukan/rank/:rank"
+          element={
+            <DarkLayout>
+              <ZukanRankPage />
+            </DarkLayout>
+          }
+        />
+        <Route
+          path="/zukan/:rank/:species"
+          element={
+            <DarkLayout>
+              <ZukanSpeciesPage />
+            </DarkLayout>
+          }
+        />
+        <Route
+          path="/debug/zukan-check"
+          element={
+            <DarkLayout>
+              <ZukanDebugCheck />
+            </DarkLayout>
+          }
+        />
 
         {/* バトル */}
         <Route path="/battle" element={<BattleStartPage />} />
         <Route path="/battle/play" element={<BattlePlayPage />} />
+        <Route path="/battle/result" element={<BattleResultPage />} />
 
         {/* 管理・連携 */}
         <Route path="/admin/data" element={<AdminDataPage />} />
@@ -80,11 +126,18 @@ function Home() {
       <h2>Home</h2>
       <p>
         <Link to="/battle">バトルへ</Link> /{" "}
-        <Link to="/zukan" className="underline text-blue-600">図鑑トップ</Link> /{" "}
-        <Link to="/login">ログイン</Link> /{" "}
-        <Link to="/review" className="underline text-blue-600">クイック復習</Link> /{" "}
-        <Link to="/review/start" className="underline text-green-700">連続復習</Link> /{" "}
-        <Link to="/admin/data">管理</Link>
+        <Link to="/zukan" className="underline text-blue-600">
+          図鑑トップ
+        </Link>{" "}
+        / <Link to="/login">ログイン</Link> /{" "}
+        <Link to="/review" className="underline text-blue-600">
+          クイック復習
+        </Link>{" "}
+        /{" "}
+        <Link to="/review/start" className="underline text-green-700">
+          連続復習
+        </Link>{" "}
+        / <Link to="/admin/data">管理</Link>
       </p>
     </div>
   );
@@ -94,7 +147,9 @@ function NotFound() {
   return (
     <div style={{ padding: 16 }}>
       <h2>ページが見つかりません</h2>
-      <p><Link to="/">ホームへ戻る</Link></p>
+      <p>
+        <Link to="/">ホームへ戻る</Link>
+      </p>
     </div>
   );
 }

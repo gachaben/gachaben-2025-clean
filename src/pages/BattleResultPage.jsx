@@ -1,9 +1,7 @@
 // src/pages/BattleResultPage.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  addDoc,
-  collection,
   serverTimestamp,
   doc,
   getDoc,
@@ -14,21 +12,19 @@ import {
 import { db, auth, ensureSignedIn } from "../firebase";
 
 // ====== ここをあなたの環境に合わせて変更 ======
-const ZUKAN_PATH = "/zukan/top"; // 例: ZukanTopPage へのパス
+const ZUKAN_PATH = "/zukan/top";
 // ============================================
 
-// 参加/勝利Bpt
 const BPT_BASE = 5;   // 参加ボーナス
 const BPT_WIN  = 10;  // 勝利ボーナス
 
-// かわいい吹き出し（マスコット）
 function MascotBubble({ children }) {
   return (
     <div className="mt-3 inline-flex items-start gap-2">
       <div className="select-none text-2xl">🪲</div>
-      <div className="relative bg-yellow-50 border border-yellow-300 rounded-2xl px-3 py-2 text-sm leading-6 shadow-sm">
+      <div className="relative bg-yellow-100 text-black border border-yellow-300 rounded-2xl px-3 py-2 text-sm leading-6 shadow-sm">
         {children}
-        <span className="absolute -left-1 top-3 w-3 h-3 bg-yellow-50 border-l border-t border-yellow-300 rotate-45"></span>
+        <span className="absolute -left-1 top-3 w-3 h-3 bg-yellow-100 border-l border-t border-yellow-300 rotate-45"></span>
       </div>
     </div>
   );
@@ -38,8 +34,6 @@ export default function BattleResultPage() {
   const navigate = useNavigate();
   const loc = useLocation();
 
-  // BattlePlayPage から state 経由でもらう想定
-  // 何も来ていなくても動くようにフォールバック
   const myLeft       = Number(loc.state?.myLeft ?? 0);
   const enemyLeft    = Number(loc.state?.enemyLeft ?? 0);
   const roundsPlayed = Number(loc.state?.roundsPlayed ?? 0);
@@ -51,13 +45,11 @@ export default function BattleResultPage() {
   const resultLabel = isYouWinner ? "あなたの勝ち！" : (myLeft < enemyLeft ? "あなたの負け…" : "引き分け");
   const bptEarnThisMatch = isYouWinner ? (BPT_BASE + BPT_WIN) : BPT_BASE;
 
-  // 受け取り状態
-  const [bptClaimedTimes, setBptClaimedTimes] = useState(0); // 0:未受取 / 1:通常受取済 / 2:広告分も受取済
+  const [bptClaimedTimes, setBptClaimedTimes] = useState(0);
   const [claiming, setClaiming] = useState(false);
   const [watchingAd, setWatchingAd] = useState(false);
   const [claimMsg, setClaimMsg] = useState("");
 
-  // （オプション）マスコットの応援メッセージ
   const kidMessage = useMemo(() => {
     if (isYouWinner) {
       return (
@@ -81,7 +73,6 @@ export default function BattleResultPage() {
     ensureSignedIn().catch((e) => console.error("Anonymous sign-in failed:", e));
   }, []);
 
-  // users/{uid} を保証
   const ensureUserDoc = async (uid) => {
     const ref = doc(db, "users", uid);
     const snap = await getDoc(ref);
@@ -95,16 +86,39 @@ export default function BattleResultPage() {
     if (!amount || amount <= 0) return;
     await ensureSignedIn();
     const uid = auth.currentUser?.uid;
-    if (!uid) return;
+    if (!uid) throw new Error("no-auth");
     const ref = await ensureUserDoc(uid);
     await updateDoc(ref, { bpt: increment(amount) });
   };
 
-  // 受け取り1回目
+  const claimKeyRef = (uid, kind) => {
+    const key = `${battleId ?? "noid"}-${kind}`;
+    return doc(db, "users", uid, "battleClaims", key);
+  };
+
+  const checkAndStampClaim = async (kind) => {
+    if (!battleId) return true;
+    await ensureSignedIn();
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error("no-auth");
+
+    const ref = claimKeyRef(uid, kind);
+    const snap = await getDoc(ref);
+    if (snap.exists()) return false;
+    await setDoc(ref, { kind, stampedAt: serverTimestamp() });
+    return true;
+  };
+
   const handleClaimOnce = async () => {
     if (bptClaimedTimes >= 1 || claiming) return;
     try {
       setClaiming(true);
+      const ok = await checkAndStampClaim("1");
+      if (!ok) {
+        setBptClaimedTimes(1);
+        setClaimMsg("このバトルの通常受け取りは済んでいます。");
+        return;
+      }
       await grantBpt(bptEarnThisMatch);
       setBptClaimedTimes(1);
       setClaimMsg(`+${bptEarnThisMatch} Bpt を受け取りました！`);
@@ -116,16 +130,21 @@ export default function BattleResultPage() {
     }
   };
 
-  // 広告→受け取り2回目（ダミーで setTimeout）
   const handleAdAndClaimSecond = async () => {
     if (bptClaimedTimes !== 1 || watchingAd) return;
     setWatchingAd(true);
     setClaimMsg("広告を視聴中…");
     setTimeout(async () => {
       try {
-        await grantBpt(bptEarnThisMatch);
-        setBptClaimedTimes(2);
-        setClaimMsg(`広告ボーナス！さらに +${bptEarnThisMatch} Bpt`);
+        const ok = await checkAndStampClaim("2");
+        if (!ok) {
+          setBptClaimedTimes(2);
+          setClaimMsg("このバトルの広告ボーナスは受け取り済みです。");
+        } else {
+          await grantBpt(bptEarnThisMatch);
+          setBptClaimedTimes(2);
+          setClaimMsg(`広告ボーナス！さらに +${bptEarnThisMatch} Bpt`);
+        }
       } catch (e) {
         console.error(e);
         setClaimMsg("広告ボーナス付与に失敗しました。");
@@ -135,27 +154,19 @@ export default function BattleResultPage() {
     }, 2500);
   };
 
-  // 図鑑に誘導
   const goZukan = () => {
     navigate(ZUKAN_PATH, { state: { highlightBpt: true } });
   };
 
-  // ====== 後日予定：Bptガチャ（1回のみ / 50%:同額, 50%:2倍） ======
-  // 仕様メモ：
-  // - 「広告でもう一回ゲット」の後に 1回だけ回せる
-  // - 抽選: Math.random() < 0.5 ? bptEarnThisMatch : (bptEarnThisMatch * 2)
-  // - 付与後に「本日はガチャ済み」フラグで再実行不可に
-  // ここではUIだけ置いておき、後で有効化予定
   const [gachaDoing, setGachaDoing] = useState(false);
   const [gachaResult, setGachaResult] = useState(null);
-  const ENABLE_GACHA = false; // ← 後で true にして有効化
+  const ENABLE_GACHA = false;
 
   const runGachaOnce = async () => {
     if (!ENABLE_GACHA) return;
     if (bptClaimedTimes !== 2 || gachaDoing || gachaResult != null) return;
     try {
       setGachaDoing(true);
-      // 抽選：50% 同額 / 50% 2倍
       const reward = Math.random() < 0.5 ? bptEarnThisMatch : (bptEarnThisMatch * 2);
       await grantBpt(reward);
       setGachaResult(reward);
@@ -167,27 +178,32 @@ export default function BattleResultPage() {
   };
 
   return (
-    <div className="min-h-screen w-full mx-auto max-w-3xl px-4 py-8">
+    <div className="min-h-screen w-full mx-auto max-w-3xl px-4 py-8 bg-slate-900 text-white">
       {/* ヘッダー */}
       <header className="flex items-center justify-between mb-6">
-        <button onClick={() => navigate(-1)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">← 戻る</button>
+        <button
+          onClick={() => navigate(-1)}
+          className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600"
+        >
+          ← 戻る
+        </button>
         <h1 className="text-xl font-bold">バトル結果</h1>
         <div />
       </header>
 
       {/* 結果カード */}
-      <section className="rounded-2xl border bg-white p-4 shadow-sm mb-6">
+      <section className="rounded-2xl border border-slate-600 bg-slate-800 p-4 shadow mb-6">
         <div className="text-lg font-bold mb-1">{resultLabel}</div>
-        <div className="text-sm text-gray-600 mb-2">
+        <div className="text-sm text-gray-300 mb-2">
           ラウンド数: {roundsPlayed} / 最終PW: あなた {myLeft} / 相手 {enemyLeft}
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded bg-gray-50 p-3">
-            <div className="text-xs text-gray-500 mb-1">あなた</div>
+          <div className="rounded bg-slate-700 p-3">
+            <div className="text-xs text-gray-400 mb-1">あなた</div>
             <div className="font-semibold">{selectedItem?.name ?? "あなた"}</div>
           </div>
-          <div className="rounded bg-gray-50 p-3">
-            <div className="text-xs text-gray-500 mb-1">相手</div>
+          <div className="rounded bg-slate-700 p-3">
+            <div className="text-xs text-gray-400 mb-1">相手</div>
             <div className="font-semibold">{enemyItem?.name ?? "あいて"}</div>
           </div>
         </div>
@@ -196,9 +212,9 @@ export default function BattleResultPage() {
       </section>
 
       {/* Bpt 受け取りエリア */}
-      <section className="rounded-2xl border bg-white p-4 shadow-sm">
+      <section className="rounded-2xl border border-slate-600 bg-slate-800 p-4 shadow">
         <div className="font-semibold mb-2">Bptゲット！</div>
-        <div className="text-sm mb-3">
+        <div className="text-sm mb-3 text-gray-300">
           参加 <b>+{BPT_BASE}</b>
           {isYouWinner && <> / 勝利ボーナス <b>+{BPT_WIN}</b></>}
           <span className="ml-2">＝ 今回は <b>+{bptEarnThisMatch}</b> Bpt！</span>
@@ -230,12 +246,11 @@ export default function BattleResultPage() {
           </button>
         </div>
 
-        {claimMsg && <div className="mt-2 text-sm text-gray-700">{claimMsg}</div>}
+        {claimMsg && <div className="mt-2 text-sm text-gray-200">{claimMsg}</div>}
 
-        {/* 後日有効化：Bptガチャ */}
-        <div className="mt-4 pt-3 border-t">
+        <div className="mt-4 pt-3 border-t border-slate-600">
           <div className="text-sm font-semibold mb-1">Bptガチャ（準備中）</div>
-          <div className="text-xs text-gray-500 mb-2">
+          <div className="text-xs text-gray-400 mb-2">
             広告でもう一回ゲットの後に、1回だけ回せる！<br />
             確率：<b>50%</b> で <b>同額</b> / <b>50%</b> で <b>2倍</b>（後で有効化）
           </div>
@@ -256,10 +271,16 @@ export default function BattleResultPage() {
 
       {/* フッターボタン */}
       <div className="mt-6 flex flex-wrap gap-2 justify-center">
-        <button onClick={() => navigate(-1)} className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200">
+        <button
+          onClick={() => navigate(-1)}
+          className="px-4 py-2 rounded bg-slate-700 hover:bg-slate-600"
+        >
           バトルへ戻る
         </button>
-        <button onClick={() => navigate("/")} className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600">
+        <button
+          onClick={() => navigate("/")}
+          className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+        >
           ホームへ
         </button>
       </div>

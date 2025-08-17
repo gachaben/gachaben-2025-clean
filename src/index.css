@@ -33,3 +33,15 @@ body {
 
 /* デバッグ（必要ならON） */
 /* .item-card * { outline: 1px solid rgba(255,0,0,.2); } */
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Battle用：数値がフワッと浮く演出 */
+@keyframes fadeUp {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.98); }
+  10%  { opacity: 1; transform: translateY(0)   scale(1.00); }
+  100% { opacity: 0; transform: translateY(-16px) scale(1.02); }
+}
+.animate-fadeUp { animation: fadeUp 800ms ease-out both; }

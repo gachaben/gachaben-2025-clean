@@ -145,3 +145,294 @@ firebase_old.js の import が残っていないか検索
 
 この続きは「firebase.js の修正版」と「.firebaserc の設定確認」から始めればOK。
 ここまで直れば、Emulator UI に battles コレクションが出るはず。
+
+今日の作業メモ（2025-08-14）
+✅ 完了したこと
+
+秘密鍵痕跡の完全削除
+
+git filter-repo による履歴の除去を実行
+
+git rev-list で確認 → 該当コミットなし
+
+ブランチ更新
+
+feature/review-flow-ui を最新安全版に更新
+
+git push origin feature/review-flow-ui --force → 成功
+
+タグ更新
+
+git push --force --tags で GitHub のタグも安全版に差し替え完了
+
+GitHub 接続確認
+
+push 保護エラーなし
+
+PR 作成可能状態を確認
+
+📅 明日の作業予定
+
+GitHub 上で確認
+
+ブランチ feature/review-flow-ui が最新化されているか確認
+
+差分・変更点をチェック
+
+Pull Request 作成
+
+main（または開発元ブランチ）へ PR を作成
+
+PR タイトル＆説明文記載（秘密鍵削除作業の記録も残す）
+
+他ブランチの安全化
+
+他の作業ブランチに同じ修正が必要か確認
+
+必要なら同様の filter-repo → push --force 実行
+
+レビュー・マージ
+
+問題なければレビュー依頼 → マージ
+
+💡 明日はまず GitHub 上の feature/review-flow-ui の表示確認から始めればスムーズに進められます。
+
+もし希望あれば、明日用に PR 作成テンプレ も作っておけますが、作っておきますか？
+これがあるとすぐに提出できます。
+
+
+
+
+
+作業メモ（8/14）
+🎯 目的
+
+Firestore Emulator で mistakes コレクションを作成し、
+ログイン中ユーザーの uid を紐付けて保存。
+
+保存後は onSnapshot で即時リスト反映。
+
+📌 今日やったこと
+
+Emulator 接続確認
+
+firebase.js にエミュ接続設定済み。
+
+localhost:4000 の UI 表示可能。
+
+Firestore 書き込み準備
+
+addDoc(collection(db, "mistakes"), {...}) の形で
+uid・問題文・日時などを保存できる形にした。
+
+リアルタイム反映の設計
+
+useEffect 内で onSnapshot(query(...)) を使い、
+uid が一致するデータのみ購読する想定。
+
+⏭ 明日やること
+
+useEffect で購読処理追加
+
+useEffect(() => {
+  const q = query(
+    collection(db, "mistakes"),
+    where("uid", "==", currentUser.uid),
+    orderBy("createdAt", "desc")
+  );
+  const unsub = onSnapshot(q, (snapshot) => {
+    setMistakes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  });
+  return () => unsub();
+}, [currentUser.uid]);
+
+
+書き込み後の動作確認
+
+addDoc → Emulator UI で即時反映されるか確認。
+
+画面のリストに即反映されるか確認。
+
+エラーハンドリング追加
+
+ネットワーク/認証切れ対応を入れる。
+
+このままやれば、明日は 書き込み → 即反映 が動くはず。
+必要なら明日、完成コードの全コピペ版で渡せる状態にするよ。
+
+
+
+
+
+作業メモ（今日やった＆現状）
+
+da7bcbc 付近へリセット（またはブランチ切替）→ 画面復旧。
+
+/battle/play で上下にカード・PW選択ボタンのUI確認。
+
+Console の致命的エラーなし。favicon.ico が無いだけ（後で置けば解消）。
+
+次回の進め方（順番にやればOK）
+
+Git保存しておく
+
+git add -A
+git commit -m "feat: restore working battle/play and fix blank screen"
+git push -u origin reset-card   # 初回だけ -u
+
+
+ルート整備（直叩きでも落ちないように）
+
+src/App.jsx（or main.jsx）に以下があるか確認：
+
+<Route path="/battle/start" element={<BattleStartPage />} />
+<Route path="/battle" element={<BattlePage />} />
+<Route path="/battle/play" element={<BattlePlayPage />} />
+
+
+BattlePage / BattlePlayPage の先頭に一時ログ：
+
+useEffect(()=>console.log("Route: /battle mounted"),[]);
+
+
+stateガード（直URL対策）
+
+BattlePage.jsx / BattlePlayPage.jsx で useLocation().state が無い場合でも
+
+ダミーデータで継続 or
+
+navigate("/battle/start", { replace: true })
+のどちらかに統一。
+
+上下分割＋中央ゲージ（レイアウト復元）
+
+BattlePlayPage.jsx：
+
+上：相手カード＋PWゲージ
+
+中央：綱引き式PWゲージ（自分/相手の残量）
+
+下：自分カード＋選択肢
+
+スマホ想定で grid grid-rows-[auto_auto_auto] gap-3 くらいから。
+
+PWベット → 問題表示の流れを厳密化
+
+selectedPw === null → ベットUI表示
+
+決定後に question セット
+
+回答 → ダメージ計算（仕様：正解時は「かけたPW分だけ相手PWを削る。自分は減らない」）
+
+Firestore 書き込み確認（Emu）
+
+ボタン「Write battles test」で battles へ1件書き込み
+
+Emulator UI（http://localhost:4000）→ Firestore タブで battles に入っているか確認
+
+画像・演出
+
+ItemCard の withFx を true にして、エフェクトが前面に出るよう z-index と position を確認。
+
+エフェクトMP4は public/effects/S_spark.mp4 → video に pointer-events-none 付与。
+
+favicon 404の後始末（低優先）
+
+public/favicon.ico を置くか、index.html で <link rel="icon" href="/favicon.ico"> を消す。
+
+よく使う起動系コマンド
+# フロント
+npm run dev
+
+# Firebase Emulator (別ターミナル)
+firebase emulators:start
+
+# 変更の保存
+git add -A
+git commit -m "wip: battle layout restore"
+git push
+
+直すときに触るファイル（目安）
+
+src/pages/BattleStartPage.jsx（導線）
+
+src/pages/BattlePage.jsx（直叩きガード＆PW選択→問題開始）
+
+src/pages/BattlePlayPage.jsx（上下分割・中央ゲージ・ダメージ処理）
+
+src/components/ItemCard.jsx（演出z-index）
+
+src/lib/saveBattleRecord.js（Emu書き込み）
+
+必要なら、次回は上下分割レイアウトの完成版コンポーネントを丸ごと投げるよ。
+おつ！また続きやろう💪
+
+ChatGPT の回答は必ずしも正しいとは限りません。重要な情報は確認するようにしてください
+
+
+
+
+作業メモ（2025-08-17）
+✅ やったこと
+
+上下分割レイアウトでバトル画面を構築
+
+上：相手（カード、ベットUI、問題選択肢）
+
+中央：綱引き式 PWゲージ（赤＝相手、青＝自分）
+
+下：自分（カード、ベットUI、問題選択肢）
+
+バトル進行フェーズを整理
+
+betEnemy : CPU が自動で PW をベット
+
+betMe : 自分が PW をベット
+
+question : 自分が回答 → 少し間 → CPU が回答
+
+enemyAnswered : CPU の解答を表示
+
+resolve : 正誤判定し PW 減算 → 次ラウンド or 結果
+
+CPU ロジック
+
+ベット：残 PW の 20% 付近を狙って選択
+
+正解率：60% の確率で正解
+
+ゲージ
+
+合計を 100% として、相手／自分の割合を赤青バーで表示
+
+パーセンテージを下に表示
+
+UI
+
+相手の選択肢は相手カードの下に配置
+
+自分が答えた後に CPU が少し遅れて答える演出
+
+ログ（デバッグ用）で進行状況を確認可能
+
+コミット準備
+
+ファイル: src/pages/BattlePlayPage.jsx
+
+コミットメッセージ例:
+
+feat(battle): implement upper/lower split layout, central gauge, enemy choice UI
+
+📝 次のTODO
+
+/battle/result の結果画面 UI を調整（勝敗表示＋リトライ/戻るボタン）
+
+PW 反映をもう少し演出強化（エフェクトや±数値の浮遊表示など）
+
+Firestore 保存（バトル履歴）をこの簡略版にも入れるか検討
+
+👉 これで一旦 バトル画面の基本完成版 が Git に保存できる状態になっています。
+
+次は結果画面を整える方向で進めますか？
+
+ChatGPT の回答

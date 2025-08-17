@@ -1,204 +1,302 @@
+// src/pages/BattlePlayPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ItemCard from "../components/ItemCard";
 
+const QUESTIONS = [
+  { text: "カブトムシの幼虫がよく食べるものは？", options: ["木の葉", "腐葉土", "果物"], answer: "腐葉土" },
+  { text: "セミが地中で過ごす年数は？", options: ["1年", "3〜7年", "10年"], answer: "3〜7年" },
+];
+const PW_OPTIONS = [50, 100, 200, 300];
+
 export default function BattlePlayPage() {
-  const nav = useNavigate();
-  const { state } = useLocation() || {};
+  const { state } = useLocation();
+  const navigate = useNavigate();
+  const {
+    enemy,
+    selectedItem,
+    questionCount = 1,
+    initialEnemyPw = 400,
+    initialMyPw = 600,
+  } = state || {};
 
-  // --- 受け取り or フォールバック ---
-  const fallbackMe = {
-    itemId: "2508_S_001_kabuto_stage1",
-    name: "カブト",
-    pw: 300,
-    rank: "S",
-    stage: 1,
-    imageName: "2508_S_001_kabuto_stage1.png",
-    seriesId: "2508",
-    cpt: 120,
-    bpt: 90,
-  };
-  const fallbackEnemy = {
-    id: "cpu001",
-    name: "カブトムシくん",
-    power: 300,
-    item: {
-      itemId: "2508_A_005_kabuto_stage1",
-      name: "カブト（CPU）",
-      pw: 300,
-      rank: "A",
-      stage: 1,
-      imageName: "2508_A_005_kabuto_stage1.png",
-      seriesId: "2508",
-      cpt: 100,
-      bpt: 80,
-    },
-  };
+  // ===== PW =====
+  const [myPw, setMyPw] = useState(initialMyPw);
+  const [enemyPw, setEnemyPw] = useState(initialEnemyPw);
 
-  const me = state?.selectedItem ?? fallbackMe;
-  const enemy = state?.enemyItem ?? fallbackEnemy;
-  const totalRounds = Math.max(1, Number(state?.questionCount ?? 3));
-
-  // 残PW
-  const [myPwLeft, setMyPwLeft] = useState(Number(state?.myPwLeft ?? me.pw ?? 300));
-  const [enemyPwLeft, setEnemyPwLeft] = useState(Number(state?.enemyPwLeft ?? enemy.power ?? 300));
+  // ===== ラウンド/フェーズ =====
+  // betEnemy → betMe → question → enemyAnswered → resolve → (next/result)
   const [round, setRound] = useState(1);
-  const [locked, setLocked] = useState(false); // 演出中ロック
+  const [phase, setPhase] = useState("betEnemy");
 
-  // 勝敗サウンド（任意。ファイルが無くてもエラーにしない）
-  const playSafe = (src) => {
-    try {
-      const a = new Audio(src);
-      a.volume = 0.6;
-      a.play().catch(() => {});
-    } catch (_) {}
-  };
+  // ベット/問題/回答
+  const [enemyBet, setEnemyBet] = useState(null);
+  const [myBet, setMyBet] = useState(null);
+  const [question, setQuestion] = useState(null);
+  const [myAnswer, setMyAnswer] = useState(null);
+  const [enemyAnswer, setEnemyAnswer] = useState(null);
 
-  // PW選択（攻撃）
-  const handleAttack = (cost) => {
-    if (locked || round > totalRounds) return;
-    if (myPwLeft < cost) return;
+  const [log, setLog] = useState([]);
 
-    setLocked(true);
-    // 単純な判定：自分のコスト ＞ CPU乱数 なら命中（演出は超簡易）
-    const cpu = Math.random() < 0.5 ? 100 : 200;
-    const hit = cost >= cpu;
-
-    setTimeout(() => {
-      setMyPwLeft((v) => v - cost);
-      if (hit) {
-        setEnemyPwLeft((v) => Math.max(0, v - cost));
-        playSafe("/sounds/hit.mp3"); // 任意。無い場合は何も起きません
-      } else {
-        playSafe("/sounds/miss.mp3");
-      }
-      setRound((r) => r + 1);
-      setLocked(false);
-    }, 350);
-  };
-
-  // 進行状況
-  const result = useMemo(() => {
-    if (round <= totalRounds && enemyPwLeft > 0 && myPwLeft > 0) return null;
-    // 終了
-    if (enemyPwLeft <= 0 && myPwLeft <= 0) return "draw";
-    if (enemyPwLeft <= 0) return "win";
-    if (myPwLeft <= 0) return "lose";
-    if (round > totalRounds) {
-      if (myPwLeft > enemyPwLeft) return "win";
-      if (myPwLeft < enemyPwLeft) return "lose";
-      return "draw";
+  // ===== ItemCard 用に敵データ整形 =====
+  const enemyItem = useMemo(() => {
+    if (enemy && (enemy.seriesId || enemy.imageName || enemy.itemId)) return enemy;
+    if (enemy && enemy.item) return enemy.item;
+    if (selectedItem) {
+      return {
+        ...selectedItem,
+        itemId: (selectedItem.itemId ?? selectedItem.id ?? "cpu") + "-cpu",
+        name: (selectedItem.name ? `${selectedItem.name}（CPU）` : "CPU"),
+      };
     }
-    return null;
-  }, [round, totalRounds, enemyPwLeft, myPwLeft]);
+    return { itemId: "cpu-001", seriesId: "kontyu", stage: 3, imageName: "kabuto", name: "CPU", rank: "S" };
+  }, [enemy, selectedItem]);
 
+  // ===== 綱引きゲージ =====
+  const total = Math.max(1, myPw + enemyPw);
+  const enemyPct = (enemyPw / total) * 100;
+  const myPct = 100 - enemyPct;
+
+  // ===== CPUロジック =====
+  const pickCpuBet = (remain) => {
+    const target = Math.max(50, Math.floor((remain * 0.2) / 50) * 50);
+    const affordable = PW_OPTIONS.filter((v) => v <= remain);
+    if (affordable.length === 0) return 50;
+    let best = affordable[0];
+    for (const v of affordable) if (Math.abs(v - target) <= Math.abs(best - target)) best = v;
+    return best;
+  };
+  const cpuCorrect = () => Math.random() < 0.6;
+
+  // ラウンド開始リセット
   useEffect(() => {
-    if (!result) return;
-    if (result === "win") playSafe("/sounds/win.mp3");
-    if (result === "lose") playSafe("/sounds/lose.mp3");
-  }, [result]);
+    setEnemyBet(null);
+    setMyBet(null);
+    setQuestion(null);
+    setMyAnswer(null);
+    setEnemyAnswer(null);
+    setPhase("betEnemy");
+  }, [round]);
 
-  // ゲージ共通
-  const Bar = ({ now, max = 1000, colorFrom, colorTo, label }) => {
-    const pct = Math.max(0, Math.min(100, Math.round((now / max) * 100)));
-    return (
-      <div className="w-full">
-        <div className="flex justify-between text-xs mb-1">
-          <span className="text-gray-600">{label}</span>
-          <span className="font-semibold">{now}</span>
+  // 敵が先にベット（自動／UIは敵側に表示）
+  useEffect(() => {
+    if (phase !== "betEnemy") return;
+    const id = setTimeout(() => {
+      const bet = pickCpuBet(enemyPw);
+      setEnemyBet(bet);
+      setLog((p) => [...p, `相手が ${bet} PW をベット`]);
+      setPhase("betMe");
+    }, 700);
+    return () => clearTimeout(id);
+  }, [phase, enemyPw]);
+
+  // 自分のベット → 問題セット
+  const handleMyBet = (bet) => {
+    setMyBet(bet);
+    setQuestion(QUESTIONS[(round - 1) % QUESTIONS.length]);
+    setPhase("question");
+  };
+
+  // 自分回答 → 少し待って敵回答 → さらに間をおいて結果
+  const handleMyAnswer = (opt) => {
+    if (!question) return;
+    setMyAnswer(opt);
+    // 1) 少し待って敵回答
+    setTimeout(() => {
+      const cpuIsCorrect = cpuCorrect();
+      const cpuOpt = cpuIsCorrect ? question.answer : question.options.find((o) => o !== question.answer);
+      setEnemyAnswer(cpuOpt);
+      setPhase("enemyAnswered");
+      // 2) さらに間をおいて結果計算へ
+      setTimeout(() => setPhase("resolve"), 650);
+    }, 700);
+  };
+
+  // 結果（ダメージ反映）→ 次へ
+  useEffect(() => {
+    if (phase !== "resolve" || !question) return;
+
+    const meCorrect = myAnswer === question.answer;
+    const enCorrect = enemyAnswer === question.answer;
+
+    if (meCorrect && myBet) setEnemyPw((pw) => Math.max(0, pw - myBet));
+    if (enCorrect && enemyBet) setMyPw((pw) => Math.max(0, pw - enemyBet));
+
+    const line = [
+      meCorrect ? `✅ 自分正解 (-相手 ${myBet})` : "❌ 自分不正解",
+      enCorrect ? `✅ 相手正解 (-自分 ${enemyBet})` : "❌ 相手不正解",
+    ].join(" / ");
+    setLog((p) => [...p, line]);
+
+    const id = setTimeout(() => {
+      const nextRound = round + 1;
+      if (nextRound > questionCount || myPw === 0 || enemyPw === 0) {
+        navigate("/battle/result", { state: { myPw, enemyPw } });
+        return;
+      }
+      setRound(nextRound);
+    }, 700);
+
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  // ===== 中央ゲージ（素のCSS） =====
+  const Gauge = () => (
+    <section
+      style={{
+        padding: "12px 0",
+        background: "#f3f4f6",
+        borderTop: "1px solid #e5e7eb",
+        borderBottom: "1px solid #e5e7eb",
+        marginTop: 8,
+        marginBottom: 8,
+      }}
+    >
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 12px" }}>
+        <div style={{ textAlign: "center", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>PWゲージ</div>
+        <div
+          style={{
+            position: "relative",
+            height: 20,
+            borderRadius: 8,
+            overflow: "hidden",
+            border: "1px solid #d1d5db",
+            background: "#ffffff",
+          }}
+        >
+          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${enemyPct}%`, background: "rgba(239,68,68,0.9)" }} />
+          <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: `${myPct}%`, background: "rgba(59,130,246,0.9)" }} />
+          <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 2, background: "rgba(255,255,255,0.85)" }} />
         </div>
-        <div className="h-3 rounded bg-gray-200 overflow-hidden">
-          <div
-            className="h-full transition-all duration-300"
-            style={{
-              width: `${pct}%`,
-              background: `linear-gradient(90deg, ${colorFrom}, ${colorTo})`,
-            }}
-          />
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginTop: 4, color: "#4b5563" }}>
+          <span>相手 {Math.round(enemyPct)}%</span>
+          <span>自分 {Math.round(myPct)}%</span>
+        </div>
+      </div>
+    </section>
+  );
+
+  // 敵側 選択肢ボタン（表示のみ／敵回答後は選択肢をハイライト）
+  const EnemyChoices = () => {
+    if (!question) return null;
+    return (
+      <div style={{ width: "100%", maxWidth: 720, padding: "0 12px", marginTop: 8 }}>
+        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>相手の選択肢</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {question.options.map((opt) => {
+            const isPicked = enemyAnswer === opt;
+            return (
+              <button
+                key={`enemy-opt-${opt}`}
+                disabled
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 6,
+                  border: `2px solid ${isPicked ? "#ef4444" : "#e5e7eb"}`,
+                  background: "#fff",
+                  opacity: 0.9,
+                }}
+              >
+                {opt}
+              </button>
+            );
+          })}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
-      <header className="flex items-center justify-between mb-4">
-        <button onClick={() => nav(-1)} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200">
-          ← 戻る
-        </button>
-        <h1 className="text-xl md:text-2xl font-bold">バトル（{totalRounds}問）　Round {Math.min(round, totalRounds)}/{totalRounds}</h1>
-        <div />
-      </header>
+    <div className="min-h-screen flex flex-col bg-white">
+      {/* === 上：相手 === */}
+      <section className="flex-1 flex flex-col items-center justify-start border-b bg-gray-50 p-3">
+        <h2 className="font-bold">相手</h2>
+        <div className="mt-2"><ItemCard item={enemyItem} size="md" withFx /></div>
 
-      {/* 上：相手カード */}
-      <section className="mb-6">
-        <div className="text-sm text-gray-600 mb-2">相手</div>
-        <div className="flex items-center gap-4">
-          <ItemCard item={enemy.item ?? enemy} owned={true} pwMode={false} />
-          <div className="flex-1 max-w-[520px]">
-            <Bar now={enemyPwLeft} max={600} colorFrom="#ef4444" colorTo="#f97316" label="相手PW" />
+        {/* 敵 ベットUI（自動決定・表示のみ） */}
+        <div className="mt-3" style={{ width: "100%", maxWidth: 720, padding: "0 12px" }}>
+          <div className="text-sm font-semibold mb-1">
+            かけるPW（Round {round}/{questionCount}）
+            {phase === "betEnemy" && <span className="ml-2 text-xs text-gray-500">…思考中</span>}
           </div>
-        </div>
-      </section>
-
-      {/* 下：自分カード */}
-      <section className="mb-6">
-        <div className="text-sm text-gray-600 mb-2">あなた</div>
-        <div className="flex items-center gap-4">
-          <ItemCard item={me} owned={true} pwMode={false} />
-          <div className="flex-1 max-w-[520px]">
-            <Bar now={myPwLeft} max={600} colorFrom="#22c55e" colorTo="#06b6d4" label="残PW" />
-          </div>
-        </div>
-      </section>
-
-      {/* 操作エリア */}
-      {!result ? (
-        <section className="mb-10">
-          <div className="text-sm font-bold mb-2">このラウンドで使うPWを選んでね（残：{myPwLeft}）</div>
-          <div className="flex flex-wrap gap-2">
-            {[50, 100, 200, 300].map((n) => (
+          <div className="flex gap-2 flex-wrap opacity-90">
+            {PW_OPTIONS.map((pw) => (
               <button
-                key={n}
-                disabled={locked || myPwLeft < n}
-                onClick={() => handleAttack(n)}
-                className={`px-4 py-2 rounded-full border font-bold disabled:opacity-40 disabled:cursor-not-allowed ${
-                  myPwLeft >= n
-                    ? "bg-white text-blue-700 border-blue-600 hover:bg-blue-50"
-                    : "bg-white text-gray-400 border-gray-300"
-                }`}
+                key={`enemy-${pw}`}
+                className="px-3 py-1 rounded border bg-white"
+                disabled
+                style={{ borderColor: enemyBet === pw ? "#ef4444" : "#e5e7eb", color: enemyBet === pw ? "#b91c1c" : "#111827" }}
               >
-                {n} PW
+                {pw}
               </button>
             ))}
           </div>
-        </section>
-      ) : (
-        <section className="mt-6">
-          <div
-            className={`inline-block px-4 py-2 rounded text-white font-bold ${
-              result === "win" ? "bg-emerald-600" : result === "lose" ? "bg-rose-600" : "bg-gray-600"
-            }`}
-          >
-            {result === "win" ? "勝ち！" : result === "lose" ? "負け…" : "引き分け"}
-          </div>
-          <div className="mt-4">
-            <button
-              onClick={() => nav("/battle")}
-              className="px-4 py-2 rounded bg-gray-100 hover:bg-gray-200"
-            >
-              準備画面へ戻る
-            </button>
-          </div>
-        </section>
-      )}
+        </div>
 
-      {/* デバッグリンク群（任意） */}
-      <div className="mt-10 text-sm space-x-3">
-        <a className="underline" href="/login">ログイン</a>
-        <a className="underline" href="/review">復習へ</a>
-        <a className="underline" href="/zukan">図鑑トップ</a>
-        <a className="underline" href="/admin/data">管理</a>
+        {/* 敵の選択肢はカードの直下に配置 */}
+        {(phase === "question" || phase === "enemyAnswered" || phase === "resolve") && <EnemyChoices />}
+      </section>
+
+      {/* === 中央ゲージ === */}
+      <Gauge />
+
+      {/* === 下：自分 === */}
+      <section className="flex-1 flex flex-col items-center justify-start bg-gray-50 p-3">
+        <h2 className="font-bold">自分</h2>
+        <div className="mt-2">
+          {selectedItem ? (
+            <ItemCard item={selectedItem} size="md" withFx />
+          ) : (
+            <div className="px-3 py-2 rounded bg-gray-200">アイテム未選択</div>
+          )}
+        </div>
+
+        {/* 自分のベット */}
+        {phase === "betMe" && (
+          <div className="mt-3 w-full max-w-sm">
+            <div className="text-sm font-semibold mb-1">かけるPWを選ぶ（Round {round}/{questionCount}）</div>
+            <div className="flex gap-2 flex-wrap">
+              {PW_OPTIONS.map((pw) => (
+                <button
+                  key={`me-${pw}`}
+                  className="px-3 py-2 rounded bg-blue-600 text-white hover:opacity-90 disabled:opacity-40"
+                  disabled={pw > myPw}
+                  onClick={() => handleMyBet(pw)}
+                >
+                  {pw}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 自分の選択肢 */}
+        {phase === "question" && question && (
+          <div className="mt-4 w-full max-w-[720px]">
+            <div className="font-semibold mb-2">{question.text}</div>
+            <div className="flex gap-2 flex-wrap">
+              {question.options.map((opt) => (
+                <button
+                  key={`me-opt-${opt}`}
+                  className="px-3 py-2 rounded border bg-white hover:bg-blue-50"
+                  onClick={() => handleMyAnswer(opt)}
+                  disabled={!!myAnswer}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <div className="mt-2 text-xs text-gray-500">ベット：相手 {enemyBet} / 自分 {myBet ?? "-"}</div>
+          </div>
+        )}
+      </section>
+
+      {/* ログ（デバッグ） */}
+      <div className="p-2 bg-gray-900 text-white text-xs">
+        {log.map((l, i) => (
+          <div key={i}>{l}</div>
+        ))}
       </div>
     </div>
   );

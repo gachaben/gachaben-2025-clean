@@ -1,99 +1,35 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-/* ランク用クラス */
-/* Sランク（細めの黒ふち） */
-
-.s-rank {
-  color: gold;
-  text-shadow:
-    0 0 1px #000,
-    0 0 1px #000,
-    0 0 1px #000,
-    0 0 1px #000;
+/* /src/index.css ーー 最小のリセット */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-/* Sランク：名前・PW → 白抜き＋黒ふち＋細字 */
-.rank-s {
-  color: gold;
-  font-size: 1.75rem; /* text-2xlより大きめ */
-  font-weight: 800;
-  text-shadow:
-    0 0 1px #000,
-    0 0 1px #000;
+html, body, #root {
+  height: 100%;
 }
 
-
-
-.rank-a {
-  color: red;
-  font-size: 1.75rem;
-  font-weight: 800;
-  text-shadow:
-    -1px -1px 0 #fff,
-     1px -1px 0 #fff,
-    -1px  1px 0 #fff,
-     1px  1px 0 #fff;
+body {
+  margin: 0;
+  background: #fff;       /* 画面全体は白でOK（カードの中は透明化する） */
+  color: #111;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
-.rank-b {
-  color: green;
-  font-size: 1.75rem;
-  font-weight: 800;
-  text-shadow:
-    -1px -1px 0 #fff,
-     1px -1px 0 #fff,
-    -1px  1px 0 #fff,
-     1px  1px 0 #fff;
+/* ==== ItemCard の白下地を完全無効化（最強版） ==== */
+.item-card, .item-card * {
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+}
+.item-card::before, .item-card::after,
+.item-card *::before, .item-card *::after {
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
 }
 
-/* Aランク（白ふち） */
-.a-rank {
-  color: red;
-  text-shadow:
-    -1px -1px 0 #fff,
-     1px -1px 0 #fff,
-    -1px  1px 0 #fff,
-     1px  1px 0 #fff;
-}
-
-/* Bランク（白ふち） */
-.b-rank {
-  color: green;
-  text-shadow:
-    -1px -1px 0 #fff,
-     1px -1px 0 #fff,
-    -1px  1px 0 #fff,
-     1px  1px 0 #fff;
-}
-
-.s-rank-text {
-  color: white;
-  font-weight: bold;
-  text-shadow:
-    -0.5px -0.5px 0 #000,
-    0.5px -0.5px 0 #000,
-    -0.5px 0.5px 0 #000,
-    0.5px 0.5px 0 #000;
-}
-
-.text-stroke {
-  color: black;
-  -webkit-text-stroke: 1px yellow;
-  text-stroke: 1px yellow; /* 一部ブラウザ用 */
-}
-/* src/index.css または src/styles/globals.css などに追加 */
-.text-outline-white {
-  color: green; /* 中の文字色は Tailwind で上書き */
-  -webkit-text-stroke: 1px rgb(210, 236, 185);
-}
-
-.text-outline-red {
-  color: red;
-  -webkit-text-stroke: 1px rgb(233, 240, 172);
-}
-
-.text-outline-yellow {
-  color: #facc15; /* Tailwind の yellow-400 */
-  -webkit-text-stroke: 1px rgb(245, 241, 241);
-}
+/* デバッグ（必要ならON） */
+/* .item-card * { outline: 1px solid rgba(255,0,0,.2); } */

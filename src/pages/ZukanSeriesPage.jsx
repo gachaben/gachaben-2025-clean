@@ -5,6 +5,7 @@ import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
 import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import ItemCard from "../components/ItemCard";
+import { resolveImageBaseName } from "../utils/resolveImageName";
 
 export default function ZukanSeriesPage() {
   const navigate = useNavigate();
@@ -15,13 +16,18 @@ export default function ZukanSeriesPage() {
   const [userItemPowers, setUserItemPowers] = useState({});
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const [fixing, setFixing] = useState(false);
 
   // 未ログインなら匿名ログイン
   useEffect(() => {
     const auth = getAuth();
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
-        try { await signInAnonymously(auth); } catch (e) { console.error(e); }
+        try {
+          await signInAnonymously(auth);
+        } catch (e) {
+          console.error(e);
+        }
       } else {
         setAuthReady(true);
       }
@@ -34,14 +40,20 @@ export default function ZukanSeriesPage() {
     setLoading(true);
     try {
       const user = getAuth().currentUser;
-      if (!user) { setUserItems([]); setLoading(false); return; }
+      if (!user) {
+        setUserItems([]);
+        setLoading(false);
+        return;
+      }
 
       const itemSnap = await getDoc(doc(db, "userItems", user.uid));
       const rawItems = itemSnap.exists() ? itemSnap.data() : {};
 
       const powersSnap = await getDocs(collection(db, "userItemPowers", user.uid, "items"));
       const powers = {};
-      powersSnap.forEach((d) => { powers[d.id] = d.data(); });
+      powersSnap.forEach((d) => {
+        powers[d.id] = d.data();
+      });
       setUserItemPowers(powers);
 
       const itemList = Object.entries(rawItems).map(([id, data]) => ({
@@ -58,7 +70,9 @@ export default function ZukanSeriesPage() {
     }
   };
 
-  useEffect(() => { if (authReady) fetchAll(); }, [authReady]);
+  useEffect(() => {
+    if (authReady) fetchAll();
+  }, [authReady]);
 
   // フィルタ
   const filteredItems = useMemo(
@@ -71,7 +85,7 @@ export default function ZukanSeriesPage() {
     [userItems, seriesId, rank]
   );
 
-  // Seed（エミュに1件だけ投入）
+  // Seed（1件追加：実在ファイル名に合わせて）
   const handleSeed = async () => {
     try {
       setSeeding(true);
@@ -85,8 +99,8 @@ export default function ZukanSeriesPage() {
             seriesId: "kontyu",
             rank: "S",
             name: "カブト（S）",
-            stage: 3,
-            imageName: "kabuto_S_aomushi",
+            stage: 1,                               // ← stage1 に合わせる
+            imageName: "2508_S_005_kabuto_stage1", // ← 実ファイル名（拡張子なし）
             pw: 300,
           },
         },
@@ -107,6 +121,39 @@ export default function ZukanSeriesPage() {
     }
   };
 
+  // 画像名を itemNames に合わせて自動修正（今表示中のフィルタ対象だけ）
+  const fixImageNamesByMapping = async () => {
+    try {
+      setFixing(true);
+      const user = getAuth().currentUser;
+      if (!user) return;
+
+      const updates = {};
+      for (const it of filteredItems) {
+        const base = resolveImageBaseName(it); // itemNames から導出
+        if (!base) continue;
+        const current = String(it.imageName || "").replace(".png", "");
+        if (current !== base) {
+          updates[it.itemId] = { imageName: base, stage: it.stage };
+        }
+      }
+
+      if (Object.keys(updates).length === 0) {
+        alert("修正対象はありません（すでに一致しています）");
+        return;
+      }
+
+      await setDoc(doc(db, "userItems", user.uid), updates, { merge: true });
+      await fetchAll();
+      alert(`画像名を ${Object.keys(updates).length} 件 修正しました。`);
+    } catch (e) {
+      console.error("fix error:", e);
+      alert("画像名の自動修正に失敗しました。コンソールを確認してください。");
+    } finally {
+      setFixing(false);
+    }
+  };
+
   // このアイテムでバトルへ（カード全体がボタン）
   const goBattleWith = (item) => {
     navigate("/battle", { state: { selectedItem: item } });
@@ -115,7 +162,9 @@ export default function ZukanSeriesPage() {
   if (!authReady) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-3">{seriesId} シリーズ・{rank} ランクのアイテム一覧</h1>
+        <h1 className="text-2xl font-bold mb-3">
+          {seriesId} シリーズ・{rank} ランクのアイテム一覧
+        </h1>
         <p>ログイン準備中…</p>
       </div>
     );
@@ -123,7 +172,9 @@ export default function ZukanSeriesPage() {
   if (loading) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-3">{seriesId} シリーズ・{rank} ランクのアイテム一覧</h1>
+        <h1 className="text-2xl font-bold mb-3">
+          {seriesId} シリーズ・{rank} ランクのアイテム一覧
+        </h1>
         <p>読み込み中…</p>
       </div>
     );
@@ -131,7 +182,9 @@ export default function ZukanSeriesPage() {
 
   return (
     <div className="min-h-screen p-6">
-      <h1 className="text-2xl font-bold mb-4">{seriesId} シリーズ・{rank} ランクのアイテム一覧</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        {seriesId} シリーズ・{rank} ランクのアイテム一覧
+      </h1>
 
       <div className="flex flex-wrap gap-3 mb-4">
         <button
@@ -140,6 +193,14 @@ export default function ZukanSeriesPage() {
           className="px-3 py-2 rounded bg-emerald-600 text-white disabled:opacity-60"
         >
           {seeding ? "Seeding…" : "Seed（1件追加）"}
+        </button>
+
+        <button
+          onClick={fixImageNamesByMapping}
+          disabled={fixing}
+          className="px-3 py-2 rounded bg-indigo-600 text-white disabled:opacity-60"
+        >
+          {fixing ? "修正中…" : "画像名を自動修正（itemNames）"}
         </button>
       </div>
 

@@ -3,19 +3,25 @@ import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
 
 import LinkAccountPage from "./pages/LinkAccountPage";
+import ZukanTopPage from "./pages/ZukanTopPage.jsx";      // ★ 追加
+import ZukanListPage from "./pages/ZukanListPage.jsx";    // ★ 追加
 import ZukanSeriesPage from "./pages/ZukanSeriesPage.jsx";
 import BattleStartPage from "./pages/BattleStartPage.jsx";
 import BattlePlayPage from "./pages/BattlePlayPage.jsx";
 import AdminDataPage from "./pages/AdminDataPage.jsx";
 
 // 復習まわり
-import ReviewQuickStart from "./pages/ReviewQuickStart";      // 一覧&フィルタ
-import ReviewPlayPage from "./pages/ReviewPlayPage.jsx";      // 1問プレイ
-import ReviewSessionStart from "./pages/ReviewSessionStart.jsx"; // ★ 連続復習スタート
-import ReviewResultPage from "./pages/ReviewResultPage.jsx";     // ★ 結果
+import ReviewQuickStart from "./pages/ReviewQuickStart";
+import ReviewPlayPage from "./pages/ReviewPlayPage.jsx";
+import ReviewSessionStart from "./pages/ReviewSessionStart.jsx";
+import ReviewResultPage from "./pages/ReviewResultPage.jsx";
 
 import LoginPage from "./pages/LoginPage.jsx";
 import { writeTestBattle } from "./debug/writeTestBattle";
+// 追加の import
+import ZukanDebugCheck from "./pages/ZukanDebugCheck.jsx";
+import ZukanRankPage from "./pages/ZukanRankPage.jsx";
+import ZukanSpeciesPage from "./pages/ZukanSpeciesPage.jsx";
 
 export default function App() {
   return (
@@ -26,16 +32,21 @@ export default function App() {
         {/* ログイン */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* 復習：クイック一覧（/review はこれに統一） */}
+        {/* 復習 */}
         <Route path="/review" element={<ReviewQuickStart />} />
-        {/* 連続復習スタート＆結果 */}
         <Route path="/review/start" element={<ReviewSessionStart />} />
         <Route path="/review/result" element={<ReviewResultPage />} />
-        {/* 復習：1問プレイ */}
         <Route path="/review/play/:id" element={<ReviewPlayPage />} />
 
-        {/* 図鑑・バトル */}
-        <Route path="/zukan/:seriesId/:rank" element={<ZukanSeriesPage />} />
+        {/* 図鑑 */}
+        <Route path="/zukan" element={<ZukanTopPage />} />                 {/* ★ 図鑑トップ */}
+        <Route path="/zukan/list" element={<ZukanListPage />} />           {/* ★ 図鑑一覧（任意） */}
+        <Route path="/zukan/:seriesId/:rank" element={<ZukanSeriesPage />} /> {/* 既存：シリーズ詳細 */}
+        <Route path="/debug/zukan-check" element={<ZukanDebugCheck />} />
+        <Route path="/zukan/rank/:rank" element={<ZukanRankPage />} />
+        <Route path="/zukan/:rank/:species" element={<ZukanSpeciesPage />} />
+
+        {/* バトル */}
         <Route path="/battle" element={<BattleStartPage />} />
         <Route path="/battle/play" element={<BattlePlayPage />} />
 
@@ -55,6 +66,7 @@ export default function App() {
           <Link to="/login">ログイン</Link> /{" "}
           <Link to="/review">復習へ</Link> /{" "}
           <Link to="/review/start">連続復習</Link> /{" "}
+          <Link to="/zukan">図鑑トップ</Link> /{" "}
           <Link to="/admin/data">管理</Link>
         </div>
       </div>
@@ -68,6 +80,7 @@ function Home() {
       <h2>Home</h2>
       <p>
         <Link to="/battle">バトルへ</Link> /{" "}
+        <Link to="/zukan" className="underline text-blue-600">図鑑トップ</Link> /{" "}
         <Link to="/login">ログイン</Link> /{" "}
         <Link to="/review" className="underline text-blue-600">クイック復習</Link> /{" "}
         <Link to="/review/start" className="underline text-green-700">連続復習</Link> /{" "}

@@ -1,3 +1,54 @@
+// src/pages/Battle.jsx など（この画面を出しているファイル）
+import React from "react";
+import ItemCard from "../components/ItemCard"; // ← パスは環境に合わせて
+
+export default function Battle() {
+  // テスト用のダミー item データ
+  const testItem = {
+    rank: "S",
+    seriesId: "kontyu",
+    stage: 1,
+    imageName: "2508_A_005_kabuto_stage1.png",
+    bpt: 3,
+    cpt: 2,
+    pwValue: 200,
+  };
+
+  return (
+    <div className="min-h-screen p-4">
+      {/* ==== ここが一時テスト枠（黒背景）==== */}
+      <div
+        style={{
+          padding: 20,
+          background: "black",
+          borderRadius: 12,
+          marginBottom: 24,
+          display: "inline-block",
+        }}
+      >
+        <ItemCard item={testItem} size="sm" withFx />
+      </div>
+
+      {/* ==== ここから下は元の UI（既存のコードをこの下に置く）==== */}
+      {/* 例：既存ヘッダやカード一覧など */}
+      {/* <Header ... /> */}
+      {/* <YourOriginalContent ... /> */}
+    </div>
+  );
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 // src/pages/BattlePage.jsx
 import React, { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";

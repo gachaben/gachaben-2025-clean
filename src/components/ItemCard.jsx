@@ -1,15 +1,18 @@
 import React from "react";
+import { itemNames } from "../data/itemNames.js";
 
 export default function ItemCard({ item, owned, pwMode, onClick }) {
   if (!item) return null;
 
-  const { imageName = "", name, pw = 0, cpt = 0, bpt = 0, stage, seriesId } = item;
+  const { imageName = "", name = "", pw = 0, cpt = 0, bpt = 0, stage } = item;
 
-  // 拡張子重複防止（imageNameに.pngが入っていてもOK）
-  const base = imageName.replace(/\.png$/i, "");
-  const img = `/images/${seriesId}/stage${stage}/${base}.png`;
+  // 画像パス & ベース名（.png を除去）
+  const base = String(imageName).replace(/\.png$/i, "");
+  const fileBase = base.replace(/^\d{4}_/, "");
+  const stageNum = stage ?? Number(base.match(/_stage(\d+)/)?.[1] ?? 1);
+  const imagePath = `/images/2508/stage${stageNum}/${fileBase}.png`;
 
-  // ランクとエフェクト
+  // ランク & エフェクト
   const isS = base.includes("_S_");
   const isA = base.includes("_A_");
   const isB = base.includes("_B_");
@@ -17,12 +20,23 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
   const rankColor = isS ? "#fde047" : isA ? "#e9d5ff" : isB ? "#d1d5db" : "#ffffff";
   const fx = isS ? "S_spark.mp4" : isA ? "A_spark.mp4" : isB ? "B_spark.mp4" : null;
 
-  // ステータス
+  // レベル
   const lvl = (x) => (x >= 250 ? 5 : x >= 200 ? 4 : x >= 150 ? 3 : x >= 100 ? 2 : x >= 50 ? 1 : 0);
   const cptLv = lvl(cpt);
   const bptLv = lvl(bpt);
 
-  const dispName = name === "ヘラクレスオオカブト" ? "ヘラクレス\nオオカブト" : name;
+  // ===== 名前解決：優先順位 name → itemNames[base] → base =====
+  const resolvedName = (name && name.trim()) || itemNames[base] || base;
+
+  // 2行化（ヘラクレスは手動、他は中央で二分）
+  const nameLines = (() => {
+    if (resolvedName === "ヘラクレスオオカブト") return ["ヘラクレス", "オオカブト"];
+    if (resolvedName.length > 8) {
+      const mid = Math.ceil(resolvedName.length / 2);
+      return [resolvedName.slice(0, mid), resolvedName.slice(mid)];
+    }
+    return [resolvedName];
+  })();
 
   return (
     <div
@@ -37,11 +51,11 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
         borderRadius: 12,
         overflow: "hidden",
         boxShadow: "0 6px 18px rgba(0,0,0,.25)",
-        background: "transparent",   // ★ カード土台は完全透明
+        background: "transparent",
         cursor: pwMode ? "pointer" : "default",
       }}
     >
-      {/* 背景エフェクト（最背面。光だけ重ねる） */}
+      {/* 背景エフェクト（光だけ加算） */}
       {fx && (
         <video
           src={`/images/effects/${fx}`}
@@ -56,17 +70,17 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
             height: "100%",
             objectFit: "cover",
             zIndex: 0,
-            mixBlendMode: "plus-lighter", // 黒画素は出ない
+            mixBlendMode: "plus-lighter",
             pointerEvents: "none",
             background: "transparent",
           }}
         />
       )}
 
-      {/* アイテム画像（中央・エフェクトの上に必ず重なる） */}
+      {/* アイテム画像（中央） */}
       <img
-        src={img}
-        alt={name}
+        src={imagePath}
+        alt={resolvedName}
         draggable={false}
         style={{
           position: "absolute",
@@ -76,7 +90,7 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
           maxWidth: "92%",
           maxHeight: "62%",
           objectFit: "contain",
-          zIndex: 10,                // ★ videoより前
+          zIndex: 10,
           background: "transparent",
         }}
       />
@@ -87,7 +101,7 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
           position: "absolute",
           right: 6,
           top: 4,
-          zIndex: 40,
+          zIndex: 50,
           fontFamily: "serif",
           fontWeight: 800,
           fontSize: 28,
@@ -99,7 +113,30 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
         {rank}
       </div>
 
-      {/* 文字（全部 透明背景。text-shadow だけで可読性UP） */}
+      {/* 名前：中央上（2行対応） */}
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: 6,
+          transform: "translateX(-50%)",
+          zIndex: 60,
+          color: "#fff",
+          textAlign: "center",
+          lineHeight: 1.05,
+          fontWeight: 700,
+          fontSize: 12,
+          whiteSpace: "pre-line",
+          textShadow: "0 0 4px #000, 0 0 10px #000",
+          background: "transparent",
+          maxWidth: "90%",
+          pointerEvents: "none",
+        }}
+      >
+        {nameLines.join("\n")}
+      </div>
+
+      {/* PW／攻撃／防御（下・透明背景） */}
       <div
         style={{
           position: "absolute",
@@ -113,18 +150,16 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
           color: "#fff",
         }}
       >
-        {/* 名前は上に置きたい場合は別途 top に配置してOK */}
-        <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: "pre-line", textShadow: "0 0 3px #000,0 0 6px #000", background: "transparent" }}>
-          {dispName}
+        <div style={{ fontSize: 12, textShadow: "0 0 3px #000,0 0 6px #000" }}>{pw} PW</div>
+        <div style={{ fontSize: 11, lineHeight: 1, textShadow: "0 0 3px #000,0 0 6px #000" }}>
+          攻撃力：{Array.from({ length: cptLv }).map((_, i) => (
+            <span key={i}>🥊</span>
+          ))}
         </div>
-        <div style={{ fontSize: 12, textShadow: "0 0 3px #000,0 0 6px #000", background: "transparent" }}>
-          {pw} PW
-        </div>
-        <div style={{ fontSize: 11, lineHeight: 1, textShadow: "0 0 3px #000,0 0 6px #000", background: "transparent" }}>
-          攻撃力：{Array.from({ length: cptLv }).map((_, i) => <span key={i}>🥊</span>)}
-        </div>
-        <div style={{ fontSize: 11, lineHeight: 1, textShadow: "0 0 3px #000,0 0 6px #000", background: "transparent" }}>
-          防御力：{Array.from({ length: bptLv }).map((_, i) => <span key={i}>💪</span>)}
+        <div style={{ fontSize: 11, lineHeight: 1, textShadow: "0 0 3px #000,0 0 6px #000" }}>
+          防御力：{Array.from({ length: bptLv }).map((_, i) => (
+            <span key={i}>💪</span>
+          ))}
         </div>
       </div>
     </div>

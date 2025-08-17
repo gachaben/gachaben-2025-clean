@@ -1,3 +1,4 @@
+// src/pages/BattleStartPage.jsx
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ItemCard from "../components/ItemCard";
@@ -13,16 +14,17 @@ export default function BattleStartPage() {
   // 試合数（1/3/5問）
   const [questionCount, setQuestionCount] = useState(3);
 
-  // 一応、直接アクセス時はダミーでも動くようにする
+  // 直接アクセス時のダミー（規約どおりのimageName/seriesId/stage に修正）
   useEffect(() => {
     if (!selectedItem) {
       setSelectedItem({
-        itemId: "kabuto_S_01",
+        itemId: "2508_S_005_kabuto_stage1",
         name: "カブト（S）",
         pw: 300,
         rank: "S",
-        imageName: "kabuto_S_aomushi",
-        seriesId: "kontyu",
+        imageName: "2508_S_005_kabuto_stage1",
+        seriesId: "2508",
+        stage: 1,
       });
     }
   }, [selectedItem]);
@@ -33,10 +35,15 @@ export default function BattleStartPage() {
     const initialMyPw = selectedItem?.pw ?? 300;
     const initialEnemyPw = 300;
 
+    // 敵も規約どおりの形に
     const enemyItem = {
-      id: "cpu001",
-      name: "カブトムシくん",
-      power: initialEnemyPw,
+      itemId: "2508_S_010_kuwagata_stage1",
+      name: "クワガタムシ（S）",
+      pw: initialEnemyPw,
+      rank: "S",
+      imageName: "2508_S_010_kuwagata_stage1",
+      seriesId: "2508",
+      stage: 1,
     };
 
     navigate("/battle/play", {

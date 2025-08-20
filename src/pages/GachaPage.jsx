@@ -1,3 +1,4 @@
+// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
 // src/pages/GachaPage.jsx
 import React, { useState } from "react";
 import GachaAnimation from "../components/GachaAnimation";

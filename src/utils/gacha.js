@@ -1,3 +1,4 @@
+// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
 // utils/gacha.js （またはコンポーネント内でもOK）
 export const rollGachaPoint = () => {
   const rand = Math.random();

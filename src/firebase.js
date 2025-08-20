@@ -1,3 +1,4 @@
+// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
 // src/firebase.js
 import { initializeApp, getApp, getApps } from "firebase/app";
 import {

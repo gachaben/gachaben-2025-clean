@@ -1,3 +1,4 @@
+// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
 import React, { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { db } from "../firebase";

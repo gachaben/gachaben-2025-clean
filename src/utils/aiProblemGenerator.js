@@ -1,3 +1,4 @@
+// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
 // src/utils/aiProblemGenerator.js
 
 export function generateSampleProblems(grade, subject) {

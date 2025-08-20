@@ -3,9 +3,9 @@ import { initializeApp, getApp, getApps } from "firebase/app";
 import {
   getAuth,
   connectAuthEmulator,
+  signInAnonymously,   // ★ 昔もあった export
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInAnonymously,
   signOut,
   onAuthStateChanged,
 } from "firebase/auth";
@@ -17,7 +17,7 @@ import {
 } from "firebase/firestore";
 
 // ▶ プロジェクトID
-const PROD_PROJECT_ID = ""; // 必要になったら設定
+const PROD_PROJECT_ID = "";
 const EMU_PROJECT_ID  = "demo-gachaben";
 
 const isLocal =
@@ -29,7 +29,7 @@ const PROJECT_ID = isLocal
   ? EMU_PROJECT_ID
   : (import.meta.env.VITE_FIREBASE_PROJECT_ID || PROD_PROJECT_ID);
 
-// ★ Firestoreエミュのポート（未設定なら 8080 を使う）
+const AUTH_PORT = Number(import.meta.env.VITE_AUTH_PORT || 9099);
 const FIRESTORE_PORT = Number(import.meta.env.VITE_FIRESTORE_PORT || 8080);
 
 const firebaseConfig = {
@@ -46,36 +46,32 @@ export const db = initializeFirestore(app, {
   useFetchStreams: false,
 });
 
-// 使いやすく re-export
+// 便利 re-export
 export { setDoc, doc, serverTimestamp, updateDoc, collection, getDocs };
 
+// Auth
 export const auth = getAuth(app);
 export {
+  signInAnonymously,              // ★ これをちゃんと export
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInAnonymously,
   signOut,
   onAuthStateChanged,
 };
 
-// 🔐 どこからでも呼べる匿名サインイン（未ログイン時だけ実行）
+// 匿名サインイン（未ログイン時のみ）
 export async function ensureSignedIn() {
-  const a = auth;
-  if (a.currentUser) return a.currentUser;
-  try {
-    const cred = await signInAnonymously(a);
-    return cred.user;
-  } catch (e) {
-    console.error("ensureSignedIn failed:", e);
-    throw e;
-  }
+  if (auth.currentUser) return auth.currentUser;
+  const cred = await signInAnonymously(auth);
+  return cred.user;
 }
 
+// Emulator 接続
 if (isLocal) {
-  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectAuthEmulator(auth, `http://127.0.0.1:${AUTH_PORT}/`, { disableWarnings: true });
   connectFirestoreEmulator(db, "127.0.0.1", FIRESTORE_PORT);
-  setLogLevel("debug");
-  console.log("[EMU] connected → Auth:9099 / Firestore:", FIRESTORE_PORT);
+  setLogLevel("error"); // or "silent"
+  console.log(`[EMU] connected → Auth:${AUTH_PORT} / Firestore:${FIRESTORE_PORT}`);
   console.log("[EMU] projectId =", app.options.projectId);
 }
 

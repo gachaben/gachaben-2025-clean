@@ -1,4 +1,3 @@
-// src/pages/ReviewPage.jsx
 import React, { useEffect, useState, useMemo } from "react";
 import { getAuth } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
@@ -20,7 +19,6 @@ export default function ReviewPage() {
 
   const uid = getAuth().currentUser?.uid;
 
-  // 日付フォーマッタ（Timestamp/Date/numberに対応）
   const fmt = useMemo(() => {
     try {
       return new Intl.DateTimeFormat("ja-JP", {
@@ -36,11 +34,8 @@ export default function ReviewPage() {
   }, []);
 
   function toDate(val) {
-    // Firestore Timestamp なら toDate()
     if (val?.toDate) return val.toDate();
-    // epoch millis
     if (typeof val === "number") return new Date(val);
-    // ISO文字列
     if (typeof val === "string") return new Date(val);
     return null;
   }
@@ -91,26 +86,10 @@ export default function ReviewPage() {
         練習やチャレンジで新しい問題に挑戦してみよう
       </div>
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-        <button
-          onClick={() => navigate("/")}
-          style={{
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid #ddd",
-            background: "white",
-          }}
-        >
+        <button onClick={() => navigate("/")} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "white" }}>
           トップへ
         </button>
-        <button
-          onClick={() => navigate("/challenge")}
-          style={{
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid #0aa",
-            background: "#0ff2",
-          }}
-        >
+        <button onClick={() => navigate("/challenge")} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #0aa", background: "#0ff2" }}>
           チャレンジへ進む
         </button>
       </div>
@@ -128,35 +107,17 @@ export default function ReviewPage() {
           {mistakes.map((m) => {
             const created = toDate(m.createdAt);
             return (
-              <li
-                key={m.id}
-                style={{
-                  border: "1px solid #ddd",
-                  padding: 12,
-                  borderRadius: 8,
-                  marginBottom: 8,
-                  display: "grid",
-                  gap: 4,
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>問題ID: {m.questionId}</div>
-                <div>あなたの選択: {m.choice}</div>
-                <div>正解: {m.correct}</div>
+              <li key={m.id} style={{ border: "1px solid #ddd", padding: 12, borderRadius: 8, marginBottom: 8, display: "grid", gap: 4 }}>
+                <div style={{ fontWeight: 600 }}>{m.text}</div>
+                <div>あなたの選択: {m.picked}</div>
+                <div>正解: {m.answer}</div>
                 <div style={{ fontSize: 12, opacity: 0.7 }}>
                   追加日時: {created ? fmt.format(created) : "—"}
                 </div>
                 <div>
                   <button
-                    onClick={() =>
-                      navigate(`/review/play/${encodeURIComponent(m.id)}`)
-                    }
-                    style={{
-                      marginTop: 8,
-                      padding: "6px 10px",
-                      borderRadius: 6,
-                      border: "1px solid #09f",
-                      background: "#09f2",
-                    }}
+                    onClick={() => navigate(`/review/play/${encodeURIComponent(m.id)}`)}
+                    style={{ marginTop: 8, padding: "6px 10px", borderRadius: 6, border: "1px solid #09f", background: "#09f2" }}
                   >
                     この問題で復習する
                   </button>

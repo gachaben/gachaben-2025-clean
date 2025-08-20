@@ -435,4 +435,126 @@ Firestore 保存（バトル履歴）をこの簡略版にも入れるか検討
 
 次は結果画面を整える方向で進めますか？
 
-ChatGPT の回答
+ChatGPT の回答.
+
+
+
+作業メモ（確実版）
+0) まず現状把握
+
+エミュレータ UI の表示：Firestore = 8080 / Auth = 9099（OK）
+
+/review の赤ログ：ReviewQuickStart.jsx:36 からの 127.0.0.1:8080 ... net::ERR_CONNECTION_REFUSED
+
+コンソールの情報ログ：時々 [EMU] connected → ... Firestore:8088 と表示（＝env or キャッシュで 8088 が紛れ込んでいる）
+
+1) src/firebase.js を“固定ポート”にして安定化
+
+一時対策として env を無視し、8080/9099 を直指定にします（ズレを完全に潰すため）。
+
+// src/firebase.js
+- const AUTH_PORT = Number(import.meta.env.VITE_AUTH_PORT || 9099);
+- const FIRESTORE_PORT = Number(import.meta.env.VITE_FIRESTORE_PORT || 8080);
++ const AUTH_PORT = 9099;     // ← 一旦固定
++ const FIRESTORE_PORT = 8080; // ← 一旦固定
+
+// Emulator 接続（Auth の URL は最後に / を付ける）
+- connectAuthEmulator(auth, `http://127.0.0.1:${AUTH_PORT}`, { disableWarnings: true });
++ connectAuthEmulator(auth, `http://127.0.0.1:${AUTH_PORT}/`, { disableWarnings: true });
+
+- setLogLevel("debug");
++ setLogLevel("error"); // うるさければ "silent"
+
+
+目的：どんな .env が残っていても、強制で 8080/9099 に繋ぐ。
+後で安定したら、また env 方式に戻せば OK。
+
+2) /review 側は 共通 db を使うだけにする
+
+ReviewQuickStart.jsx / ReviewPage.jsx の中に initializeApp / getFirestore / connectFirestoreEmulator があれば削除。
+使うのは import { db, ensureSignedIn } from "../firebase" のみ。
+
+// NG例（入ってたら削除）
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+// OK例
+import { db, ensureSignedIn } from "../firebase";
+
+
+目的：エミュ接続は firebase.js だけで行う（重複初期化/ポートズレを防ぐ）。
+
+3) 8088 の痕跡をプロジェクト全体から検出
+
+前は src\* や .env* だけ検索していたので、全部検索します。
+
+コマンドプロンプト（CMD）
+findstr /s /n /i "8088 VITE_FIRESTORE_PORT VITE_AUTH_PORT connectFirestoreEmulator" *.*
+
+
+何かヒットしたら、そのファイルで 8088 を削除 or 8080 に統一。
+
+package.json のスクリプトに cross-env VITE_FIRESTORE_PORT=8088 みたいな記述が無いかも確認。
+
+4) きれいに再起動
+
+ターミナルで Vite を停止 → npm run dev 再起動
+
+ブラウザで DevTools → Application → Clear storage → Clear site data
+
+Ctrl+Shift+R（ハードリロード）
+
+コンソールに次が出ることを確認
+
+[EMU] connected → Auth:9099 / Firestore:8080
+[EMU] projectId = demo-gachaben
+
+
+※ 8088 が二度と出ないこと
+
+5) エミュレータが確実に 8080 で生きているか確認
+
+黒ターミナルに：
+
+Firestore   127.0.0.1:8080
+Authentication 127.0.0.1:9099
+
+
+の枠が出ている（起動済み）
+
+念のためポート占有チェック（Windows）：
+
+netstat -ano | findstr :8080
+
+
+→ 余計なプロセスが掴んでいたら taskkill /PID <PID> /F
+
+6) 動作確認
+
+/battle → わざと不正解 → /battle/result に到達
+
+http://127.0.0.1:4000/firestore
+ で mistakes に doc が増える
+
+/review を開く → 赤ログが消え、リストに問題が並ぶ
+
+よくあるハマりどころ（対処早見表）
+
+Auth が本番に飛ぶ → connectAuthEmulator の URL 末尾に / 必須
+
+ページごとに Firebase 初期化 → firebase.js に一本化（他は db を import だけ）
+
+たまに 8088 が出る → どこかの .env* や package.json で 8088 を注入、または古いバンドル。→ プロジェクト全体検索 + ハードリロード + Vite再起動
+
+ERR_CONNECTION_REFUSED → たいていエミュ停止 or ポート競合。→ 起動中か確認、競合プロセス殺す
+
+ここまでやれば /review の赤は消えます。
+もしまだ出る場合は、コンソールの “ファイル名:行番号” と src/firebase.js 先頭30行くらいを貼ってください。そこを直接なおします。
+
+
+
+
+
+
+
+
+
+

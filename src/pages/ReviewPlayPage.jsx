@@ -10,9 +10,10 @@ import {
 
 // 各ビューを import
 import McqView from "@/components/review/McqView";
+import KeypadView from "@/components/review/KeypadView";
 
 // 出題タイプごとのレジストリ
-const registry = { mcq: McqView };
+const registry = { mcq: McqView, keypad: KeypadView };
 
 export default function ReviewPlayPage() {
   const { state } = useLocation();
@@ -106,8 +107,13 @@ export default function ReviewPlayPage() {
 
   if (!current) return <div>読み込み中...</div>;
 
-  // 出題タイプに応じてビューを切り替える（デフォルト mcq）
-  const type = current?.type ?? "mcq";
+  // 出題タイプに応じてビューを切り替える
+  // type が無ければ options の有無で推論（options 無し ⇒ keypad）
+  const type =
+    current?.type
+      ? current.type
+      : (Array.isArray(current?.options) ? "mcq" : "keypad");
+
   const View = registry[type] ?? McqView;
 
   return (

@@ -1,6 +1,6 @@
 // assignTournamentRewards.js
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 
 // 👑 設定（スコアキーや報酬ID）
 const SCORE_KEY = "monthlyScore_202507";

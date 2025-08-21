@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../../firebase";
+import { auth, db } from "../../legacy_deprecated/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 
 const EvolveSelectPage = () => {

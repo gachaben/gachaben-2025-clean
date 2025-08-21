@@ -1,6 +1,6 @@
 import React from "react";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "../firebase"; // ←自分のfirebase設定ファイル名にあわせてね
+import { db } from "../legacy_deprecated/firebase"; // ←自分のfirebase設定ファイル名にあわせてね
 import { getAuth } from "firebase/auth";
 
 const RegisterStageTest = () => {

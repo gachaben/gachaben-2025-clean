@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { collection, doc, getDocs, getDoc, query, where } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 import ItemCard from "../components/ItemCard";
 import { useAuth } from "../hooks/useAuth"; // 自作Hookでログイン中ユーザーを取得
 

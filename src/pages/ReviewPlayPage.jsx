@@ -12,7 +12,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { db, auth, ensureSignedIn } from "../firebase";
+import { db, auth, ensureSignedIn } from "../legacy_deprecated/firebase";
 
 function shuffle(arr) {
   const a = [...arr];

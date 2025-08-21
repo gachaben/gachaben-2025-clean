@@ -1,7 +1,7 @@
 // src/utils/saveRewardPower.js
 
 import { doc, updateDoc, arrayUnion, increment } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { auth, db } from "../legacy_deprecated/firebase";
 import { format } from "date-fns";
 
 const saveRewardPower = async (amount) => {

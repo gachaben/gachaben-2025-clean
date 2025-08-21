@@ -5,7 +5,7 @@ import {
   doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc,
   arrayUnion, serverTimestamp
 } from "firebase/firestore";
-import { db, auth, ensureSignedIn } from "../firebase";
+import { db, auth, ensureSignedIn } from "../legacy_deprecated/firebase";
 
 function Img({ src, alt }) {
   const [ok, setOk] = useState(true);

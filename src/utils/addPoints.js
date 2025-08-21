@@ -1,5 +1,5 @@
 import { doc, updateDoc, increment } from "firebase/firestore";
-import { db } from "../firebase"; // ← パスは環境に合わせて！
+import { db } from "../legacy_deprecated/firebase"; // ← パスは環境に合わせて！
 
 export async function addPoints(uid, amount) {
   const userRef = doc(db, "users", uid);

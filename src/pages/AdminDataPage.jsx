@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   collection, getDocs, orderBy, query, limit, where,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 
 // 表示用
 function toDate(ts) {

@@ -1,6 +1,6 @@
 // src/components/OshiComment.jsx
 import React, { useEffect, useState } from "react";
-import { auth, db } from "../firebase";
+import { auth, db } from "../legacy_deprecated/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 const OshiComment = ({ message }) => {

@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { collection, getDoc, doc, getDocs, updateDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 import ItemCard from "../components/ItemCard";
 import { itemNames } from "../data/itemNames";
 

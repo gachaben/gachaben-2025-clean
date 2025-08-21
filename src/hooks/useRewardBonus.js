@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 import { useRewardBonus } from "../hooks/useRewardBonus";
 import { ensureUserIncrement } from "../lib/ensureUserIncr";
 

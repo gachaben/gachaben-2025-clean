@@ -1,4 +1,4 @@
-import { auth, db } from "../firebase";
+import { auth, db } from "../legacy_deprecated/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
 // 🔥 今月のスコアIDを生成（例：monthlyScore_202507）

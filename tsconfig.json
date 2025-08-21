@@ -11,7 +11,12 @@
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
-    "types": ["node", "react", "react-dom"]
+    "types": ["node", "react", "react-dom"],
+    "baseUrl": "src",
+    "paths": {
+      "@/*": ["*"],
+      "@/firebase": ["fbkit/index.ts"]   // ← ここを修正
+    }
   },
   "include": ["src"],
   "exclude": ["dist", "node_modules", "legacy_deprecated"]

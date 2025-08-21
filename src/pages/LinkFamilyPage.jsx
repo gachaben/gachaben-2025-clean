@@ -1,6 +1,6 @@
 // src/pages/LinkFamilyPage.jsx
 import React, { useState, useEffect } from "react";
-import { auth, db } from "../firebase";
+import { auth, db } from "../legacy_deprecated/firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";

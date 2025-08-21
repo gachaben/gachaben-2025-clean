@@ -1,6 +1,6 @@
 import React from "react";
 import { doc, updateDoc, arrayUnion } from "firebase/firestore";
-import { auth, db } from "../firebase"; // ←自分の構成に合わせて調整してね！
+import { auth, db } from "../legacy_deprecated/firebase"; // ←自分の構成に合わせて調整してね！
 
 const AddEggButton = () => {
   const handleAddEgg = async () => {

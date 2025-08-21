@@ -1,7 +1,7 @@
 // src/pages/GachaResultPage.jsx
 
 import React, { useEffect, useState } from "react";
-import { auth, db } from "../firebase";
+import { auth, db } from "../legacy_deprecated/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { getRandomReward } from "../utils/gachaReward"; // ← ガチャ報酬関数（別途作成してね）
 

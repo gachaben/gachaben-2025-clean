@@ -1,5 +1,5 @@
 // src/debug/writeTestBattle.js
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 import {
   addDoc, collection, serverTimestamp,
   waitForPendingWrites, getDocFromServer, doc

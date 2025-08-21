@@ -1,5 +1,5 @@
 // src/utils/assignRandomEgg.js
-import { auth, db } from "../firebase";
+import { auth, db } from "../legacy_deprecated/firebase";
 import { doc, setDoc } from "firebase/firestore";
 
 // ランダムに卵を1つ付与する関数

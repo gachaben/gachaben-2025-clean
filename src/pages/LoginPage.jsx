@@ -7,7 +7,7 @@ import {
   signInAnonymously,
   signOut,
   onAuthStateChanged,
-} from "../firebase";
+} from "../legacy_deprecated/firebase";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function LoginPage() {

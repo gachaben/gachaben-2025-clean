@@ -1,5 +1,5 @@
 // 🔧 Firebase設定を読み込み
-import { db } from "../firebase"; // ← 自分のfirebase設定ファイルのパスに変更
+import { db } from "../legacy_deprecated/firebase"; // ← 自分のfirebase設定ファイルのパスに変更
 import { collection, addDoc, Timestamp } from "firebase/firestore";
 
 // 🥚 Firestoreに卵データを追加する関数

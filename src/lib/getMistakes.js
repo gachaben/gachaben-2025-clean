@@ -7,7 +7,7 @@ import {
   orderBy,
   getDocs,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 
 /**
  * ログイン中ユーザーの間違い履歴を取得

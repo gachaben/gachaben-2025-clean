@@ -1,7 +1,7 @@
 // src/pages/ReviewQuickStart.jsx
 import React, { useEffect, useState } from "react";
 import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
-import { db, ensureSignedIn } from "../firebase";
+import { db, ensureSignedIn } from "../legacy_deprecated/firebase";
 
 export default function ReviewQuickStart() {
   const [uid, setUid] = useState(null);

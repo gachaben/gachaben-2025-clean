@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 
 const getCurrentMonthId = () => {
   const now = new Date();

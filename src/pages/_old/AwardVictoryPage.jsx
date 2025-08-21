@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { collection, getDocs, doc, getDoc, setDoc, arrayUnion } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "../../firebase";
+import { auth, db } from "../../legacy_deprecated/firebase";
 
 const AwardVictoryPage = () => {
   const [prefecture, setPrefecture] = useState("");

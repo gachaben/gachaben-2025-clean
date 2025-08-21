@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { getAuth } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 import {
   collection,
   query,

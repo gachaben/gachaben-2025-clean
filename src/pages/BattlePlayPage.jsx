@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import ItemCard from "../components/ItemCard";
 import useBattleFinish from "../hooks/useBattleFinish";
-import { ensureSignedIn } from "../firebase";
+import { ensureSignedIn } from "../legacy_deprecated/firebase";
 import { recordMistake } from "../lib/recordMistakes";
 
 const QUESTIONS = [

@@ -1,7 +1,7 @@
 // @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
 import React, { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 import { collection, addDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 

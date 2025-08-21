@@ -2,18 +2,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../firebase";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+
+// 🔥 ここを新しい構成に切り替え
+import { auth, db, doc, getDoc, setDoc, serverTimestamp } from "@/fbkit";
 
 export default function Login() {
-  const [email, setEmail]     = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError]     = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -21,21 +17,21 @@ export default function Login() {
     setError("");
 
     const emailNorm = email.trim().toLowerCase(); // emailは整形
-    const passRaw   = password;                   // passwordは触らない
+    const passRaw = password;                     // passwordは触らない
 
     try {
       // 1) サインイン
       const { user } = await signInWithEmailAndPassword(auth, emailNorm, passRaw);
 
       // 2) users/{uid} を必ず用意（初回は作成、既存でも不足があれば補完）
-      const ref  = doc(db, "users", user.uid);
-      let snap   = await getDoc(ref);
+      const ref = doc(db, "users", user.uid);
+      let snap = await getDoc(ref);
 
       if (!snap.exists()) {
         await setDoc(ref, {
           email: emailNorm,
-          role: "child",              // 既定
-          createdAt: serverTimestamp()
+          role: "child", // 既定
+          createdAt: serverTimestamp(),
         });
         snap = await getDoc(ref);
       } else {
@@ -50,10 +46,9 @@ export default function Login() {
       const data = snap.data() || {};
       const role = data?.role ?? "child";
 
-      if (role === "parent")      navigate("/parent-home");
-      else if (role === "admin")  navigate("/admin-reward");
-      else                        navigate(data?.parentId ? "/child-home" : "/link-family");
-
+      if (role === "parent") navigate("/parent-home");
+      else if (role === "admin") navigate("/admin-reward");
+      else navigate(data?.parentId ? "/child-home" : "/link-family");
     } catch (err) {
       // よく出るエラーをわかりやすく
       if (err?.code === "auth/wrong-password" || err?.message === "INVALID_PASSWORD") {
@@ -72,7 +67,10 @@ export default function Login() {
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100 px-4">
       <h1 className="text-3xl font-bold mb-6">🔐 ログイン</h1>
 
-      <form onSubmit={handleLogin} className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md">
+      <form
+        onSubmit={handleLogin}
+        className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md"
+      >
         <input
           type="email"
           placeholder="メールアドレス"

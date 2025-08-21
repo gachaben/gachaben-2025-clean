@@ -1,6 +1,6 @@
 // src/lib/recordMistakes.js
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "../legacy_deprecated/firebase";
 
 export async function recordMistake(p) {
   const { uid, question, picked, source = "battle" } = p || {};

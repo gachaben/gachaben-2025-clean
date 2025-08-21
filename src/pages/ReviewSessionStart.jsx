@@ -8,7 +8,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { db, auth, ensureSignedIn } from "../firebase";
+import { db, auth, ensureSignedIn } from "../legacy_deprecated/firebase";
 
 export default function ReviewSessionStart() {
   const navigate = useNavigate();

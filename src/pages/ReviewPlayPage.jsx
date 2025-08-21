@@ -1,4 +1,3 @@
-// src/pages/ReviewPlayPage.jsx
 import React, { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
@@ -12,9 +11,15 @@ import {
 import McqView from "@/components/review/McqView";
 import KeypadView from "@/components/review/KeypadView";
 import SequenceView from "@/components/review/SequenceView";
+import TextInputView from "@/components/review/TextInputView";
 
 // 出題タイプごとのレジストリ
-const registry = { mcq: McqView, keypad: KeypadView, sequence: SequenceView };
+const registry = {
+  mcq: McqView,
+  keypad: KeypadView,
+  sequence: SequenceView,
+  text: TextInputView,
+};
 
 export default function ReviewPlayPage() {
   const { state } = useLocation();
@@ -25,10 +30,10 @@ export default function ReviewPlayPage() {
   const [cursor, setCursor] = useState(0);
   const [current, setCurrent] = useState(null);
   const [feedback, setFeedback] = useState("");
-  const [result, setResult] = useState([]);   // 画面表示用（任意）
-  const resultsRef = useRef([]);              // finish用：常に最新
+  const [result, setResult] = useState([]);
+  const resultsRef = useRef([]); // finish用：常に最新
 
-  // 初期ロード（idが無ければ一覧へ戻す）
+  // 初期ロード
   useEffect(() => {
     (async () => {
       const useIds = Array.isArray(passedIds) ? passedIds.filter(Boolean) : [];
@@ -42,7 +47,7 @@ export default function ReviewPlayPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 安全なロード（存在しない/壊れたdocはスキップ）
+  // docロード（存在しない/欠陥docはスキップ）
   async function loadByIndex(idx, baseIds = ids) {
     if (!Array.isArray(baseIds) || idx >= baseIds.length) {
       await finish();
@@ -52,7 +57,6 @@ export default function ReviewPlayPage() {
     try {
       const snap = await getDoc(doc(db, "mistakes", id));
       if (!snap.exists()) {
-        // 次へ
         if (idx + 1 < baseIds.length) return loadByIndex(idx + 1, baseIds);
         return finish();
       }
@@ -64,13 +68,13 @@ export default function ReviewPlayPage() {
       setCurrent({ id, ...data });
       setCursor(idx);
       setFeedback("");
-    } catch (_) {
+    } catch {
       if (idx + 1 < baseIds.length) return loadByIndex(idx + 1, baseIds);
       return finish();
     }
   }
 
-  // 共通更新ヘルパー：state と ref を同時に更新
+  // 結果の同期更新
   function upsertResult(id, okFlag) {
     setResult(prev => {
       const prevWrong = prev.find(r => r.id === id)?.wrongTries ?? 0;
@@ -89,7 +93,6 @@ export default function ReviewPlayPage() {
     setFeedback("正解！🎉");
     setTimeout(next, 350);
   }
-
   function handleWrong() {
     if (!current) return;
     upsertResult(current.id, false);
@@ -105,9 +108,8 @@ export default function ReviewPlayPage() {
   async function finish() {
     const auth = getAuth();
     const uid = auth.currentUser?.uid ?? "guest";
-    const final = resultsRef.current; // ← ここがポイント
+    const final = resultsRef.current;
 
-    // セッション保存
     await addDoc(collection(db, "reviews"), {
       userId: uid,
       items: final,
@@ -116,7 +118,6 @@ export default function ReviewPlayPage() {
       createdAt: serverTimestamp(),
     });
 
-    // 正解に到達したものを reviewed に更新
     const batch = writeBatch(db);
     final.filter(r => r.ok).forEach(r => {
       batch.update(doc(db, "mistakes", r.id), {
@@ -131,8 +132,13 @@ export default function ReviewPlayPage() {
 
   if (!current) return <div>読み込み中...</div>;
 
-  // 出題タイプ：type優先／無ければ options 無→keypad, 有→mcq
-  const type = current?.type ? current.type : (Array.isArray(current?.options) ? "mcq" : "keypad");
+  // 出題タイプ：type優先。無ければ meta.input === 'text' ＞ options有無
+  const type = current?.type
+    ? current.type
+    : (current?.meta?.input === "text"
+        ? "text"
+        : (Array.isArray(current?.options) ? "mcq" : "keypad"));
+
   const View = registry[type] ?? McqView;
 
   return (

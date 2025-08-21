@@ -1,42 +1,86 @@
-// src/pages/ReviewResultPage.jsx
-import React from "react";
+// src/pages/ReviewPlayPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { db } from "@/firebase";
+import {
+  doc, getDoc, updateDoc, writeBatch, collection, addDoc, serverTimestamp
+} from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
-export default function ReviewResultPage() {
+export default function ReviewPlayPage() {
+  const { state } = useLocation();
   const navigate = useNavigate();
-  const { state } = useLocation() || {};
-  const total = state?.total ?? 0;
-  const correct = state?.correct ?? 0;
-  const elapsed = state?.elapsed ?? 0;
+  const ids = state?.ids ?? [];
+  const [cursor, setCursor] = useState(0);
+  const [current, setCurrent] = useState(null);
+  const [loaded, setLoaded] = useState(false);
+  const [result, setResult] = useState([]); // {id, ok:boolean}
 
-  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const sec = Math.max(0, Math.round(elapsed / 1000));
+  useEffect(() => {
+    (async () => {
+      if (ids.length === 0) { navigate("/review-list"); return; }
+      const d = await getDoc(doc(db, "mistakes", ids[0]));
+      setCurrent({ id: ids[0], ...d.data() });
+      setLoaded(true);
+    })();
+  }, [ids, navigate]);
 
+  async function load(idx) {
+    const d = await getDoc(doc(db, "mistakes", ids[idx]));
+    setCurrent({ id: ids[idx], ...d.data() });
+    setCursor(idx);
+  }
+
+  async function answer(ok) {
+    setResult(prev => [...prev, { id: current.id, ok }]);
+    const next = cursor + 1;
+    if (next >= ids.length) {
+      await finish();
+      return;
+    }
+    await load(next);
+  }
+
+  async function finish() {
+    // ① セッション保存
+    const auth = getAuth();
+    const uid = auth.currentUser?.uid ?? "guest";
+    await addDoc(collection(db, "reviews"), {
+      userId: uid,
+      items: result,
+      total: result.length,
+      correct: result.filter(r=>r.ok).length,
+      createdAt: serverTimestamp(),
+    });
+
+    // ② OK だったものは閉じる（status=reviewed）
+    const batch = writeBatch(db);
+    result.filter(r => r.ok).forEach(r => {
+      batch.update(doc(db, "mistakes", r.id), {
+        status: "reviewed",
+        reviewedAt: serverTimestamp(),
+      });
+    });
+    await batch.commit();
+
+    navigate("/review-list", { replace: true });
+  }
+
+  if (!loaded || !current) return <div>読み込み中...</div>;
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-4">
-      <h2 className="text-2xl font-bold">復習結果</h2>
-
-      <div className="p-4 border rounded bg-white">
-        <div className="text-lg mb-2">
-          正答数 <b>{correct}</b> / <b>{total}</b>（{pct}%）
+    <div style={{ padding: 16 }}>
+      <h2>復習 ({cursor+1}/{ids.length})</h2>
+      <div style={{ margin: "16px 0", fontSize: 18 }}>
+        <div>Q: {current.question}</div>
+        <div style={{ color: "#888", marginTop: 8 }}>
+          正解: {current.correctAnswer}（自分の解答: {current.userAnswer}）
         </div>
-        <div className="text-sm text-gray-600">所要時間：{sec} 秒</div>
       </div>
-
-      <div className="flex gap-2">
-        <button
-          onClick={() => navigate("/review/start")}
-          className="px-4 py-2 rounded bg-emerald-600 text-white"
-        >
-          もう一度セットを作る
-        </button>
-        <button
-          onClick={() => navigate("/review")}
-          className="px-4 py-2 rounded bg-blue-600 text-white"
-        >
-          一覧へ
-        </button>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={() => answer(true)}>理解できた 👍</button>
+        <button onClick={() => answer(false)}>まだ不安 👀</button>
       </div>
     </div>
   );
 }
+

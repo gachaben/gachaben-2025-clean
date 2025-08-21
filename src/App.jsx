@@ -13,6 +13,7 @@ import AdminDataPage from "./pages/AdminDataPage.jsx";
 
 // 復習まわり
 import ReviewQuickStart from "./pages/ReviewQuickStart";
+import ReviewListPage from "./pages/ReviewListPage";
 import ReviewPlayPage from "./pages/ReviewPlayPage.jsx";
 import ReviewSessionStart from "./pages/ReviewSessionStart.jsx";
 import ReviewResultPage from "./pages/ReviewResultPage.jsx";
@@ -95,6 +96,10 @@ export default function App() {
         <Route path="/battle" element={<BattleStartPage />} />
         <Route path="/battle/play" element={<BattlePlayPage />} />
         <Route path="/battle/result" element={<BattleResultPage />} />
+
+        <Route path="/review-list" element={<ReviewListPage />} />
+        <Route path="/review/play" element={<ReviewPlayPage />} />
+
 
         {/* 管理・連携 */}
         <Route path="/admin/data" element={<AdminDataPage />} />

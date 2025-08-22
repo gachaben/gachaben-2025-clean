@@ -1,8 +1,8 @@
 // src/pages/ReviewQuickStart.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { getAuth } from "firebase/auth";
-import { useNavigate, Link } from "react-router-dom";
-import { db, ensureSignedIn } from "../legacy_deprecated/firebase";
+import { useNavigate } from "react-router-dom";
+import { db } from "../legacy_deprecated/firebase";
 import {
   collection,
   query,
@@ -10,19 +10,15 @@ import {
   orderBy,
   limit,
   onSnapshot,
-  addDoc,
-  serverTimestamp,
 } from "firebase/firestore";
 
 export default function ReviewQuickStart() {
   const [mistakes, setMistakes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [seeding, setSeeding] = useState(false);
   const navigate = useNavigate();
 
-  // ここは「表示用」。null でもページは出す
-  const uidSnapshot = getAuth().currentUser?.uid;
+  const uid = getAuth().currentUser?.uid;
 
   const fmt = useMemo(() => {
     try {
@@ -46,14 +42,13 @@ export default function ReviewQuickStart() {
   }
 
   useEffect(() => {
-    // uid がまだ無いときはリスト読み込みをスキップ
-    if (!uidSnapshot) {
+    if (!uid) {
       setLoading(false);
       return;
     }
     const q = query(
       collection(db, "mistakes"),
-      where("uid", "==", uidSnapshot),
+      where("uid", "==", uid),
       orderBy("createdAt", "desc"),
       limit(100)
     );
@@ -71,48 +66,7 @@ export default function ReviewQuickStart() {
       }
     );
     return () => unsub();
-  }, [uidSnapshot]);
-
-  // ★ ボタン押下時に uid を確保して投入
-  const seedNow = async () => {
-    setSeeding(true);
-    try {
-      const user = await ensureSignedIn(); // ← ここで必ずログインを完了させる
-      const uid = user.uid;
-
-      const ref1 = await addDoc(collection(db, "mistakes"), {
-        uid,
-        createdAt: serverTimestamp(),
-        type: "group",
-        text: "『カブト』を組み立てよう",
-        answer: ["カ", "ブ", "ト"],
-        tokens: [
-          { id: "t1", text: "ト" },
-          { id: "t2", text: "ブ" },
-          { id: "t3", text: "カ" },
-        ],
-        picked: "",
-      });
-
-      const ref2 = await addDoc(collection(db, "mistakes"), {
-        uid,
-        createdAt: serverTimestamp(),
-        type: "mcq",
-        text: "セミが地中で過ごす年数は？",
-        options: ["1年", "3〜7年", "10年"],
-        answer: "3〜7年",
-        picked: "1年",
-      });
-
-      console.log("seed OK:", ref1.id, ref2.id);
-      // onSnapshot が反映してくれるのでここで何もせずOK
-    } catch (e) {
-      console.warn("seed ERR:", e);
-      alert("投入に失敗しました: " + (e?.message || e));
-    } finally {
-      setSeeding(false);
-    }
-  };
+  }, [uid]);
 
   if (loading) return <div style={{ padding: 16 }}>読み込み中...</div>;
   if (error) return <div style={{ padding: 16 }}>エラー: {error}</div>;
@@ -133,28 +87,17 @@ export default function ReviewQuickStart() {
         練習やチャレンジで新しい問題に挑戦してみよう
       </div>
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-        <Link
-          to="/"
-          style={{
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid #ddd",
-            background: "white",
-          }}
+        <button
+          onClick={() => navigate("/")}
+          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "white" }}
         >
           トップへ
-        </Link>
+        </button>
         <button
-          onClick={seedNow}
-          disabled={seeding}
-          style={{
-            padding: "8px 12px",
-            borderRadius: 8,
-            border: "1px solid #0aa",
-            background: "#0ff2",
-          }}
+          onClick={() => navigate("/review/quick-seed")}
+          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #0aa", background: "#0ff2" }}
         >
-          {seeding ? "投入中…" : "サンプル投入"}
+          サンプル投入
         </button>
       </div>
     </div>
@@ -184,20 +127,13 @@ export default function ReviewQuickStart() {
               >
                 <div style={{ fontWeight: 600 }}>{m.text}</div>
                 <div>あなたの選択: {String(m.picked ?? "")}</div>
-                <div>
-                  正解:{" "}
-                  {Array.isArray(m.answer)
-                    ? JSON.stringify(m.answer)
-                    : String(m.answer ?? "")}
-                </div>
+                <div>正解: {Array.isArray(m.answer) ? JSON.stringify(m.answer) : String(m.answer ?? "")}</div>
                 <div style={{ fontSize: 12, opacity: 0.7 }}>
                   追加日時: {created ? fmt.format(created) : "—"}
                 </div>
                 <div>
                   <button
-                    onClick={() =>
-                      navigate(`/review/play/${encodeURIComponent(m.id)}`)
-                    }
+                    onClick={() => navigate(`/review/play/${encodeURIComponent(m.id)}`)}
                     style={{
                       marginTop: 8,
                       padding: "6px 10px",

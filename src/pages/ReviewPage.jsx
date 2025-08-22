@@ -86,10 +86,16 @@ export default function ReviewPage() {
         練習やチャレンジで新しい問題に挑戦してみよう
       </div>
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-        <button onClick={() => navigate("/")} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "white" }}>
+        <button
+          onClick={() => navigate("/")}
+          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "white" }}
+        >
           トップへ
         </button>
-        <button onClick={() => navigate("/challenge")} style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #0aa", background: "#0ff2" }}>
+        <button
+          onClick={() => navigate("/challenge")}
+          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #0aa", background: "#0ff2" }}
+        >
           チャレンジへ進む
         </button>
       </div>
@@ -107,7 +113,17 @@ export default function ReviewPage() {
           {mistakes.map((m) => {
             const created = toDate(m.createdAt);
             return (
-              <li key={m.id} style={{ border: "1px solid #ddd", padding: 12, borderRadius: 8, marginBottom: 8, display: "grid", gap: 4 }}>
+              <li
+                key={m.id}
+                style={{
+                  border: "1px solid #ddd",
+                  padding: 12,
+                  borderRadius: 8,
+                  marginBottom: 8,
+                  display: "grid",
+                  gap: 4,
+                }}
+              >
                 <div style={{ fontWeight: 600 }}>{m.text}</div>
                 <div>あなたの選択: {m.picked}</div>
                 <div>正解: {m.answer}</div>
@@ -117,7 +133,13 @@ export default function ReviewPage() {
                 <div>
                   <button
                     onClick={() => navigate(`/review/play/${encodeURIComponent(m.id)}`)}
-                    style={{ marginTop: 8, padding: "6px 10px", borderRadius: 6, border: "1px solid #09f", background: "#09f2" }}
+                    style={{
+                      marginTop: 8,
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      border: "1px solid #09f",
+                      background: "#09f2",
+                    }}
                   >
                     この問題で復習する
                   </button>

@@ -1,131 +1,125 @@
 // src/pages/LoginPage.jsx
 import React, { useEffect, useState } from "react";
 import {
-  auth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
+  onAuthStateChanged,
   signInAnonymously,
   signOut,
-  onAuthStateChanged,
-} from "../legacy_deprecated/firebase";
-import { Link, useNavigate } from "react-router-dom";
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
+import { auth } from "../legacy_deprecated/firebase";
 
 export default function LoginPage() {
+  const [user, setUser] = useState(null);
   const [email, setEmail] = useState("test@example.com");
-  const [password, setPassword] = useState("password123");
+  const [password, setPassword] = useState("password");
+  const [name, setName] = useState("Demo User");
   const [msg, setMsg] = useState("");
-  const [uid, setUid] = useState(auth.currentUser?.uid || "(未ログイン)");
-  const [busy, setBusy] = useState(false);
-  const navigate = useNavigate();
 
-  // ログイン状態の変化を監視して UID を更新
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setUid(user?.uid ?? "(未ログイン)");
-    });
-    return () => unsub();
+    const un = onAuthStateChanged(auth, (u) => setUser(u));
+    return () => un();
   }, []);
 
-  const niceError = (err) => {
-    const code = err?.code || "";
-    if (code.includes("invalid-credential")) return "メールまたはパスワードが違います";
-    if (code.includes("too-many-requests")) return "試行回数が多すぎます。しばらく時間をおいてください";
-    return err.message || String(err);
-  };
-
-  const loginEmail = async (e) => {
-    e.preventDefault();
+  const doAnon = async () => {
     setMsg("");
-    setBusy(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      setMsg("✅ ログインしました");
-      navigate("/review");
-    } catch (err) {
-      // ユーザーがいなければ作成してからログイン
-      if (err.code === "auth/invalid-credential" || err.code === "auth/user-not-found") {
-        try {
-          await createUserWithEmailAndPassword(auth, email, password);
-          setMsg("🆕 ユーザー作成→ログインしました");
-          navigate("/review");
-        } catch (e2) {
-          setMsg(`❌ ${niceError(e2)}`);
-        }
-      } else {
-        setMsg(`❌ ${niceError(err)}`);
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const loginAnon = async () => {
-    setMsg("");
-    setBusy(true);
     try {
       await signInAnonymously(auth);
-      setMsg("✅ 匿名ログインしました");
-      navigate("/review");
-    } catch (err) {
-      setMsg(`❌ ${niceError(err)}`);
-    } finally {
-      setBusy(false);
+      setMsg("匿名ログインしました");
+    } catch (e) {
+      setMsg(`匿名ログイン失敗: ${e.message}`);
     }
   };
 
-  const logout = async () => {
+  const doSignup = async () => {
     setMsg("");
-    setBusy(true);
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      if (name) await updateProfile(cred.user, { displayName: name });
+      setMsg("ユーザー作成できました");
+    } catch (e) {
+      setMsg(`作成失敗: ${e.message}`);
+    }
+  };
+
+  const doSignin = async () => {
+    setMsg("");
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setMsg("ログイン成功");
+    } catch (e) {
+      setMsg(`ログイン失敗: ${e.message}`);
+    }
+  };
+
+  const doSignout = async () => {
+    setMsg("");
     try {
       await signOut(auth);
-      setMsg("👋 ログアウトしました");
-    } catch (err) {
-      setMsg(`❌ ${niceError(err)}`);
-    } finally {
-      setBusy(false);
+      setMsg("ログアウトしました");
+    } catch (e) {
+      setMsg(`ログアウト失敗: ${e.message}`);
     }
   };
 
   return (
     <div style={{ padding: 16 }}>
-      <h1>ログイン</h1>
-      <p>現在のUID: <code>{uid}</code></p>
+      <h2>ログイン</h2>
+      <div style={{ marginBottom: 8 }}>
+        現在のUID: <code>{user?.uid ?? "(未ログイン)"}</code>
+      </div>
 
-      <form onSubmit={loginEmail} style={{ marginTop: 12, display: "grid", gap: 8, maxWidth: 360 }}>
+      <div style={{ display: "grid", gap: 8, maxWidth: 360 }}>
+        <label>
+          名前：
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="border px-2 py-1 rounded w-full"
+          />
+        </label>
         <label>
           メール：
           <input
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            disabled={busy}
-            autoComplete="email"
+            className="border px-2 py-1 rounded w-full"
           />
         </label>
         <label>
           パスワード：
           <input
+            type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            disabled={busy}
-            autoComplete="current-password"
+            className="border px-2 py-1 rounded w-full"
           />
         </label>
-        <button type="submit" disabled={busy}>
-          {busy ? "処理中..." : "メール/パスワードでログイン（無ければ作成）"}
-        </button>
-      </form>
 
-      <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-        <button onClick={loginAnon} disabled={busy}>匿名ログイン</button>
-        <button onClick={logout} disabled={busy}>ログアウト</button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button className="border px-3 py-2 rounded" onClick={doSignin}>
+            メール/パスワードでログイン
+          </button>
+          <button className="border px-3 py-2 rounded" onClick={doSignup}>
+            メール/パスワードで作成（無ければ作成）
+          </button>
+          <button className="border px-3 py-2 rounded" onClick={doAnon}>
+            匿名ログイン
+          </button>
+          <button className="border px-3 py-2 rounded" onClick={doSignout}>
+            ログアウト
+          </button>
+        </div>
       </div>
 
-      {msg && <p style={{ marginTop: 12 }}>{msg}</p>}
-
-      <div style={{ marginTop: 16 }}>
-        <Link to="/review">→ 復習ページへ</Link>
-      </div>
+      {msg && (
+        <div style={{ marginTop: 12, color: "#333" }}>
+          <strong>{msg}</strong>
+        </div>
+      )}
     </div>
   );
 }

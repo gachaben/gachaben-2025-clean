@@ -6,32 +6,29 @@ import { db } from "../legacy_deprecated/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import SequenceView from "@/components/review/SequenceView";
 import GroupView from "@/components/review/GroupView";
+import { consumeOneHeart } from "../lib/hearts";
 
 /* =========================
    子コンポーネント（外に出す）
    ========================= */
-function MCQView({ text, options = [], answer, setDebugYou, isCorrectAnswer, onCorrect, onWrong }) {
+function MCQView({ text, options = [], answer, setDebugYou, isCorrectAnswer, judge }) {
   const [picked, setPicked] = useState(null);
 
   const labelOf = (op) => String(op?.label ?? op?.value ?? op);
 
   const handlePick = (idx) => {
     const lbl = labelOf(options[idx]);
-    console.log("[MCQ] pick:", idx, lbl);
     setPicked(idx);
     setDebugYou(lbl);
   };
 
   const confirm = () => {
-    console.log("[MCQ] confirm clicked. picked =", picked);
     if (picked == null) return;
     const you = labelOf(options[picked]);
-    console.log("[MCQ] you=", you, "answer=", answer);
     setDebugYou(you);
-    isCorrectAnswer(you, answer) ? onCorrect() : onWrong();
+    const ok = isCorrectAnswer(you, answer);
+    judge(ok);
   };
-
-  const isDisabled = picked == null;
 
   return (
     <div className="space-y-3">
@@ -59,23 +56,22 @@ function MCQView({ text, options = [], answer, setDebugYou, isCorrectAnswer, onC
       <button
         type="button"
         onClick={confirm}
-        disabled={isDisabled}
-        aria-disabled={isDisabled}
-        className={`px-4 py-2 rounded-md border mt-2 ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        disabled={picked == null}
+        aria-disabled={picked == null}
+        className={`px-4 py-2 rounded-md border mt-2 ${picked == null ? "opacity-50 cursor-not-allowed" : ""}`}
       >
         確定
       </button>
-
-      <div className="text-xs opacity-70 mt-1">
-        picked: <code>{String(picked)}</code>
-      </div>
     </div>
   );
 }
 
-function TextView({ text, answer, setDebugYou, isCorrectAnswer, onCorrect, onWrong }) {
+function TextView({ text, answer, setDebugYou, isCorrectAnswer, judge }) {
   const [val, setVal] = useState("");
-  const confirm = () => (isCorrectAnswer(val, answer) ? onCorrect() : onWrong());
+  const confirm = () => {
+    const ok = isCorrectAnswer(val, answer);
+    judge(ok);
+  };
   return (
     <div className="space-y-3">
       <div className="text-lg font-semibold mb-2">{text}</div>
@@ -165,8 +161,28 @@ export default function ReviewPlayPage() {
     return shuffled.map((ch, i) => ({ id: String(i), text: String(ch) }));
   }, [q]);
 
-  const onCorrect = () => navigate("/review", { replace: true });
-  const onWrong = () => alert("ざんねん！もう一度トライしてみよう");
+  // ナビゲーション（正誤時の画面遷移）
+  const goCorrect = () => navigate("/review", { replace: true });
+  const goWrong = () => alert("ざんねん！もう一度トライしてみよう");
+
+  // ❤を消費してから正誤処理を実行
+  const judge = async (ok) => {
+    try {
+      await consumeOneHeart(uid, `review-${q.id}-${Date.now()}`);
+      ok ? goCorrect() : goWrong();
+    } catch (e) {
+      const code = e?.code || e?.message;
+      if (code === "NO_HEART") {
+        alert("❤が足りません。広告で回復してから再挑戦してね！");
+        navigate("/review"); // とりあえず一覧へ戻す（回復導線は後で実装）
+      } else if (code === "NO_AUTH") {
+        alert("ログイン状態を確認してください。");
+      } else {
+        console.error("[ReviewPlay] judge error:", e);
+        alert("エラーが起きました。時間をおいて再度お試しください。");
+      }
+    }
+  };
 
   if (loading) return <div style={{ padding: 16 }}>読み込み中...</div>;
   if (error) return <div style={{ padding: 16 }}>エラー: {error}</div>;
@@ -183,8 +199,8 @@ export default function ReviewPlayPage() {
           questionId={q.id}
           items={q.items || q.tokens || []}
           answer={q.answer}
-          onCorrect={onCorrect}
-          onWrong={onWrong}
+          onCorrect={() => judge(true)}
+          onWrong={() => judge(false)}
         />
       )}
 
@@ -193,8 +209,8 @@ export default function ReviewPlayPage() {
           questionId={q.id}
           tokens={groupTokens}
           answer={q.answer}
-          onCorrect={() => { setDebugYou("(group) 正解パターン"); onCorrect(); }}
-          onWrong={() => { setDebugYou("(group) 現在＝" + debugYou); onWrong(); }}
+          onCorrect={() => { setDebugYou("(group) 正解パターン"); judge(true); }}
+          onWrong={() => { setDebugYou("(group) 現在＝" + debugYou); judge(false); }}
         />
       )}
 
@@ -205,8 +221,7 @@ export default function ReviewPlayPage() {
           answer={q.answer}
           setDebugYou={setDebugYou}
           isCorrectAnswer={isCorrectAnswer}
-          onCorrect={onCorrect}
-          onWrong={onWrong}
+          judge={judge}
         />
       )}
 
@@ -216,11 +231,11 @@ export default function ReviewPlayPage() {
           answer={q.answer}
           setDebugYou={setDebugYou}
           isCorrectAnswer={isCorrectAnswer}
-          onCorrect={onCorrect}
-          onWrong={onWrong}
+          judge={judge}
         />
       )}
 
+      {/* 未対応タイプ → 簡易テキスト入力で判定 */}
       {!["sequence", "group", "mcq", "text", "keypad"].includes(type) && (
         <div>
           <div className="text-lg font-semibold mb-2">{q.text}</div>
@@ -232,14 +247,17 @@ export default function ReviewPlayPage() {
             answer={q.answer}
             setDebugYou={setDebugYou}
             isCorrectAnswer={isCorrectAnswer}
-            onCorrect={onCorrect}
-            onWrong={onWrong}
+            judge={judge}
           />
         </div>
       )}
 
       <div className="mt-6">
-        <button type="button" onClick={() => navigate("/review")} className="px-3 py-2 rounded-md border">
+        <button
+          type="button"
+          onClick={() => navigate("/review")}
+          className="px-3 py-2 rounded-md border"
+        >
           戻る
         </button>
       </div>

@@ -1,22 +1,10 @@
 import React, { useMemo, useState, useEffect } from "react";
 
-/**
- * 並べ替え（sequence）ビュー
- * - correctAnswer を空白区切りで分割して正解配列に
- * - options があれば候補プールに使う
- * - 最後まで正しい順で選んだら onCorrect() を「レンダー後」に呼ぶ
- */
 export default function SequenceView({ question, onCorrect, onWrong }) {
-  // 正解列
   const answerTokens = useMemo(() => {
-    if (Array.isArray(question.options) && question.options.length > 0) {
-      // options がある場合でも、正解の順序は correctAnswer に従う
-      return String(question.correctAnswer ?? "").split(" ").filter(Boolean);
-    }
     return String(question.correctAnswer ?? "").split(" ").filter(Boolean);
   }, [question.id]);
 
-  // 候補プール（シャッフル）
   const initialPool = useMemo(() => {
     const src =
       Array.isArray(question.options) && question.options.length > 0
@@ -29,10 +17,8 @@ export default function SequenceView({ question, onCorrect, onWrong }) {
   const [picked, setPicked] = useState([]);
   const [completed, setCompleted] = useState(false);
 
-  // ✅ 完了フラグが立った「後」で onCorrect を呼ぶ（親のsetStateと競合しない）
   useEffect(() => {
     if (completed) {
-      // 少し遅延させてから呼ぶとさらに安全
       const t = setTimeout(() => onCorrect(), 0);
       return () => clearTimeout(t);
     }
@@ -40,15 +26,12 @@ export default function SequenceView({ question, onCorrect, onWrong }) {
 
   function pick(tok) {
     if (completed) return;
-
     const expected = answerTokens[picked.length];
     if (tok === expected) {
       const nextPicked = [...picked, tok];
       setPicked(nextPicked);
       setRemain(prev => prev.filter(t => t !== tok));
-      if (nextPicked.length === answerTokens.length) {
-        setCompleted(true); // ← ここでは onCorrect を呼ばない
-      }
+      if (nextPicked.length === answerTokens.length) setCompleted(true);
     } else {
       onWrong();
     }
@@ -56,7 +39,6 @@ export default function SequenceView({ question, onCorrect, onWrong }) {
 
   function undo(idx) {
     if (completed) return;
-    // 最後に入れた1個だけ戻せる
     if (idx !== picked.length - 1) return;
     const tok = picked[picked.length - 1];
     setPicked(prev => prev.slice(0, -1));
@@ -79,7 +61,6 @@ export default function SequenceView({ question, onCorrect, onWrong }) {
               cursor: i === picked.length - 1 && !completed ? "pointer" : "default",
               opacity: i === picked.length - 1 ? 1 : 0.8
             }}
-            title={i === picked.length - 1 ? "最後の1個は戻せます" : ""}
             disabled={completed}
           >
             {t}
@@ -91,6 +72,7 @@ export default function SequenceView({ question, onCorrect, onWrong }) {
         {remain.map(t => (
           <button
             key={t}
+            type="button"
             onClick={() => pick(t)}
             disabled={completed}
             style={{

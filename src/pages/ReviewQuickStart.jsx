@@ -15,16 +15,20 @@ function tsToMs(v) {
   if (v instanceof Date) return v.getTime?.() ?? 0;
   if (typeof v.toMillis === "function") return v.toMillis();
   if (v.seconds != null && v.nanoseconds != null) {
-    // emuで生オブジェクトのことがある
     return v.seconds * 1000 + Math.floor(v.nanoseconds / 1e6);
   }
   try {
-    // 予備: toDate があれば使う
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     return v.toDate?.().getTime?.() ?? 0;
   } catch {
     return 0;
   }
+}
+
+function formatMMSS(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
 }
 
 export default function ReviewQuickStart() {
@@ -32,7 +36,9 @@ export default function ReviewQuickStart() {
   const uid = getAuth().currentUser?.uid;
 
   const [user, setUser] = useState(null);
+  const [nowMs, setNowMs] = useState(Date.now()); // ← 秒カウントダウン用
 
+  // User doc 購読
   useEffect(() => {
     if (!uid) return;
     const un = onSnapshot(doc(db, "users", uid), (snap) => {
@@ -41,20 +47,23 @@ export default function ReviewQuickStart() {
     return () => un && un();
   }, [uid]);
 
+  // 1秒ごとに「現在時刻」を更新（軽いです）
+  useEffect(() => {
+    const t = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
   const hearts = user?.hearts ?? 0;
-
   const lastAdAtMs = tsToMs(user?.lastAdHeartsAt);
-  const now = Date.now();
-  const cdRemainMs = Math.max(0, COOLDOWN_MIN * 60_000 - (now - lastAdAtMs));
-  const cdRemainMin = Math.ceil(cdRemainMs / 60_000);
 
+  const cdTotalMs = COOLDOWN_MIN * 60_000;
+  const cdRemainMs = Math.max(0, cdTotalMs - (nowMs - lastAdAtMs));
   const canAdRecover = hearts < 5 && cdRemainMs === 0;
 
   const doAdRecover = async () => {
     if (!uid) return alert("ログインを確認してください");
     if (hearts >= 5) return alert("❤は満タンです！");
-    if (!canAdRecover)
-      return alert(`クールダウン中です。約 ${cdRemainMin} 分後に再度お試しください。`);
+    if (!canAdRecover) return; // ガード
     try {
       // 本来は広告SDKの視聴完了イベント後に実行
       await fullRecoverHearts(uid, { reason: "ad" });
@@ -78,8 +87,7 @@ export default function ReviewQuickStart() {
         }}
       >
         <div style={{ marginBottom: 8 }}>
-          まだ復習する問題はありません
-          <span role="img" aria-label="sparkles">✨</span>
+          まだ復習する問題はありません<span role="img" aria-label="sparkles">✨</span>
           <br />
           <small>（まずは「サンプル投入」で動作確認してみよう）</small>
         </div>
@@ -116,13 +124,15 @@ export default function ReviewQuickStart() {
           disabled={!canAdRecover}
           onClick={doAdRecover}
         >
-          広告で❤全回復（{COOLDOWN_MIN}分クールダウン）
+          {canAdRecover
+            ? "広告で❤全回復（今すぐ使用可能）"
+            : `広告で❤全回復（${COOLDOWN_MIN}分クールダウン）`}
         </button>
         <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
           {hearts >= 5
             ? "❤は満タンです。"
             : cdRemainMs > 0
-            ? `再使用まで 約 ${cdRemainMin} 分`
+            ? `再使用まで ${formatMMSS(cdRemainMs)}`
             : "今すぐ使用できます。"}
         </div>
       </div>
@@ -146,7 +156,7 @@ export default function ReviewQuickStart() {
             lastAdHeartsAt:{" "}
             <code>
               {(() => {
-                const ms = tsToMs(user?.lastAdHeartsAt);
+                const ms = lastAdAtMs;
                 return ms ? new Date(ms).toLocaleString() : "-";
               })()}
             </code>

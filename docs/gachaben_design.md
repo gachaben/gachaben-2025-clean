@@ -135,6 +135,164 @@
 - 課金導線（無制限❤／無制限バトル／限定ガチャ券）
 - バトルAI：対戦相手履歴の参照幅・学年差補正
 
+10. 用語定義（ブレ防止）
+
+❤：スタミナ。最大5。内部キー hearts。
+
+バトル券：1日の無料挑戦回数。内部キー battleTickets（最大3）。
+
+武器：ユーザーが解いた問題IDの集合。バトル出題の母集団。
+
+問題レベル：level = 1/2/3（難→重みづけに使用）。
+
+週：月曜00:00〜日曜23:59（Asia/Tokyo）。
+
+11. クリティカル仕様（境界条件）
+
+❤消費タイミング：問題の「解答確定」時に -1。
+
+❤回復タイミング：lastHeartTick から 15分ごとに +1（MAX=5）。
+
+広告回復：視聴完了イベント受信時に hearts=5。連打防止にクールダウン 10分。
+
+直近出題クールタイム：同一問題は同セッションで連続出題禁止＋週末イベント中は同問題の再出現間隔=3問以上。
+
+未成年配慮：広告はミュート解除不可・スキップ不可のリワード広告のみ。ペアレンタル同意（ToS/Privacyに明記）。
+
+12. Firestore スキーマ（v1・最小）
+// users/{uid}
+{
+  hearts: number,                // 0..5
+  heartsLastTickAt: Timestamp,   // ❤回復基点
+  battleTickets: number,         // 0..3
+  battleTicketsResetAt: Timestamp, // 翌0時に向けた基準
+  solvedProblems: { [problemId]: { lastSolvedAt: Timestamp, level: 1|2|3 } },
+  daily: {
+    date: 'YYYY-MM-DD',
+    textbookCleared: boolean,
+    playedMin: number,           // セッション累積分
+    calcDone: boolean, kanjiDone: boolean, readingDone: boolean
+  },
+  gacha: {
+    normal: number, premium: number
+  },
+  ranks: { weeklyPoint: number, totalPoint: number }
+}
+
+// problems/{problemId}
+{
+  grade: number, subject: 'jp'|'math'|'sci'|'soc'|'eng',
+  unit: string,
+  type: 'mcq'|'keypad'|'sequence'|'text'|'multi'|'group',
+  level: 1|2|3,
+  body: {...},
+}
+
+// events/{autoId}  // 分析用（非必須だが将来のABに効く）
+{
+  uid, type: 'ad_reward'|'battle_win'|'gacha_draw'|'mission_clear',
+  meta: {...}, at: Timestamp
+}
+
+13. バトル出題ロジック（確定アルゴリズム）
+
+武器母集団＝users/{uid}.solvedProblems。
+
+バトルガチャ結果（80/50/30）→重みテーブルを選択。
+
+weightedRandomPick(母集団, weights[level]) で1問選ぶ。
+
+直前出題と同一IDはスキップ。
+
+CPU正誤は「相手履歴の正答率×問題level×乱数」で判定（係数は環境変数で可変）。
+
+14. ガチャ確率テーブル（ソースオブトゥルース）
+
+ノーマル：B多め／A=5%／S=1%
+
+激熱：A多め／S=10%
+
+プレミアム：S=100%
+
+テーブルは config/gachaTables.json に一元管理し、UI表示の文言もここから参照。
+
+15. ランキング集計仕様
+
+期間：月00:00〜日23:59 (JST)
+
+ポイント：勝利+30／惜敗+10／敗北+5／引き分け+1。
+
+週末2倍：土日だけ ×2。
+
+集計はクラウド関数の日次＋週次バッチで確定。クライアント側は暫定表示。
+
+16. チート/多重実行対策（最初から書いとく）
+
+リワード広告はサーバー側検証（広告SDKのサーバーコールバック or 署名検証）。
+
+重要書き込み（❤回復・ガチャ結果・ランキング加算）はidempotencyKeyで二重防止。
+
+タイムゾーンはJST固定でサーバー側計算（クライアント時計無視）。
+
+17. KPI と初期目標
+
+D1/7/28 リテンション、セッション/日、広告視聴/DAU、ガチャ回数/DAU。
+
+目標（初期）：
+
+D1: 35% / D7: 12%
+
+広告: 1ユーザー週10〜15回（想定維持）
+
+ガチャ: 1日 3〜5 回
+
+18. チュートリアル & 空振り時のUX
+
+初回起動：
+
+❤説明→ 2) ミッション→ 3) ガチャ→ 4) バトルの順で3タップ完了。
+
+❤ゼロ時：広告で全回復バナー＋「今は学習だけ進める」セーフティ導線。
+
+バトル券ゼロ時：同様に広告回復or学習へ誘導。
+
+19. ABテストの鉤
+
+トグル（Remote Config）：hearts.recoverMinutes、battle.weightPreset、weekendMultiplier。
+
+最初はログだけ仕込む（露骨なUI分岐は第2段）。
+
+20. 法務・保護者向け
+
+プライバシーポリシー／利用規約：広告・データ利用・未成年を明記。
+
+学校利用を想定し、教師向け説明PDF（1枚）を準備（後追いでOK）。
+
+実装メモ（貼っておくと楽）
+
+❤自動回復（クライアント共通関数）
+
+export function computeHearts(now, lastTick, hearts) {
+  if (hearts >= 5) return { hearts, lastTick };
+  const minutes = Math.floor((now - lastTick) / 60000);
+  const gained = Math.floor(minutes / 15);
+  if (gained <= 0) return { hearts, lastTick };
+  const nextHearts = Math.min(5, hearts + gained);
+  const consumedMinutes = gained * 15;
+  const nextTick = lastTick + consumedMinutes * 60000;
+  return { hearts: nextHearts, lastTick: nextTick };
+}
+
+
+直近出題クールタイム（擬似コード）
+
+function pickProblem(pool, weights, recentIds) {
+  const candidates = pool.filter(p => !recentIds.includes(p.id));
+  return weightedRandom(candidates, p => weights[p.level]);
+}
+
+
+
 
 🗂 ガチャ弁25 資産仕分け表（最新版）
 カテゴリ	資産	残す／削除	理由

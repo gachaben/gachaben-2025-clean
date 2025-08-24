@@ -1,12 +1,13 @@
 // src/App.jsx
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Link } from "react-router-dom";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { getFirebaseAuth } from "@/firebase";
 
-// ★ 起動時に匿名ログインを保証（legacy_deprecated/firebase 側でエミュ接続）
-import { ensureSignedIn, db } from "./legacy_deprecated/firebase";
+// ✅ 入口を1本化：互換ハブ（src/fbkit/index.ts）経由
+import { db } from "@/firebase";
 
-// Firestore デバッグ用
+// Firestore（デバッグ／書き込み）
 import { onSnapshot, doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 // 既存ページ
@@ -39,22 +40,34 @@ import DarkLayout from "./layouts/DarkLayout.jsx";
 // ユーザ状態（❤/日次リセット）
 import { ensureUserDoc, refreshUserDaily, userDocRef } from "./lib/userState";
 
+/** ★ 匿名ログインを保証（エミュ接続は fbkit 側で済み） */
+async function ensureSignedIn() {
+  const auth = getFirebaseAuth(); // ← fbkit の Auth（エミュ接続済み）
+  if (!auth.currentUser) {
+    try {
+      await signInAnonymously(auth);
+    } catch (e) {
+      console.error("anonymous sign-in failed:", e);
+    }
+  }
+}
 export default function App() {
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-    // 1) まずサインイン（匿名OK）
-    ensureSignedIn();
-
-    // 2) サインイン完了後に users/{uid} 初期化 & 自動回復
-    const unSub = onAuthStateChanged(getAuth(), async (user) => {
-      if (!user) return;
+  ensureSignedIn();
+  const auth = getFirebaseAuth(); // ← 同じインスタンス
+  const unSub = onAuthStateChanged(auth, async (user) => {
+    if (!user) return;
+    try {
       await ensureUserDoc(user.uid);
       await refreshUserDaily(user.uid);
+    } finally {
       setAuthReady(true);
-    });
-    return () => unSub();
-  }, []);
+    }
+  });
+  return () => unSub();
+}, []);
 
   if (!authReady) {
     return <div style={{ padding: 16 }}>起動中...</div>;
@@ -202,20 +215,32 @@ function UserDebugPanel() {
 
   useEffect(() => {
     if (!uid) return;
-    const un = onSnapshot(userDocRef(uid), (snap) => setU({ id: snap.id, ...snap.data() }));
+    const un = onSnapshot(userDocRef(uid), (snap) =>
+      setU({ id: snap.id, ...snap.data() })
+    );
     return () => un();
   }, [uid]);
 
   if (!uid) return null;
 
   return (
-    <div style={{ marginTop: 16, padding: 12, border: "1px dashed #aaa", borderRadius: 8 }}>
+    <div
+      style={{ marginTop: 16, padding: 12, border: "1px dashed #aaa", borderRadius: 8 }}
+    >
       <div style={{ fontWeight: 600, marginBottom: 8 }}>User Debug</div>
       <div style={{ fontSize: 14, lineHeight: 1.7 }}>
-        <div>uid: <code>{uid}</code></div>
-        <div>hearts: <code>{u?.hearts ?? "-"}</code></div>
-        <div>battleTickets: <code>{u?.battleTickets ?? "-"}</code></div>
-        <div>daily.date: <code>{u?.daily?.date ?? "-"}</code></div>
+        <div>
+          uid: <code>{uid}</code>
+        </div>
+        <div>
+          hearts: <code>{u?.hearts ?? "-"}</code>
+        </div>
+        <div>
+          battleTickets: <code>{u?.battleTickets ?? "-"}</code>
+        </div>
+        <div>
+          daily.date: <code>{u?.daily?.date ?? "-"}</code>
+        </div>
       </div>
       <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
         <button className="px-3 py-2 border rounded" onClick={() => refreshUserDaily(uid)}>

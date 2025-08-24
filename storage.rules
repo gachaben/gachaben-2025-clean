@@ -1,6 +1,8 @@
+// storage.rules（エミュ用の最小設定・本番では絞ってね）
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // エミュ用：誰でも読み書き可（本番ではNG）
     match /{allPaths=**} {
       allow read, write: if true;
     }

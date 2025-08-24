@@ -15,7 +15,8 @@
     "baseUrl": "src",
     "paths": {
       "@/*": ["*"],
-      "@/firebase": ["fbkit/index.ts"]   // ← ここを修正
+      "@/firebase": ["fbkit/index.ts"],
+      "@/fbkit/*": ["fbkit/*"]         // ← 追加（あると便利）
     }
   },
   "include": ["src"],

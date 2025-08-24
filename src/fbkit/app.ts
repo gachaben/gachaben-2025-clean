@@ -1,32 +1,26 @@
 // src/fbkit/app.ts
-import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   initializeFirestore,
   getFirestore,
   connectFirestoreEmulator,
   persistentLocalCache,
   persistentMultipleTabManager,
-  type Firestore,
 } from "firebase/firestore";
-import {
-  getAuth,
-  connectAuthEmulator,
-  type Auth,
-} from "firebase/auth";
-import {
-  getStorage,
-  connectStorageEmulator,
-  type FirebaseStorage,
-} from "firebase/storage";
-import { firebaseConfig, isLocalhost } from "./config";
+import type { Firestore } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import type { Auth } from "firebase/auth";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
+import type { FirebaseStorage } from "firebase/storage";
+import { firebaseConfig, isLocalhost, FIRESTORE_PORT } from "./config";
 
 // ---- Singleton holders ----
-let _app: FirebaseApp | undefined;
+let _app: ReturnType<typeof initializeApp> | undefined;
 let _db: Firestore | undefined;
 let _auth: Auth | undefined;
 let _storage: FirebaseStorage | undefined;
 
-export function getFirebaseApp(): FirebaseApp {
+export function getFirebaseApp() {
   if (!_app) {
     _app = getApps().length ? getApp() : initializeApp(firebaseConfig);
   }
@@ -37,18 +31,18 @@ export function getFirestoreDb(): Firestore {
   if (!_db) {
     const app = getFirebaseApp();
     try {
-      // 初回はキャッシュ付きで初期化
       _db = initializeFirestore(app, {
         localCache: persistentLocalCache({
           tabManager: persistentMultipleTabManager(),
         }),
+        ignoreUndefinedProperties: true,
+        experimentalAutoDetectLongPolling: true,
       });
-    } catch (e) {
-      // 既に他所で初期化されていた場合は既存インスタンスを返す
+    } catch {
       _db = getFirestore(app);
     }
     if (isLocalhost) {
-      connectFirestoreEmulator(_db, "localhost", 8080);
+      connectFirestoreEmulator(_db, "localhost", FIRESTORE_PORT);
     }
   }
   return _db;

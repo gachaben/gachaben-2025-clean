@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "../legacy_deprecated/firebase"; // ← あなたのfirebase設定に合わせてパス調整
+import { db } from "@/firebase"; // ← あなたのfirebase設定に合わせてパス調整
 import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 

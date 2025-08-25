@@ -1,6 +1,6 @@
 // src/components/EggDisplay.jsx
 import React, { useEffect, useState } from "react";
-import { auth, db } from "../legacy_deprecated/firebase";
+import { auth, db } from "@/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 const EggDisplay = () => {

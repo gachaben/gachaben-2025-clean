@@ -1,7 +1,7 @@
 // 📄 src/utils/initializeUserItems.js
 
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 
 // ユーザーにアイテムIDを自動登録（egg形式ではなくS/A/B形式）
 export const initializeUserItems = async (uid) => {

@@ -1,5 +1,5 @@
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 
 export const setInitialStage = async (uid) => {
   const ref = doc(db, "userItemPowers", uid);

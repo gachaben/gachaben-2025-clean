@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase"; // パスは調整してね
+import { db } from "@/firebase"; // パスは調整してね
 
 export async function addEggItem(uid, itemId) {
   const itemRef = doc(db, "userItemPowers", `${uid}_${itemId}`);

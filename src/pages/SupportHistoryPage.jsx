@@ -1,7 +1,7 @@
 // src/pages/SupportHistoryPage.jsx
 
 import React, { useEffect, useState } from "react";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import {
   collection,
   query,

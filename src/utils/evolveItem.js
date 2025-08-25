@@ -1,6 +1,6 @@
 // src/utils/evolveItem.js
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import { getRandomStageUp } from "./getRandomStageUp";
 import { getZoneByPower } from "./getZoneByPower";
 import { getRankFromPower } from "./getRankFromPower"; // ← これ新規で必要なら作る

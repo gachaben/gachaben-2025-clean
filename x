@@ -18,7 +18,7 @@
 [31m-// 各ビュー[m
 [31m-import McqView from "@/components/review/McqView";[m
 [31m-import KeypadView from "@/components/review/KeypadView";[m
-[32m+[m[32mimport { db } from "../legacy_deprecated/firebase";[m
+[32m+[m[32mimport { db } from "@/firebase";[m
 [32m+[m[32mimport { doc, getDoc } from "firebase/firestore";[m
  import SequenceView from "@/components/review/SequenceView";[m
 [31m-import TextInputView from "@/components/review/TextInputView";[m

@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import {
   collection,
   query,

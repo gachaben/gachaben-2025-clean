@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import { fullRecoverHearts } from "../lib/hearts";
 
 const COOLDOWN_MIN = 10;

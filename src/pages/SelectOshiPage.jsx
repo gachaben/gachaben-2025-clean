@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { doc, updateDoc } from "firebase/firestore";
-import { auth, db } from "../legacy_deprecated/firebase";
+import { auth, db } from "@/firebase";
 
 const oshiList = [
   { id: "wanwan", name: "ワンワン", image: "/images/wanwan.png" },

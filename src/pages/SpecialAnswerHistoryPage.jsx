@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 

@@ -1,6 +1,6 @@
 // utils/updateBadges.js
 import { doc, getDoc, setDoc, arrayUnion } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 
 // ユーザー1人にバッジを追加する
 export const giveBadgeToUser = async (uid, badgeName) => {

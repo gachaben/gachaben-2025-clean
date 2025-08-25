@@ -1,6 +1,6 @@
 // src/utils/updateItemStage.js
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 
 export const updateItemStage = async (uid, itemId, newStage) => {
   try {

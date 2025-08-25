@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getAuth } from "firebase/auth";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import SequenceView from "@/components/review/SequenceView";
 import GroupView from "@/components/review/GroupView";

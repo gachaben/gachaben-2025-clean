@@ -1,6 +1,6 @@
 // src/utils/updateEvolutionStage.js
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 
 // 進化条件に応じて stage を更新
 export const updateEvolutionStage = async (uid, itemId) => {

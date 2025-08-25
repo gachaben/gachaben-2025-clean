@@ -1,5 +1,5 @@
 // 📄 src/utils/saveBattleRecord.js
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 export const saveBattleRecord = async (uid, data) => {

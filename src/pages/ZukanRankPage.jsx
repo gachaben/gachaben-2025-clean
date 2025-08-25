@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { collection, getDoc, doc, getDocs } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import { itemNames } from "../data/itemNames";
 import ItemCard from "../components/ItemCard";
 

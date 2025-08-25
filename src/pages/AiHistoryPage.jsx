@@ -1,6 +1,6 @@
 // src/pages/AiHistoryPage.jsx
 import React, { useEffect, useState } from "react";
-import { db } from "../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import { getAuth } from "firebase/auth";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 

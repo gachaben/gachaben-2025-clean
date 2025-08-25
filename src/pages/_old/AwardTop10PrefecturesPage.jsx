@@ -6,7 +6,7 @@ import {
   setDoc,
   arrayUnion,
 } from "firebase/firestore";
-import { db } from "../../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 
 const AwardTop10PrefecturesPage = () => {
   const [message, setMessage] = useState("");

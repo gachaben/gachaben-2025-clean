@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { auth, db } from "@/firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { addEggItem } from "../utils/addEggItem";
 import { updateEvolutionStage } from "../utils/updateEvolutionStage"; // ← 追加！
 
 const QuizResultPage = () => {

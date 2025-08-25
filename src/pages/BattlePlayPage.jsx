@@ -1,15 +1,18 @@
 // src/pages/BattlePlayPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import ItemCard from "../components/ItemCard";
 import useBattleFinish from "../hooks/useBattleFinish";
 import { ensureSignedIn } from "@/firebase";
 import { recordMistake } from "../lib/recordMistakes";
 
+// ===== サンプル問題 =====
 const QUESTIONS = [
   { text: "カブトムシの幼虫がよく食べるものは？", options: ["木の葉", "腐葉土", "果物"], answer: "腐葉土" },
   { text: "セミが地中で過ごす年数は？", options: ["1年", "3〜7年", "10年"], answer: "3〜7年" },
 ];
+
+// ===== かけられるPW候補 =====
 const PW_OPTIONS = [50, 100, 200, 300];
 
 export default function BattlePlayPage() {
@@ -24,6 +27,10 @@ export default function BattlePlayPage() {
     initialMyPw = 600,
     userId,
   } = state || {};
+
+  // ===== バトル開始時刻・二重終了ガード =====
+  const startedAtRef = useRef(Date.now());
+  const finishedOnceRef = useRef(false);
 
   // ===== PW =====
   const [myPw, setMyPw] = useState(initialMyPw);
@@ -40,6 +47,9 @@ export default function BattlePlayPage() {
   const [myAnswer, setMyAnswer] = useState(null);
   const [enemyAnswer, setEnemyAnswer] = useState(null);
 
+  // ラウンドログ（結果ページ保存用）
+  const [roundLogs, setRoundLogs] = useState([]);
+  // 画面表示用の簡易ログ
   const [log, setLog] = useState([]);
 
   // ===== ItemCard 用に敵データ整形 =====
@@ -72,7 +82,7 @@ export default function BattlePlayPage() {
   };
   const cpuCorrect = () => Math.random() < 0.6;
 
-  // ラウンド開始リセット
+  // ===== ラウンド開始時のリセット =====
   useEffect(() => {
     setEnemyBet(null);
     setMyBet(null);
@@ -82,7 +92,7 @@ export default function BattlePlayPage() {
     setPhase("betEnemy");
   }, [round]);
 
-  // 敵が先にベット
+  // ===== 敵が先にベット =====
   useEffect(() => {
     if (phase !== "betEnemy") return;
     const id = setTimeout(() => {
@@ -94,14 +104,14 @@ export default function BattlePlayPage() {
     return () => clearTimeout(id);
   }, [phase, enemyPw]);
 
-  // 自分のベット
+  // ===== 自分のベット =====
   const handleMyBet = (bet) => {
     setMyBet(bet);
     setQuestion(QUESTIONS[(round - 1) % QUESTIONS.length]);
     setPhase("question");
   };
 
-  // 自分回答
+  // ===== 自分回答 → CPU回答 → resolve =====
   const handleMyAnswer = (opt) => {
     if (!question) return;
     setMyAnswer(opt);
@@ -114,7 +124,7 @@ export default function BattlePlayPage() {
     }, 700);
   };
 
-  // 結果 → 次へ
+  // ===== 決着処理 & 次ラウンド／終了判定 =====
   useEffect(() => {
     if (phase !== "resolve" || !question) return;
 
@@ -133,7 +143,26 @@ export default function BattlePlayPage() {
     ].join(" / ");
     setLog((p) => [...p, line]);
 
-    // 不正解は mistakes へ保存
+    // ラウンドログ（詳細）
+    setRoundLogs((prev) => [
+      ...prev,
+      {
+        round,
+        enemyBet,
+        myBet,
+        myAnswer,
+        enemyAnswer,
+        correctAnswer: question.answer,
+        meCorrect,
+        enCorrect,
+        myPwAfter: nextMyPw,
+        enemyPwAfter: nextEnemyPw,
+        qText: question.text,
+        qOptions: question.options,
+      },
+    ]);
+
+    // 不正解は mistakes に保存
     (async () => {
       if (!meCorrect && question && myAnswer) {
         const user = await ensureSignedIn();
@@ -143,6 +172,7 @@ export default function BattlePlayPage() {
           picked: myAnswer,
           source: "battle",
         });
+        // eslint-disable-next-line no-console
         console.log("[mistake] recorded:", { uid: user?.uid, q: question.text, picked: myAnswer });
       }
     })();
@@ -152,22 +182,41 @@ export default function BattlePlayPage() {
       const isFinished = nextRound > questionCount || nextMyPw === 0 || nextEnemyPw === 0;
 
       if (isFinished) {
-        // 保存は内部で try/catch、結果遷移は常に行う
-        onBattleFinish({
-          myFinalLeft: nextMyPw,
-          enemyFinalLeft: nextEnemyPw,
-          roundsPlayed: round,
-          selectedItem,
-          enemyItem,
-          userId,
-        });
+        if (!finishedOnceRef.current) {
+          finishedOnceRef.current = true; // ★二重終了ガード
+          // 勝敗
+          let winner = "draw";
+          if (nextMyPw === 0 && nextEnemyPw === 0) winner = "draw";
+          else if (nextEnemyPw === 0 || nextMyPw > nextEnemyPw) winner = "you";
+          else if (nextMyPw === 0 || nextEnemyPw > nextMyPw) winner = "enemy";
+
+          // 保存と遷移は hook 側に委譲
+          onBattleFinish({
+            start: startedAtRef.current,
+            end: Date.now(),
+            myFinalLeft: nextMyPw,
+            enemyFinalLeft: nextEnemyPw,
+            roundsPlayed: round,          // 実際にプレイした回数
+            questionCount,                // 予定問題数
+            winner,                       // "you" | "enemy" | "draw"
+            selectedItem,
+            enemyItem,
+            userId,
+            myPwStart: initialMyPw,
+            myPwEnd: nextMyPw,
+            enemyPwStart: initialEnemyPw,
+            enemyPwEnd: nextEnemyPw,
+            log: roundLogs,               // 各ラウンドの詳細
+          });
+        }
         return;
       }
       setRound(nextRound);
     }, 700);
 
     return () => clearTimeout(id);
-  }, [phase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]); // 依存は phase に限定（他は内部で参照）
 
   // ===== 中央ゲージ =====
   const Gauge = () => (
@@ -205,6 +254,7 @@ export default function BattlePlayPage() {
     </section>
   );
 
+  // ===== 相手の選択肢（表示専用） =====
   const EnemyChoices = () => {
     if (!question) return null;
     return (
@@ -244,7 +294,7 @@ export default function BattlePlayPage() {
         {/* 敵 ベットUI（表示のみ） */}
         <div className="mt-3" style={{ width: "100%", maxWidth: 720, padding: "0 12px" }}>
           <div className="text-sm font-semibold mb-1">
-            かけるPW（Round {round}/{questionCount}）
+            かけるPW（Round {round}/{questionCount})
             {phase === "betEnemy" && <span className="ml-2 text-xs text-gray-500">…思考中</span>}
           </div>
           <div className="flex gap-2 flex-wrap opacity-90">
@@ -276,7 +326,7 @@ export default function BattlePlayPage() {
 
         {phase === "betMe" && (
           <div className="mt-3 w-full max-w-sm">
-            <div className="text-sm font-semibold mb-1">かけるPWを選ぶ（Round {round}/{questionCount}）</div>
+            <div className="text-sm font-semibold mb-1">かけるPWを選ぶ（Round {round}/{questionCount})</div>
             <div className="flex gap-2 flex-wrap">
               {PW_OPTIONS.map((pw) => (
                 <button
@@ -307,12 +357,12 @@ export default function BattlePlayPage() {
                 </button>
               ))}
             </div>
-            <div className="mt-2 text-xs text-gray-500">ベット：相手 {enemyBet} / 自分 {myBet ?? "-"}</div>
+            <div className="mt-2 text-xs text-gray-500">ベット：相手 {enemyBet ?? "-"} / 自分 {myBet ?? "-"}</div>
           </div>
         )}
       </section>
 
-      {/* ログ */}
+      {/* ログ（下部） */}
       <div className="p-2 bg-gray-900 text-white text-xs">
         {log.map((l, i) => (<div key={i}>{l}</div>))}
       </div>

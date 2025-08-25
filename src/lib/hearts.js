@@ -1,6 +1,5 @@
 // src/lib/hearts.js
 import { runTransaction, serverTimestamp } from "firebase/firestore";
-import { db } from "../legacy_deprecated/firebase";
 import { userDocRef } from "./userState";
 
 export async function consumeOneHeart(uid, idempotencyKey) {

@@ -1,9 +1,8 @@
 // src/lib/recordMistakes.js
 import { getAuth } from "firebase/auth";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/firebase";
-import {
-  addDoc, collection, getDocs, query, where, updateDoc, serverTimestamp
-} from "firebase/firestore";
+
 
 export async function recordMistake(payload) {
   const auth = getAuth();

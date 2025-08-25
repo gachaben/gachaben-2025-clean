@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../../legacy_deprecated/firebase";
+import { db } from "@/firebase";
 import { getImageByStage } from "../../utils/getImageByStage";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../legacy_deprecated/firebase";
+import { auth } from "@/firebase";
 import { itemNameMap } from "../../utils/item_Kontyu_Names";
 
 // ランキング対象アイテムID一覧

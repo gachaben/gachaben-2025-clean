@@ -3,14 +3,11 @@
   "private": true,
   "type": "module",
   "version": "1.0.0",
+ "scripts": {
+  "dev": "vite",
+  "dev:emu": "concurrently \"firebase emulators:start --project demo-gachaben\" \"npm run dev\""
+},
 
-  "scripts": {
-    "dev": "vite",
-    "emulators": "firebase emulators:start --project demo-gachaben",
-    "dev:emu": "concurrently -k -n EMU,WEB \"npm:emulators\" \"npm:dev\"",
-    "ports:clean": "kill-port 4000 8080 9099 9199 5173"
-  },
-  
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
     "@types/node": "^24.3.0",

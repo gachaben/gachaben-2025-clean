@@ -1,5 +1,7 @@
 // src/lib/saveBattleRecord.js
-import { collection, addDoc, serverTimestamp, db } from "@/fbkit";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { db } from "@/firebase"; // ← dbだけをfbkitから
 
 /**
  * バトル結果を保存

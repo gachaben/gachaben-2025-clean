@@ -1,7 +1,7 @@
 // scripts/registerEggs.js
 import { initializeApp } from "firebase/app";
 import { collection, addDoc } from "firebase/firestore";
-import { db } from "../firebase"
+import { db } from "@/firebase";
 
 // ✅ あなたの Firebase 設定に差し替えてください
 const firebaseConfig = {

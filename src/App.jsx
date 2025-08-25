@@ -1,14 +1,9 @@
 // src/App.jsx
 import React, { useEffect, useState } from "react";
 import { Routes, Route, Link } from "react-router-dom";
-import { getAuth, onAuthStateChanged, signInAnonymously } from "firebase/auth";
-import { getFirebaseAuth } from "@/firebase";
-
-// ✅ 入口を1本化：互換ハブ（src/fbkit/index.ts）経由
-import { db } from "@/firebase";
-
-// Firestore（デバッグ／書き込み）
-import { onSnapshot, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/firebase"; // ← fbkit 経由で取得
+import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { doc, setDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 
 // 既存ページ
 import LinkAccountPage from "./pages/LinkAccountPage";
@@ -42,7 +37,6 @@ import { ensureUserDoc, refreshUserDaily, userDocRef } from "./lib/userState";
 
 /** ★ 匿名ログインを保証（エミュ接続は fbkit 側で済み） */
 async function ensureSignedIn() {
-  const auth = getFirebaseAuth(); // ← fbkit の Auth（エミュ接続済み）
   if (!auth.currentUser) {
     try {
       await signInAnonymously(auth);
@@ -51,23 +45,23 @@ async function ensureSignedIn() {
     }
   }
 }
+
 export default function App() {
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
-  ensureSignedIn();
-  const auth = getFirebaseAuth(); // ← 同じインスタンス
-  const unSub = onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
-    try {
-      await ensureUserDoc(user.uid);
-      await refreshUserDaily(user.uid);
-    } finally {
-      setAuthReady(true);
-    }
-  });
-  return () => unSub();
-}, []);
+    ensureSignedIn();
+    const unSub = onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      try {
+        await ensureUserDoc(user.uid);
+        await refreshUserDaily(user.uid);
+      } finally {
+        setAuthReady(true);
+      }
+    });
+    return () => unSub();
+  }, []);
 
   if (!authReady) {
     return <div style={{ padding: 16 }}>起動中...</div>;
@@ -207,10 +201,10 @@ function NotFound() {
   );
 }
 
-/* ====== ここから下はデバッグ用の小さな部品 ====== */
+/* ====== デバッグ部品 ====== */
 
 function UserDebugPanel() {
-  const uid = getAuth().currentUser?.uid;
+  const uid = auth.currentUser?.uid;
   const [u, setU] = useState(null);
 
   useEffect(() => {
@@ -252,7 +246,7 @@ function UserDebugPanel() {
 }
 
 function FirestoreWriteTest() {
-  const uid = getAuth().currentUser?.uid;
+  const uid = auth.currentUser?.uid;
   if (!uid) return null;
   return (
     <div style={{ marginTop: 12 }}>

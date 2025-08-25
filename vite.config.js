@@ -10,4 +10,5 @@ export default defineConfig({
       '@/firebase': fileURLToPath(new URL('./src/fbkit', import.meta.url)),
     },
   },
+  server: { port: 5173 },
 })

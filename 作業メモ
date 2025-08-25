@@ -73,3 +73,173 @@ PostCSSはTailwind v3から @tailwindcss/postcss 経由で使うように変更�
 
 
 ChatGPT に質問する
+ 
+
+了解。**作業メモ（最短復旧版）**を置きます。上からそのままやれば戻せます。質問不要。
+
+作業メモ v1（最短8手）
+0) すべて停止＆ポート解放
+Ctrl+C   # 走ってる dev / emulator を止める
+npx kill-port 8088 9099 9199 4000 5173
+
+1) Vite のキャッシュ掃除（500対策）
+# プロジェクト直下で
+rd /s /q node_modules\.vite
+rd /s /q node_modules    # 重い場合はスキップ可
+npm i                    # 上で消した場合のみ
+
+2) .env.local を固定（新規 or 上書き）
+VITE_USE_EMU=true
+VITE_FIRESTORE_PORT=8088
+
+3) firebase.json を固定（上書き）
+{
+  "emulators": {
+    "ui": { "enabled": true, "port": 4000 },
+    "auth": { "port": 9099 },
+    "firestore": { "port": 8088 },
+    "storage": { "port": 9199 }
+  },
+  "firestore": { "rules": "firestore.rules", "indexes": "firestore.indexes.json" }
+}
+
+4) vite.config.js の alias を確認/上書き
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { fileURLToPath, URL } from 'node:url'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@/firebase': fileURLToPath(new URL('./src/fbkit', import.meta.url)),
+    },
+  },
+  server: { port: 5173 },
+})
+
+5) Firebase 初期化を1か所に統一（上書き）
+src/fbkit/app.ts（全コピペ）
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
+import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
+import { getStorage, connectStorageEmulator, type FirebaseStorage } from "firebase/storage";
+import { firebaseConfig } from "./config";
+
+let _app: FirebaseApp | undefined;
+let _db: Firestore | undefined;
+let _auth: Auth | undefined;
+let _storage: FirebaseStorage | undefined;
+
+export function getFirebaseApp() { if (!_app) _app = getApps().length ? getApp() : initializeApp(firebaseConfig); return _app!; }
+export function getFirestoreDb() { if (!_db) _db = getFirestore(getFirebaseApp()); return _db!; }
+export function getAuthInstance() { if (!_auth) _auth = getAuth(getFirebaseApp()); return _auth!; }
+export function getStorageInstance() { if (!_storage) _storage = getStorage(getFirebaseApp()); return _storage!; }
+
+export const app = getFirebaseApp();
+export const db = getFirestoreDb();
+export const auth = getAuthInstance();
+export const storage = getStorageInstance();
+
+// Emulator（HMR多重対策）
+const useEmu = import.meta.env.VITE_USE_EMU === "true";
+if (useEmu && !(globalThis as any).__EMU_CONNECTED__) {
+  const HOST = "127.0.0.1";
+  const FS_PORT = Number(import.meta.env.VITE_FIRESTORE_PORT) || 8088;
+  try { connectAuthEmulator(auth, `http://${HOST}:9099`, { disableWarnings: true }); } catch {}
+  try { connectFirestoreEmulator(db, HOST, FS_PORT); } catch {}
+  try { connectStorageEmulator(storage, HOST, 9199); } catch {}
+  (globalThis as any).__EMU_CONNECTED__ = true;
+}
+
+src/fbkit/index.ts（全コピペ）
+export * from "./app"; // db, auth, storage をここから取る
+
+
+以降、他のファイルで initializeApp / getFirestore / getAuth / getStorage / initializeFirestore を呼ばない。
+Firestore/認証は常に：
+
+import { db, auth, storage } from "@/firebase";
+
+6) Login ページを最小化（500を確実に消す）
+src/pages/LoginPage.jsx（全コピペ）
+import React, { useEffect, useState } from "react";
+import { auth, db } from "@/firebase";
+import { signInAnonymously } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+
+export default function LoginPage() {
+  const [msg, setMsg] = useState("");
+
+  useEffect(() => {
+    // 起動時に匿名サインイン（未ログインだと 400/500 の温床になるため先に実行）
+    signInAnonymously(auth).then(() => setMsg("匿名ログインOK")).catch(e => setMsg(String(e)));
+  }, []);
+
+  async function seed() {
+    const uid = auth.currentUser?.uid ?? "EMU_TEST_UID";
+    await setDoc(doc(db, "users", uid), {
+      displayName: "Demo User",
+      hearts: 5,
+      battleTickets: 3,
+      createdAt: serverTimestamp(),
+    }, { merge: true });
+    setMsg(`seeded: users/${uid}`);
+  }
+
+  return (
+    <div style={{ padding: 16 }}>
+      <h1>Login (minimal)</h1>
+      <p>{msg || "..."}</p>
+      <button onClick={seed}>users に書き込む（seed）</button>
+    </div>
+  );
+}
+
+
+これで GET /src/pages/LoginPage.jsx 500（Vite 変換失敗）は、文法ミスや存在しない import を含まない最小コードに置き換わり、確実に解消します。
+
+7) 旧初期化の参照を断つ（1回だけ検索）
+
+VSCode 全体検索で 以下がゼロ件になるまで置換：
+
+from "../firebase" → from "@/firebase"
+
+from "./firebase" → from "@/firebase"
+
+legacy_deprecated/firebase → 削除 or @/firebase
+
+8) 同時起動
+npm i -D concurrently
+npx kill-port 8088 9099 9199 4000 5173
+
+
+package.json に追記：
+
+"scripts": {
+  "dev": "vite",
+  "dev:emu": "concurrently \"firebase emulators:start --project demo-gachaben\" \"npm run dev\""
+}
+
+
+起動：
+
+npm run dev:emu
+
+
+Emulator UI（http://127.0.0.1:4000）で
+ Auth=9099 / Firestore=8088 が緑か確認
+
+ブラウザ http://localhost:5173/login
+ → 画面の「seed」ボタンを1回押す
+
+Emulator UI → Firestore に users コレクションが出現すれば復旧OK
+
+うまくいかない時の見方（2行だけ）
+
+画面赤字が DEFAULT already exists → 7) の置換が漏れてる
+
+画面赤字が ERR_CONNECTION_REFUSED 9099 → Emulator 未起動（npm run dev:emu を再実行）
+
+これで“起点”に戻る＋users を確実に表示できる状態まで持っていけます。

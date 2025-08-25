@@ -14,7 +14,7 @@ const stageNames = {
 Object.keys(baseNames).forEach((id) => {
   stages.forEach((stage) => {
     kontyuItems.push({
-      id: `${stage}${id}`,        // 例: egg001
+      id: `${stage}${id}`,        
       name: `${baseNames[id]}（${stageNames[stage]}）`,
       stage: stage,
       seriesId: "kontyu"

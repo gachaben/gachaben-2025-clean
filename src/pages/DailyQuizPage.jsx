@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { db } from "@/firebase"
+import { db } from "@/fbkit"
 import { collection, getDocs } from 'firebase/firestore'
 
 function DailyQuizPage() {
@@ -36,7 +36,7 @@ function DailyQuizPage() {
     <div style={{ padding: '2rem' }}>
       {quiz ? (
         <>
-          <h2>🧠 問題: {quiz.text}</h2>
+          <h2>🧠 問顁E {quiz.text}</h2>
           <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
             {quiz.options.map((choice, idx) => (
               <li key={idx} style={{ margin: '8px 0' }}>
@@ -48,13 +48,13 @@ function DailyQuizPage() {
           </ul>
           {selected && (
             <>
-              <p>{result ? '⭕ 正解！すごい！' : '❌ ざんねん…'}</p>
-              <button onClick={handleNext}>つぎのもんだいへ ▶</button>
+              <p>{result ? '⭁E正解�E�すごい�E�E : '❁Eざんねん…'}</p>
+              <button onClick={handleNext}>つぎ�EもんだぁE�� ▶</button>
             </>
           )}
         </>
       ) : (
-        <p>すべての問題が終わったよ！🎉</p>
+        <p>すべての問題が終わったよ�E�🎁E/p>
       )}
     </div>
   )

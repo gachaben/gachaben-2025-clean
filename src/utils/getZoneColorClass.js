@@ -3,9 +3,9 @@ export const getZoneColorClass = (zoneName) => {
   switch (zoneName) {
     case '神化ゾーン':
       return 'text-purple-600 font-bold';
-    case '超越ゾーン':
+    case '趁E��ゾーン':
       return 'text-blue-600 font-bold';
-    case '爆裂ゾーン':
+    case '爁E��ゾーン':
       return 'text-red-500 font-bold';
     default:
       return 'text-gray-500';

@@ -8,7 +8,7 @@ import {
   query,
   where,
 } from "firebase/firestore";
-import { db, auth, ensureSignedIn } from "@/firebase";
+import { db, auth, ensureSignedIn } from "@/fbkit";
 
 export default function ReviewSessionStart() {
   const navigate = useNavigate();
@@ -79,7 +79,7 @@ export default function ReviewSessionStart() {
   }, [raw, subject, unit, onlyOpen]);
 
   const startSession = () => {
-    if (items.length === 0) return alert("対象がありません。条件を調整してね。");
+    if (items.length === 0) return alert("対象がありません。条件を調整してね、E);
     const take = items.slice(0, Math.max(1, Number(limitN) || 1));
     const queue = take.map((m) => ({
       questionId: m.questionId,
@@ -106,7 +106,7 @@ export default function ReviewSessionStart() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-3">
-      <h2 className="text-xl font-bold">連続復習スタート</h2>
+      <h2 className="text-xl font-bold">連続復習スターチE/h2>
 
       <div className="p-3 border rounded bg-white flex flex-wrap gap-2 items-center">
         <select
@@ -131,7 +131,7 @@ export default function ReviewSessionStart() {
           className="px-3 py-2 border rounded"
           disabled={!subject}
         >
-          <option value="">すべての単元</option>
+          <option value="">すべての単�E</option>
           {units.map((u) => (
             <option key={u} value={u}>
               {u}
@@ -145,7 +145,7 @@ export default function ReviewSessionStart() {
             checked={onlyOpen}
             onChange={(e) => setOnlyOpen(e.target.checked)}
           />
-          未復習のみ
+          未復習�Eみ
         </label>
 
         <label className="flex items-center gap-2 text-sm">
@@ -169,7 +169,7 @@ export default function ReviewSessionStart() {
         onClick={startSession}
         className="px-4 py-2 rounded bg-emerald-600 text-white"
       >
-        連続復習をはじめる
+        連続復習をはじめめE
       </button>
     </div>
   );

@@ -1,7 +1,7 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
-import GachaResultModal from "../components/GachaResultModal"; // パス調整してね！
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
+import GachaResultModal from "../components/GachaResultModal"; // パス調整してね�E�E
 
-// JSX の return の下のほうに：
+// JSX の return の下�EほぁE���E�E
 {showGachaModal && (
   <GachaResultModal
     point={gachaPoint}

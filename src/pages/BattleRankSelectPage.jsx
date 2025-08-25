@@ -7,32 +7,32 @@ const BattleRankSelectPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-yellow-100 p-6">
-      <h2 className="text-xl font-bold mb-6">⚔️ ランクを選んでバトルキャラを決めよう！</h2>
+      <h2 className="text-xl font-bold mb-6">⚔︁Eランクを選んでバトルキャラを決めよぁE��E/h2>
 
       <div className="flex gap-6">
-        {/* Sランク（金） */}
+        {/* Sランク�E��߁E�E*/}
         <button
           onClick={() => navigate("/zukan/kontyu/S")}
           className="px-6 py-3 rounded text-white font-bold shadow-md"
           style={{ backgroundColor: "#FFD700" }} // 金色
         >
-          Sランクで戦う！
+          Sランクで戦ぁE��E
         </button>
 
-        {/* Aランク（赤） */}
+        {/* Aランク�E�赤�E�E*/}
         <button
           onClick={() => navigate("/zukan/kontyu/A")}
           className="px-6 py-3 rounded text-white font-bold shadow-md bg-red-500 hover:bg-red-600"
         >
-          Aランクで戦う！
+          Aランクで戦ぁE��E
         </button>
 
-        {/* Bランク（緑） */}
+        {/* Bランク�E�緑！E*/}
         <button
           onClick={() => navigate("/zukan/kontyu/B")}
           className="px-6 py-3 rounded text-white font-bold shadow-md bg-green-500 hover:bg-green-600"
         >
-          Bランクで戦う！
+          Bランクで戦ぁE��E
         </button>
       </div>
     </div>

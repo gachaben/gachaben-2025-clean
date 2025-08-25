@@ -1,6 +1,6 @@
 // src/pages/AiHistoryPage.jsx
 import React, { useEffect, useState } from "react";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import { getAuth } from "firebase/auth";
 import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 
@@ -42,16 +42,16 @@ const AiHistoryPage = () => {
       {loading ? (
         <p>読み込み中...</p>
       ) : history.length === 0 ? (
-        <p>履歴がありません。</p>
+        <p>履歴がありません、E/p>
       ) : (
         <ul className="space-y-4">
           {history.map((log) => (
             <li key={log.id} className="border p-4 rounded">
               <p>📅 {log.createdAt?.toDate().toLocaleString()}</p>
-              <p>🧒 学年：{log.grade}</p>
+              <p>🧁E学年�E�{log.grade}</p>
               <p>📚 教科：{log.subject}</p>
-              <p>📖 単元：{log.unit}</p>
-              <p>🌀 トピック：{log.topic}</p>
+              <p>📖 単�E�E�{log.unit}</p>
+              <p>🌀 トピチE���E�{log.topic}</p>
             </li>
           ))}
         </ul>

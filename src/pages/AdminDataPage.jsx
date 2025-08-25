@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   collection, getDocs, orderBy, query, limit, where,
 } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
 // 表示用
 function toDate(ts) {
@@ -11,7 +11,7 @@ function toDate(ts) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
-// CSV ダウンロード
+// CSV ダウンローチE
 function downloadCsv(filename, rows, columns) {
   const esc = (v) => {
     if (v == null) return "";
@@ -27,7 +27,7 @@ function downloadCsv(filename, rows, columns) {
   URL.revokeObjectURL(url);
 }
 
-// 入力値(datetime-local) → Date or null
+// 入力値(datetime-local) ↁEDate or null
 const parseLocal = (s) => (s ? new Date(s) : null);
 
 export default function AdminDataPage() {
@@ -35,10 +35,10 @@ export default function AdminDataPage() {
   const [mistakes, setMistakes] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // 共通：期間フィルタ（ローカル時間）
+  // 共通：期間フィルタ�E�ローカル時間�E�E
   const [from, setFrom] = useState("");         // "2025-08-14T00:00"
   const [to, setTo] = useState("");             // "2025-08-14T23:59"
-  // mistakes は updatedAt 優先。必要なら切替可能
+  // mistakes は updatedAt 優先。忁E��なら�E替可能
   const [mistakesField] = useState("updatedAt"); // "updatedAt" | "createdAt"
 
   const fetchAll = async () => {
@@ -47,7 +47,7 @@ export default function AdminDataPage() {
       const fromD = parseLocal(from);
       const toD = parseLocal(to);
 
-      // ---- battles: createdAt 基準 ----
+      // ---- battles: createdAt 基溁E----
       try {
         const cons = [];
         if (fromD) cons.push(where("createdAt", ">=", fromD));
@@ -58,17 +58,17 @@ export default function AdminDataPage() {
         const bSnap = await getDocs(bq);
         setBattles(bSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
       } catch (e) {
-        // インデックス未作成などで失敗 → フル取得してクライアント側で期間絞り
+        // インチE��クス未作�Eなどで失敁EↁEフル取得してクライアント�Eで期間絞り
         const bSnap = await getDocs(collection(db, "battles"));
         const all = bSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setBattles(all.filter((r) => {
           const t = r.createdAt?.toDate ? r.createdAt.toDate() : r.createdAt ? new Date(r.createdAt) : null;
-          if (!t) return true; // 日付なしは表示
+          if (!t) return true; // 日付なし�E表示
           return (!fromD || t >= fromD) && (!toD || t <= toD);
         }).sort((a,b) => (b.createdAt?.seconds ?? 0) - (a.createdAt?.seconds ?? 0)).slice(0,200));
       }
 
-      // ---- mistakes: updatedAt 優先 → だめなら createdAt, さらに全件 ----
+      // ---- mistakes: updatedAt 優允EↁEだめなめEcreatedAt, さらに全件 ----
       const tryFetchMistakes = async (field) => {
         const cons = [];
         if (fromD) cons.push(where(field, ">=", fromD));
@@ -87,7 +87,7 @@ export default function AdminDataPage() {
         try {
           mDocs = await tryFetchMistakes("createdAt");
         } catch {
-          // 最終フォールバック：全件取得→クライアントで期間絞り
+          // 最終フォールバック�E��E件取得�Eクライアントで期間絞り
           const mSnap = await getDocs(collection(db, "mistakes"));
           const all = mSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
           mDocs = all.filter((r) => {
@@ -125,7 +125,7 @@ export default function AdminDataPage() {
           <input type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} style={{ marginLeft: 6 }} />
         </label>
         <button onClick={onApply} disabled={loading} style={{ padding: "8px 12px", borderRadius: 8 }}>
-          {loading ? "更新中..." : "この条件で再読み込み"}
+          {loading ? "更新中..." : "こ�E条件で再読み込み"}
         </button>
         <button onClick={() => { setFrom(""); setTo(""); setTimeout(fetchAll, 0); }} style={{ padding: "8px 12px", borderRadius: 8 }}>
           フィルタ解除
@@ -134,7 +134,7 @@ export default function AdminDataPage() {
 
       {/* battles */}
       <h2 style={{ marginTop: 8 }}>
-        battles（createdAt 基準 / 最大200件）
+        battles�E�EreatedAt 基溁E/ 最大200件�E�E
         <button
           style={{ marginLeft: 8, padding: "4px 8px", borderRadius: 6 }}
           onClick={() =>
@@ -180,7 +180,7 @@ export default function AdminDataPage() {
 
       {/* mistakes */}
       <h2 style={{ marginTop: 24 }}>
-        mistakes（{mistakesField} 基準 / 最大500件）
+        mistakes�E�EmistakesField} 基溁E/ 最大500件�E�E
         <button
           style={{ marginLeft: 8, padding: "4px 8px", borderRadius: 6 }}
           onClick={() =>

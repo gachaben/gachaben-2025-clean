@@ -1,7 +1,7 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
 const getCurrentMonthScoreKey = () => {
   const now = new Date();
@@ -35,7 +35,7 @@ const PrefectureRankingPage = () => {
         prefectureScores[prefecture] += score;
       });
 
-      // オブジェクト → 配列に変換＆ソート
+      // オブジェクチEↁE配�Eに変換�E�E��ーチE
       const sorted = Object.entries(prefectureScores)
         .map(([prefecture, totalScore]) => ({ prefecture, totalScore }))
         .sort((a, b) => b.totalScore - a.totalScore);
@@ -52,8 +52,8 @@ const PrefectureRankingPage = () => {
       <ul>
         {ranking.map((item, index) => (
           <li key={item.prefecture} className="mb-2">
-            <span className="font-bold">{index + 1}位：</span>
-            {item.prefecture}（{item.totalScore} パワー）
+            <span className="font-bold">{index + 1}位！E/span>
+            {item.prefecture}�E�Eitem.totalScore} パワー�E�E
           </li>
         ))}
       </ul>

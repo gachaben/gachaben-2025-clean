@@ -1,6 +1,6 @@
 // src/components/EggDisplay.jsx
 import React, { useEffect, useState } from "react";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 const EggDisplay = () => {
@@ -27,7 +27,7 @@ const EggDisplay = () => {
 
   if (loading) return null;
 
-  // 🟡 卵を持っていないときは何も表示しない
+  // 🟡 卵を持ってぁE��ぁE��き�E何も表示しなぁE
   if (eggList.length === 0) return null;
 
   const latestEgg = eggList[eggList.length - 1];
@@ -37,11 +37,11 @@ const EggDisplay = () => {
     <div className="mt-6 text-center">
       <img
         src={imagePath}
-        alt="たまご"
+        alt="たまぁE
         className="w-24 h-24 mx-auto rounded shadow"
       />
-      <p className="mt-2 font-bold">{latestEgg.eggId} をゲット！</p>
-      <p className="text-sm text-gray-500">たまごを育ててね！</p>
+      <p className="mt-2 font-bold">{latestEgg.eggId} をゲチE���E�E/p>
+      <p className="text-sm text-gray-500">たまごを育ててね�E�E/p>
     </div>
   );
 };

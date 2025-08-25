@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 
-// 🔥 ここを新しい構成に切り替え
+// 🔥 ここを新しい構�Eに刁E��替ぁE
 import { auth, db, doc, getDoc, setDoc, serverTimestamp } from "@/fbkit";
 
 export default function Login() {
@@ -17,20 +17,20 @@ export default function Login() {
     setError("");
 
     const emailNorm = email.trim().toLowerCase(); // emailは整形
-    const passRaw = password;                     // passwordは触らない
+    const passRaw = password;                     // passwordは触らなぁE
 
     try {
       // 1) サインイン
       const { user } = await signInWithEmailAndPassword(auth, emailNorm, passRaw);
 
-      // 2) users/{uid} を必ず用意（初回は作成、既存でも不足があれば補完）
+      // 2) users/{uid} を忁E��用意（�E回�E作�E、既存でも不足があれ�E補完！E
       const ref = doc(db, "users", user.uid);
       let snap = await getDoc(ref);
 
       if (!snap.exists()) {
         await setDoc(ref, {
           email: emailNorm,
-          role: "child", // 既定
+          role: "child", // 既宁E
           createdAt: serverTimestamp(),
         });
         snap = await getDoc(ref);
@@ -42,7 +42,7 @@ export default function Login() {
         }
       }
 
-      // 3) 安全に role を取得して遷移
+      // 3) 安�Eに role を取得して遷移
       const data = snap.data() || {};
       const role = data?.role ?? "child";
 
@@ -50,13 +50,13 @@ export default function Login() {
       else if (role === "admin") navigate("/admin-reward");
       else navigate(data?.parentId ? "/child-home" : "/link-family");
     } catch (err) {
-      // よく出るエラーをわかりやすく
+      // よく出るエラーをわかりめE��ぁE
       if (err?.code === "auth/wrong-password" || err?.message === "INVALID_PASSWORD") {
-        setError("パスワードが違います。");
+        setError("パスワードが違います、E);
       } else if (err?.code === "auth/user-not-found") {
-        setError("このメールは未登録です。");
+        setError("こ�Eメールは未登録です、E);
       } else if (err?.code === "auth/too-many-requests") {
-        setError("試行回数が多すぎます。しばらくしてからお試しください。");
+        setError("試行回数が多すぎます。しばらくしてからお試しください、E);
       } else {
         setError("ログインに失敗しました: " + (err?.message ?? ""));
       }
@@ -81,7 +81,7 @@ export default function Login() {
         />
         <input
           type="password"
-          placeholder="パスワード"
+          placeholder="パスワーチE
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full mb-4 px-4 py-2 border rounded"

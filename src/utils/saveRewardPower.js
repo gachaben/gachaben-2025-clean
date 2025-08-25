@@ -1,7 +1,7 @@
 // src/utils/saveRewardPower.js
 
 import { doc, updateDoc, arrayUnion, increment } from "firebase/firestore";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import { format } from "date-fns";
 
 const saveRewardPower = async (amount) => {
@@ -9,8 +9,8 @@ const saveRewardPower = async (amount) => {
   if (!user) return;
 
   const uid = user.uid;
-  const date = format(new Date(), "yyyy-MM-dd"); // 例: "2025-07-05"
-  const monthKey = format(new Date(), "yyyyMM"); // 例: "202507"
+  const date = format(new Date(), "yyyy-MM-dd"); // 侁E "2025-07-05"
+  const monthKey = format(new Date(), "yyyyMM"); // 侁E "202507"
 
   const userRef = doc(db, "users", uid);
 
@@ -23,9 +23,9 @@ const saveRewardPower = async (amount) => {
       }),
     });
 
-    console.log("✅ Firestoreに保存成功:", amount, "pw");
+    console.log("✁EFirestoreに保存�E劁E", amount, "pw");
   } catch (error) {
-    console.error("❌ Firestore保存エラー:", error);
+    console.error("❁EFirestore保存エラー:", error);
   }
 };
 

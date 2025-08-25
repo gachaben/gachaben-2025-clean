@@ -2,14 +2,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getAuth } from "firebase/auth";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import { doc, getDoc } from "firebase/firestore";
 import SequenceView from "@/components/review/SequenceView";
 import GroupView from "@/components/review/GroupView";
 import { consumeOneHeart } from "../lib/hearts";
 
 /* =========================
-   子コンポーネント（外に出す）
+   子コンポ�Eネント（外に出す！E
    ========================= */
 function MCQView({ text, options = [], answer, setDebugYou, isCorrectAnswer, judge }) {
   const [picked, setPicked] = useState(null);
@@ -60,7 +60,7 @@ function MCQView({ text, options = [], answer, setDebugYou, isCorrectAnswer, jud
         aria-disabled={picked == null}
         className={`px-4 py-2 rounded-md border mt-2 ${picked == null ? "opacity-50 cursor-not-allowed" : ""}`}
       >
-        確定
+        確宁E
       </button>
     </div>
   );
@@ -83,7 +83,7 @@ function TextView({ text, answer, setDebugYou, isCorrectAnswer, judge }) {
           setDebugYou(e.target.value);
         }}
         className="px-3 py-2 rounded-md border w-full"
-        placeholder="ここに入力"
+        placeholder="ここに入劁E
       />
       <button
         type="button"
@@ -91,14 +91,14 @@ function TextView({ text, answer, setDebugYou, isCorrectAnswer, judge }) {
         disabled={!val}
         className={`px-4 py-2 rounded-md border ${!val ? "opacity-50 cursor-not-allowed" : ""}`}
       >
-        確定
+        確宁E
       </button>
     </div>
   );
 }
 
 /* =========================
-   親コンポーネント
+   親コンポ�EネンチE
    ========================= */
 export default function ReviewPlayPage() {
   const { mid } = useParams();
@@ -116,10 +116,10 @@ export default function ReviewPlayPage() {
     let alive = true;
     (async () => {
       try {
-        if (!mid) throw new Error("IDが不正です");
+        if (!mid) throw new Error("IDが不正でぁE);
         const ref = doc(db, "mistakes", mid);
         const snap = await getDoc(ref);
-        if (!snap.exists()) throw new Error("データが見つかりません");
+        if (!snap.exists()) throw new Error("チE�Eタが見つかりません");
         const data = { id: snap.id, ...snap.data() };
         if (uid && data.uid && data.uid !== uid) throw new Error("アクセス権がありません");
         if (!alive) return;
@@ -161,11 +161,11 @@ export default function ReviewPlayPage() {
     return shuffled.map((ch, i) => ({ id: String(i), text: String(ch) }));
   }, [q]);
 
-  // ナビゲーション（正誤時の画面遷移）
+  // ナビゲーション�E�正誤時�E画面遷移�E�E
   const goCorrect = () => navigate("/review", { replace: true });
-  const goWrong = () => alert("ざんねん！もう一度トライしてみよう");
+  const goWrong = () => alert("ざんねん！もぁE��度トライしてみよう");
 
-  // ❤を消費してから正誤処理を実行
+  // ❤を消費してから正誤処琁E��実衁E
   const judge = async (ok) => {
     try {
       await consumeOneHeart(uid, `review-${q.id}-${Date.now()}`);
@@ -173,20 +173,20 @@ export default function ReviewPlayPage() {
     } catch (e) {
       const code = e?.code || e?.message;
       if (code === "NO_HEART") {
-        alert("❤が足りません。広告で回復してから再挑戦してね！");
-        navigate("/review"); // とりあえず一覧へ戻す（回復導線は後で実装）
+        alert("❤が足りません。庁E��で回復してから再挑戦してね�E�E);
+        navigate("/review"); // とりあえず一覧へ戻す（回復導線�E後で実裁E��E
       } else if (code === "NO_AUTH") {
-        alert("ログイン状態を確認してください。");
+        alert("ログイン状態を確認してください、E);
       } else {
         console.error("[ReviewPlay] judge error:", e);
-        alert("エラーが起きました。時間をおいて再度お試しください。");
+        alert("エラーが起きました。時間をおいて再度お試しください、E);
       }
     }
   };
 
   if (loading) return <div style={{ padding: 16 }}>読み込み中...</div>;
   if (error) return <div style={{ padding: 16 }}>エラー: {error}</div>;
-  if (!mistake) return <div style={{ padding: 16 }}>データがありません</div>;
+  if (!mistake) return <div style={{ padding: 16 }}>チE�Eタがありません</div>;
 
   const type = String(q.type || "").toLowerCase();
 
@@ -210,7 +210,7 @@ export default function ReviewPlayPage() {
           tokens={groupTokens}
           answer={q.answer}
           onCorrect={() => { setDebugYou("(group) 正解パターン"); judge(true); }}
-          onWrong={() => { setDebugYou("(group) 現在＝" + debugYou); judge(false); }}
+          onWrong={() => { setDebugYou("(group) 現在�E�E + debugYou); judge(false); }}
         />
       )}
 
@@ -235,12 +235,12 @@ export default function ReviewPlayPage() {
         />
       )}
 
-      {/* 未対応タイプ → 簡易テキスト入力で判定 */}
+      {/* 未対応タイチEↁE簡易テキスト�E力で判宁E*/}
       {!["sequence", "group", "mcq", "text", "keypad"].includes(type) && (
         <div>
           <div className="text-lg font-semibold mb-2">{q.text}</div>
           <div className="opacity-70 mb-3">
-            タイプ <code>{q.type}</code> は未対応です（暫定テキスト入力で判定）
+            タイチE<code>{q.type}</code> は未対応です（暫定テキスト�E力で判定！E
           </div>
           <TextView
             text={q.text}
@@ -258,7 +258,7 @@ export default function ReviewPlayPage() {
           onClick={() => navigate("/review")}
           className="px-3 py-2 rounded-md border"
         >
-          戻る
+          戻めE
         </button>
       </div>
 

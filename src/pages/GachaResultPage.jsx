@@ -1,16 +1,16 @@
 // src/pages/GachaResultPage.jsx
 
 import React, { useEffect, useState } from "react";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import { doc, getDoc } from "firebase/firestore";
-import { getRandomReward } from "../utils/gachaReward"; // ← ガチャ報酬関数（別途作成してね）
+import { getRandomReward } from "../utils/gachaReward"; // ↁEガチャ報酬関数�E�別途作�Eしてね�E�E
 
 const GachaResultPage = () => {
   const [reward, setReward] = useState(null);
-  const [oshi, setOshi] = useState("nyan"); // デフォルト（にゃん）
+  const [oshi, setOshi] = useState("nyan"); // チE��ォルト（にめE���E�E
   const [showRetry, setShowRetry] = useState(false);
 
-  // 🔸 ユーザーの推しキャラを取得
+  // 🔸 ユーザーの推しキャラを取征E
   useEffect(() => {
     const fetchOshi = async () => {
       const user = auth.currentUser;
@@ -27,32 +27,32 @@ const GachaResultPage = () => {
 
   // 🔸 初回ガチャ結果を表示
   useEffect(() => {
-    const reward = getRandomReward(); // ランダム報酬関数（チャンスカード or pw）
+    const reward = getRandomReward(); // ランダム報酬関数�E�チャンスカーチEor pw�E�E
     setReward(reward);
   }, []);
 
   // 🔸 再抽選用
   const handleRetry = async () => {
-    // 仮の広告視聴処理（あとで差し替えOK）
-    const confirmed = window.confirm("広告をさいごまでみましたか？");
+    // 仮の庁E��視�E処琁E��あとで差し替ぁEK�E�E
+    const confirmed = window.confirm("庁E��をさぁE��までみましたか！E);
     if (confirmed) {
       const reward = getRandomReward();
       setReward(reward);
-      setShowRetry(false); // 2回目以降は無効
+      setShowRetry(false); // 2回目以降�E無効
     }
   };
 
   return (
     <div className="p-4 text-center">
-      <h2 className="text-xl font-bold mb-4">🎉 ガチャけっか 🎉</h2>
+      <h2 className="text-xl font-bold mb-4">🎉 ガチャけっぁE🎉</h2>
 
       {reward && (
         <div className="mb-4">
-          <p className="text-lg">👉 もらったもの：{reward.label}</p>
+          <p className="text-lg">👉 もらったもの�E�{reward.label}</p>
         </div>
       )}
 
-      {/* 🔸 推しキャラの案内セリフ */}
+      {/* 🔸 推しキャラの案�EセリチE*/}
       {showRetry && (
         <div className="mb-4">
           <img
@@ -61,7 +61,7 @@ const GachaResultPage = () => {
             className="w-32 h-32 mx-auto"
           />
           <p className="mt-2 font-bold">
-            「🎦 どうがをみたら、もういっかい ガチャが ひけるんだって！」
+            「🎦 どぁE��をみたら、もぁE��っかい ガチャぁEひけるんだって�E�、E
           </p>
         </div>
       )}
@@ -72,14 +72,14 @@ const GachaResultPage = () => {
           className="mt-4 bg-blue-500 text-white py-2 px-4 rounded"
           onClick={() => setShowRetry(true)}
         >
-          🎦 どうがをみて もういっかい ガチャ！
+          🎦 どぁE��をみて もうぁE��かい ガチャ�E�E
         </button>
       ) : (
         <button
           className="mt-4 bg-green-600 text-white py-2 px-4 rounded"
           onClick={handleRetry}
         >
-          ✅ さいごまで見たよ！ガチャもういっかい！
+          ✁Eさいごまで見たよ！ガチャもうぁE��かい�E�E
         </button>
       )}
     </div>

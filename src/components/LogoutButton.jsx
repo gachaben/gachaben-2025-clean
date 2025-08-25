@@ -7,13 +7,13 @@ const LogoutButton = () => {
     const auth = getAuth();
     try {
       await signOut(auth);
-      alert("ログアウトしました！");
+      alert("ログアウトしました�E�E);
     } catch (error) {
       console.error("ログアウトエラー:", error);
     }
   };
 
-  return <button onClick={handleLogout}>ログアウト</button>;
+  return <button onClick={handleLogout}>ログアウチE/button>;
 };
 
 export default LogoutButton;

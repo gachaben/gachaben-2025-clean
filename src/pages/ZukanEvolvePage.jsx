@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { collection, doc, getDocs, getDoc, query, where } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import ItemCard from "../components/ItemCard";
-import { useAuth } from "../hooks/useAuth"; // 自作Hookでログイン中ユーザーを取得
+import { useAuth } from "../hooks/useAuth"; // 自作Hookでログイン中ユーザーを取征E
 
 const ZukanEvolvePage = () => {
   const { seriesId } = useParams();
@@ -12,7 +12,7 @@ const ZukanEvolvePage = () => {
   const [ownedItemIds, setOwnedItemIds] = useState([]);
 
   useEffect(() => {
-    // Firestoreから指定シリーズのアイテムを取得
+    // Firestoreから持E��シリーズのアイチE��を取征E
     const fetchItems = async () => {
       const itemsRef = collection(db, "items");
       const q = query(itemsRef, where("seriesId", "==", seriesId));
@@ -21,7 +21,7 @@ const ZukanEvolvePage = () => {
       setItems(itemsData);
     };
 
-    // Firestoreからログインユーザーの所持アイテムを取得
+    // Firestoreからログインユーザーの所持アイチE��を取征E
     const fetchOwnedItems = async () => {
       if (!currentUser) return;
       const userDocRef = doc(db, "users", currentUser.uid);
@@ -36,7 +36,7 @@ const ZukanEvolvePage = () => {
     fetchOwnedItems();
   }, [seriesId, currentUser]);
 
-  // 所持アイテムのみ抽出
+  // 所持アイチE��のみ抽出
   const filteredItems = items.filter((item) => ownedItemIds.includes(item.itemId));
 
   return (

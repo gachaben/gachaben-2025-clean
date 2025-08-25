@@ -1,7 +1,7 @@
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
-// 🔥 今月のスコアIDを生成（例：monthlyScore_202507）
+// 🔥 今月のスコアIDを生成（例：monthlyScore_202507�E�E
 const getCurrentMonthScoreKey = () => {
   const now = new Date();
   const y = now.getFullYear();
@@ -30,10 +30,10 @@ const addMonthlyScore = async (points) => {
 
 
 
-// 問題が正解した時の処理
+// 問題が正解した時�E処琁E
 const handleCorrectAnswer = async () => {
-  // 正解！得点 +100 パワー
-  await addMonthlyScore(100); // ←ここでスコア加算！
+  // 正解�E�得点 +100 パワー
+  await addMonthlyScore(100); // ←ここでスコア加算！E
 
-  alert("せいかい！ パワー +100");
+  alert("せいかい�E�Eパワー +100");
 };

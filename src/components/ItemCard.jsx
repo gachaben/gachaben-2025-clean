@@ -6,13 +6,13 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
 
   const { imageName = "", name = "", pw = 0, cpt = 0, bpt = 0, stage } = item;
 
-  // 画像パス & ベース名（.png を除去）
+  // 画像パス & ベ�Eス名！Epng を除去�E�E
   const base = String(imageName).replace(/\.png$/i, "");
   const fileBase = base.replace(/^\d{4}_/, "");
   const stageNum = stage ?? Number(base.match(/_stage(\d+)/)?.[1] ?? 1);
   const imagePath = `/images/2508/stage${stageNum}/${fileBase}.png`;
 
-  // ランク & エフェクト
+  // ランク & エフェクチE
   const isS = base.includes("_S_");
   const isA = base.includes("_A_");
   const isB = base.includes("_B_");
@@ -25,10 +25,10 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
   const cptLv = lvl(cpt);
   const bptLv = lvl(bpt);
 
-  // ===== 名前解決：優先順位 name → itemNames[base] → base =====
+  // ===== 名前解決�E�優先頁E��Ename ↁEitemNames[base] ↁEbase =====
   const resolvedName = (name && name.trim()) || itemNames[base] || base;
 
-  // 2行化（ヘラクレスは手動、他は中央で二分）
+  // 2行化�E��Eラクレスは手動、他�E中央で二�E�E�E
   const nameLines = (() => {
     if (resolvedName === "ヘラクレスオオカブト") return ["ヘラクレス", "オオカブト"];
     if (resolvedName.length > 8) {
@@ -55,7 +55,7 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
         cursor: pwMode ? "pointer" : "default",
       }}
     >
-      {/* 背景エフェクト（光だけ加算） */}
+      {/* 背景エフェクト（�Eだけ加算！E*/}
       {fx && (
         <video
           src={`/images/effects/${fx}`}
@@ -77,7 +77,7 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
         />
       )}
 
-      {/* アイテム画像（中央） */}
+      {/* アイチE��画像（中央�E�E*/}
       <img
         src={imagePath}
         alt={resolvedName}
@@ -95,7 +95,7 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
         }}
       />
 
-      {/* ランク（右上） */}
+      {/* ランク�E�右上！E*/}
       <div
         style={{
           position: "absolute",
@@ -113,7 +113,7 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
         {rank}
       </div>
 
-      {/* 名前：中央上（2行対応） */}
+      {/* 名前�E�中央上！E行対応！E*/}
       <div
         style={{
           position: "absolute",
@@ -136,7 +136,7 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
         {nameLines.join("\n")}
       </div>
 
-      {/* PW／攻撃／防御（下・透明背景） */}
+      {/* PW�E�攻撁E��防御�E�下�E透�E背景�E�E*/}
       <div
         style={{
           position: "absolute",
@@ -152,8 +152,8 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
       >
         <div style={{ fontSize: 12, textShadow: "0 0 3px #000,0 0 6px #000" }}>{pw} PW</div>
         <div style={{ fontSize: 11, lineHeight: 1, textShadow: "0 0 3px #000,0 0 6px #000" }}>
-          攻撃力：{Array.from({ length: cptLv }).map((_, i) => (
-            <span key={i}>🥊</span>
+          攻撁E���E�{Array.from({ length: cptLv }).map((_, i) => (
+            <span key={i}>🥁E/span>
           ))}
         </div>
         <div style={{ fontSize: 11, lineHeight: 1, textShadow: "0 0 3px #000,0 0 6px #000" }}>

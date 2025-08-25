@@ -5,10 +5,10 @@ import { getFirestore, doc, getDoc, collection, getDocs } from "firebase/firesto
 import ItemCard from "../components/ItemCard";
 
 const ZukanDetailPage = () => {
-  const { seriesId } = useParams(); // 例: "kontyu"
+  const { seriesId } = useParams(); // 侁E "kontyu"
   const [allItems, setAllItems] = useState([]);
   const [userItems, setUserItems] = useState([]);
-  const [pwMode, setPwMode] = useState(false); // ✅ PWモード切替
+  const [pwMode, setPwMode] = useState(false); // ✁EPWモード�E替
 
   const auth = getAuth();
   const db = getFirestore();
@@ -17,19 +17,19 @@ const ZukanDetailPage = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) return;
 
-      // ✅ 所持アイテム取得
+      // ✁E所持アイチE��取征E
       const userDoc = await getDoc(doc(db, "users", user.uid));
       const userData = userDoc.data();
       const owned = userData?.items || [];
       setUserItems(owned);
 
-      // ✅ アイテム一覧取得
+      // ✁EアイチE��一覧取征E
       const snapshot = await getDocs(collection(db, "items"));
       const allData = snapshot.docs.map((doc) => doc.data());
 
-      // ✅ seriesIdでフィルター
+      // ✁EseriesIdでフィルター
       const filteredItems = allData.filter((item) => item.seriesId === seriesId);
-      console.log("取得したアイテム：", filteredItems);
+      console.log("取得したアイチE���E�E, filteredItems);
       setAllItems(filteredItems);
     });
 
@@ -37,19 +37,19 @@ const ZukanDetailPage = () => {
   }, [seriesId]);
 
   if (!seriesId) {
-    return <div>シリーズIDが指定されていません。</div>;
+    return <div>シリーズIDが指定されてぁE��せん、E/div>;
   }
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>kontyu シリーズ - {seriesId.toUpperCase()} ランクのアイテム一覧</h2>
+      <h2>kontyu シリーズ - {seriesId.toUpperCase()} ランクのアイチE��一覧</h2>
 
-      {/* ✅ PWモード切替ボタン */}
+      {/* ✁EPWモード�E替ボタン */}
       <button
         onClick={() => setPwMode((prev) => !prev)}
         className="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded mt-4 mb-6"
       >
-        {pwMode ? "PWモード解除" : "PWを使う"}
+        {pwMode ? "PWモード解除" : "PWを使ぁE}
       </button>
 
       <div style={{ display: "flex", flexWrap: "wrap" }}>
@@ -59,7 +59,7 @@ const ZukanDetailPage = () => {
             item={item}
             owned={userItems.includes(item.itemId)}
             highestZone={"神化"}
-            pwMode={pwMode} // ✅ ItemCardに渡す
+            pwMode={pwMode} // ✁EItemCardに渡ぁE
           />
         ))}
       </div>

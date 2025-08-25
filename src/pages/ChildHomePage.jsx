@@ -1,7 +1,7 @@
 // src/pages/ChildHomePage.jsx
 
 import React, { useEffect, useState } from "react";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import {
   doc,
   getDoc,
@@ -20,7 +20,7 @@ const ChildHomePage = () => {
   const [supportUnread, setSupportUnread] = useState(false);
   const [supportMessage, setSupportMessage] = useState(null);
 
-  // 🔍 supportUnread チェック
+  // 🔍 supportUnread チェチE��
   useEffect(() => {
     const fetchUnread = async () => {
       if (!currentUser || !currentUser.uid) return;
@@ -39,7 +39,7 @@ const ChildHomePage = () => {
     fetchUnread();
   }, [currentUser]);
 
-  // 📨 通知クリック → supportUnread を false にしてメッセージ取得
+  // 📨 通知クリチE�� ↁEsupportUnread めEfalse にしてメチE��ージ取征E
  const handleSupportClick = async () => {
   setSupportUnread(false);
 
@@ -56,17 +56,17 @@ const ChildHomePage = () => {
   const msgData = msgSnap.data();
   setSupportMessage(msgData.message);
 
-  // ✅ ここが追加部分：報酬未付与なら pw+100 & rewarded:true に更新
+  // ✁Eここが追加部刁E��報酬未付与なめEpw+100 & rewarded:true に更新
   if (!msgData.rewarded) {
     const userSnap = await getDoc(userRef);
     const currentPw = userSnap.data()?.pw || 0;
 
-    // pwを+100
+    // pwめE100
     await updateDoc(userRef, {
       pw: currentPw + 100,
     });
 
-    // メッセージに rewarded フラグを立てる
+    // メチE��ージに rewarded フラグを立てめE
     await updateDoc(msgRef, {
       rewarded: true,
     });
@@ -75,7 +75,7 @@ const ChildHomePage = () => {
 
 
 
-  // 📬 supportMessagesから最新1件を取得
+  // 📬 supportMessagesから最新1件を取征E
   const getLatestSupportMessageId = async (uid) => {
     const q = query(
       collection(db, "supportMessages"),
@@ -89,7 +89,7 @@ const ChildHomePage = () => {
 
   return (
     <div>
-      {/* 🔔 通知アイコン（右上） */}
+      {/* 🔔 通知アイコン�E�右上！E*/}
       <div style={{ position: "relative", textAlign: "right", padding: "12px" }}>
         <div
           onClick={handleSupportClick}
@@ -116,7 +116,7 @@ const ChildHomePage = () => {
         </div>
       </div>
 
-      {/* ✉️ 応援メッセージがあるとき表示 */}
+      {/* ✉︁E応援メチE��ージがあるとき表示 */}
       {supportMessage && (
         <div
           style={{
@@ -129,8 +129,8 @@ const ChildHomePage = () => {
             animation: "fadeIn 1s ease-out",
           }}
         >
-          📝 応援メッセージ：<br />
-          「{supportMessage}」
+          📝 応援メチE��ージ�E�Ebr />
+          「{supportMessage}、E
         </div>
       )}
     </div>

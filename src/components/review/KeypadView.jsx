@@ -12,7 +12,7 @@ export default function KeypadView({ question, onCorrect, onWrong }) {
       ok ? onCorrect() : onWrong();
       return;
     }
-    setVal(s => (s + k).slice(0, 12)); // 12桁に制限(任意)
+    setVal(s => (s + k).slice(0, 12)); // 12桁に制陁E任愁E
   }
 
   return (

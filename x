@@ -9,7 +9,7 @@
 [32m+[m[32mimport React, { useEffect, useMemo, useState } from "react";[m
 [32m+[m[32mimport { useNavigate, useParams } from "react-router-dom";[m
  import { getAuth } from "firebase/auth";[m
-[31m-import { db } from "@/firebase";[m
+[31m-import { db } from "@/fbkit";[m
 [31m-import {[m
 [31m-  collection, doc, getDoc,[m
 [31m-  writeBatch, addDoc, serverTimestamp[m
@@ -18,7 +18,7 @@
 [31m-// 各ビュー[m
 [31m-import McqView from "@/components/review/McqView";[m
 [31m-import KeypadView from "@/components/review/KeypadView";[m
-[32m+[m[32mimport { db } from "@/firebase";[m
+[32m+[m[32mimport { db } from "@/fbkit";[m
 [32m+[m[32mimport { doc, getDoc } from "firebase/firestore";[m
  import SequenceView from "@/components/review/SequenceView";[m
 [31m-import TextInputView from "@/components/review/TextInputView";[m

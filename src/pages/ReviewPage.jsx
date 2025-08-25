@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { getAuth } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import {
   collection,
   query,
@@ -81,7 +81,7 @@ export default function ReviewPage() {
         background: "#fafafa",
       }}
     >
-      <div style={{ fontSize: 16, marginBottom: 8 }}>間違えた問題はありません 🎉</div>
+      <div style={{ fontSize: 16, marginBottom: 8 }}>間違えた問題�Eありません 🎉</div>
       <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 16 }}>
         練習やチャレンジで新しい問題に挑戦してみよう
       </div>
@@ -104,7 +104,7 @@ export default function ReviewPage() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h1 className="text-xl font-bold mb-2">復習モード</h1>
+      <h1 className="text-xl font-bold mb-2">復習モーチE/h1>
 
       {mistakes.length === 0 ? (
         <Empty />
@@ -125,10 +125,10 @@ export default function ReviewPage() {
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{m.text}</div>
-                <div>あなたの選択: {m.picked}</div>
+                <div>あなた�E選抁E {m.picked}</div>
                 <div>正解: {m.answer}</div>
                 <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  追加日時: {created ? fmt.format(created) : "—"}
+                  追加日晁E {created ? fmt.format(created) : " E}
                 </div>
                 <div>
                   <button
@@ -141,7 +141,7 @@ export default function ReviewPage() {
                       background: "#09f2",
                     }}
                   >
-                    この問題で復習する
+                    こ�E問題で復習すめE
                   </button>
                 </div>
               </li>

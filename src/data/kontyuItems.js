@@ -1,13 +1,13 @@
 const kontyuItems = [];
 
-// 名前のテンプレ（仮）
+// 名前のチE��プレ�E�仮�E�E
 
 const stages = ["youchuu", "sanagi", "seichuu", "premium"];
 const stageNames = {
 
-  youchuu: "ようちゅう",
-  sanagi: "さなぎ",
-  seichuu: "せいちゅう",
+  youchuu: "ようちめE��",
+  sanagi: "さなぁE,
+  seichuu: "せいちめE��",
   premium: "プレミアム"
 };
 
@@ -15,7 +15,7 @@ Object.keys(baseNames).forEach((id) => {
   stages.forEach((stage) => {
     kontyuItems.push({
       id: `${stage}${id}`,        
-      name: `${baseNames[id]}（${stageNames[stage]}）`,
+      name: `${baseNames[id]}�E�E{stageNames[stage]}�E�`,
       stage: stage,
       seriesId: "kontyu"
     });

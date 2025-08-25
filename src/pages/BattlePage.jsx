@@ -1,9 +1,9 @@
-// src/pages/Battle.jsx など（この画面を出しているファイル）
+// src/pages/Battle.jsx など�E�この画面を�EしてぁE��ファイル�E�E
 import React from "react";
-import ItemCard from "../components/ItemCard"; // ← パスは環境に合わせて
+import ItemCard from "../components/ItemCard"; // ↁEパスは環墁E��合わせて
 
 export default function Battle() {
-  // テスト用のダミー item データ
+  // チE��ト用のダミ�E item チE�Eタ
   const testItem = {
     rank: "S",
     seriesId: "kontyu",
@@ -16,7 +16,7 @@ export default function Battle() {
 
   return (
     <div className="min-h-screen p-4">
-      {/* ==== ここが一時テスト枠（黒背景）==== */}
+      {/* ==== ここが一時テスト枠�E�黒背景�E�E=== */}
       <div
         style={{
           padding: 20,
@@ -29,8 +29,8 @@ export default function Battle() {
         <ItemCard item={testItem} size="sm" withFx />
       </div>
 
-      {/* ==== ここから下は元の UI（既存のコードをこの下に置く）==== */}
-      {/* 例：既存ヘッダやカード一覧など */}
+      {/* ==== ここから下�E允E�E UI�E�既存�Eコードをこ�E下に置く！E=== */}
+      {/* 例：既存�EチE��めE��ード一覧など */}
       {/* <Header ... /> */}
       {/* <YourOriginalContent ... /> */}
     </div>
@@ -58,8 +58,8 @@ console.log("🔵 LIVE BattlePage.jsx", import.meta.url);
   const nav = useNavigate();
   const loc = useLocation();
 
-  // Zukan/選択ページから受け取り
-  const selectedItem = loc.state?.selectedItem || null; // 自分
+  // Zukan/選択�Eージから受け取り
+  const selectedItem = loc.state?.selectedItem || null; // 自刁E
   const items = loc.state?.items || [];
   const enemyItem = loc.state?.enemyItem ?? (
   items.find(x => (x.id||x.itemId)!==(selectedItem?.id||selectedItem?.itemId)) || null
@@ -67,17 +67,17 @@ console.log("🔵 LIVE BattlePage.jsx", import.meta.url);
   const round        = loc.state?.round        ?? 1;
   const totalRounds  = loc.state?.totalRounds  ?? 3;
 
-  // 残PW（あなたの既存state/propsに合わせて必要なら差し替えOK）
+  // 残PW�E�あなた�E既孁Etate/propsに合わせて忁E��なら差し替ぁEK�E�E
   const myPwLeft    = loc.state?.myPwLeft    ?? 300;
   const enemyPwLeft = loc.state?.enemyPwLeft ?? 300;
 
-  // 直URL侵入ガード
+  // 直URL侵入ガーチE
   useEffect(() => {
     if (!selectedItem) nav("/battle/item-select", { replace: true });
   }, [selectedItem, nav]);
   if (!selectedItem) return null;
 
-  // 中央ゲージ表示用の割合（あなたのロジックで上書きOK）
+  // 中央ゲージ表示用の割合（あなた�EロジチE��で上書きOK�E�E
   const { myPct, enemyPct } = useMemo(() => {
     const total = Math.max(1, myPwLeft + enemyPwLeft);
     return {
@@ -86,26 +86,26 @@ console.log("🔵 LIVE BattlePage.jsx", import.meta.url);
     };
   }, [myPwLeft, enemyPwLeft]);
 
-// src/pages/BattlePage.jsx の return 内をこの形に
+// src/pages/BattlePage.jsx の return 冁E��こ�E形に
 return (
   <div className="min-h-[calc(100vh-64px)] w-full mx-auto max-w-5xl px-4 py-6
                 grid grid-rows-[auto_1fr_auto_1fr_auto] gap-4">
   <header className="row-start-1 text-center">…</header>
 
-  {/* 上=相手 */}
+  {/* 丁E相扁E*/}
   <section className="row-start-2 flex items-center justify-center">
     {enemyItem ? <ItemCard item={enemyItem} owned /> : <div className="text-gray-500">相手を準備中…</div>}
   </section>
 
-  {/* 中央=ゲージ（あなたの紫バーDOMをここへ） */}
-  <section className="row-start-3">…紫バーDOM…</section>
+  {/* 中央=ゲージ�E�あなた�E紫バ�EDOMをここへ�E�E*/}
+  <section className="row-start-3">…紫バ�EDOM…</section>
 
-  {/* 下=自分 */}
+  {/* 丁E自刁E*/}
   <section className="row-start-4 flex items-center justify-center">
     <ItemCard item={selectedItem} owned />
   </section>
 
-  {/* 操作＆ログ */}
+  {/* 操作！E��グ */}
   <footer className="row-start-5">…PWボタン/ログ…</footer>
 </div>
 

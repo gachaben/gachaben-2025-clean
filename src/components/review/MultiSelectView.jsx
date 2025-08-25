@@ -1,28 +1,28 @@
 import React, { useMemo, useState } from "react";
 
 /**
- * 複数選択ビュー（type: 'multi'）
+ * 褁E��選択ビュー�E�Eype: 'multi'�E�E
  *
- * データ仕様：
- * - question.question: 表示するお題（例：「3になるものをすべて選ぼう」）
- * - question.options: ["2+2","2+1","1+1","3"] のような配列
+ * チE�Eタ仕様！E
+ * - question.question: 表示するお題（例：、Eになるものをすべて選ぼぁE��！E
+ * - question.options: ["2+2","2+1","1+1","3"] のような配�E
  *
- * 正解の指定は2通り：
- * A) question.correctOptions: 正解の文字列配列（["2+1","3"]）
- * B) ルール指定（question.meta で）
+ * 正解の持E���E2通り�E�E
+ * A) question.correctOptions: 正解の斁E���E配�E�E�E"2+1","3"]�E�E
+ * B) ルール持E��！Euestion.meta で�E�E
  *    - meta.rule: "equals"
  *    - meta.target: "3"  // 目標値
- *    - meta.eval: "arith" // "2+1" 等の四則を計算して比較（簡易）
+ *    - meta.eval: "arith" // "2+1" 等�E四則を計算して比輁E��簡易！E
  */
 export default function MultiSelectView({ question, onCorrect, onWrong }) {
   const [picked, setPicked] = useState(new Set());
   const [msg, setMsg] = useState("");
 
-  // --- ユーティリティ ---
+  // --- ユーチE��リチE�� ---
   function evalArith(s) {
     const safe = String(s ?? "").replace(/[^0-9+\-*/().\s]/g, "");
     try {
-      // 極シンプル評価（四則のみ想定）
+      // 極シンプル評価�E�四剁E�Eみ想定！E
       // eslint-disable-next-line no-new-func
       const v = Function(`"use strict"; return (${safe})`)();
       return Number.isFinite(v) ? v : NaN;
@@ -31,13 +31,13 @@ export default function MultiSelectView({ question, onCorrect, onWrong }) {
     }
   }
 
-  // 正解集合を作る
+  // 正解雁E��を作る
   const correctSet = useMemo(() => {
-    // A: 直接配列で渡された場合（最優先）
+    // A: 直接配�Eで渡された場合（最優先！E
     if (Array.isArray(question.correctOptions) && question.correctOptions.length > 0) {
       return new Set(question.correctOptions.map(String));
     }
-    // B: ルール指定（= target）で判定
+    // B: ルール持E��！E target�E�で判宁E
     if (question?.meta?.rule === "equals" && question?.meta?.target != null) {
       const target = Number(question.meta.target);
       const useEval = question?.meta?.eval === "arith";
@@ -48,7 +48,7 @@ export default function MultiSelectView({ question, onCorrect, onWrong }) {
       }
       return new Set(ans);
     }
-    // どちらも無ければ空（全選択は不正解扱い）
+    // どちらも無ければ空�E��E選択�E不正解扱ぁE��E
     return new Set();
   }, [question.id]);
 
@@ -67,10 +67,10 @@ export default function MultiSelectView({ question, onCorrect, onWrong }) {
     const b = [...correctSet].sort().join("|");
     const ok = a === b && correctSet.size > 0;
     if (ok) {
-      setMsg("正解！🎉");
+      setMsg("正解�E�🎁E);
       onCorrect();
     } else {
-      setMsg("ちがう… もう一度。");
+      setMsg("ちがう… もう一度、E);
       onWrong();
     }
   }

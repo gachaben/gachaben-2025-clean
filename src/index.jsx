@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
-import "./index.css";            // 竊・縺薙ｌ縺瑚ｶ・㍾隕・ｼ・ailwind繧定ｪｭ縺ｿ霎ｼ繧・・
+import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

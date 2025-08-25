@@ -1,10 +1,10 @@
 // src/lib/saveBattleRecord.js
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { db } from "@/firebase"; // ← dbだけをfbkitから
+import { db } from "@/fbkit"; // ↁEdbだけをfbkitから
 
 /**
- * バトル結果を保存
+ * バトル結果を保孁E
  * @param {{start:number,end:number,roundsPlayed:number,winner:"you"|"enemy", userId?:string}} payload
  * @returns {Promise<string>} battleId
  */
@@ -18,6 +18,6 @@ export async function saveBattleRecord(payload) {
     createdAt: serverTimestamp(),
   };
   const ref = await addDoc(collection(db, "battles"), safe);
-  console.log("✅ battles written docId:", ref.id);
+  console.log("✁Ebattles written docId:", ref.id);
   return ref.id;
 }

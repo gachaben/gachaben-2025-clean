@@ -41,24 +41,24 @@ const RewardPopup = ({ onClose, onReward }) => {
   };
 
   const getButtonLabel = () => {
-    if (type === "chance") return "🎯 チャンスボタン！";
-    if (type === "great") return "💥 大チャンスボタン！";
-    if (type === "super") return "🔥 激アツボタン！！";
+    if (type === "chance") return "🎯 チャンスボタン�E�E;
+    if (type === "great") return "💥 大チャンスボタン�E�E;
+    if (type === "super") return "🔥 激アチE�Eタン�E�E��E;
     return "";
   };
 
   const handleReward = () => {
-    // 仮想の広告視聴後に報酬付与
-    alert(`🎁 ${reward} パワーをゲット！`);
+    // 仮想の庁E��視�E後に報酬付丁E
+    alert(`🎁 ${reward} パワーをゲチE���E�`);
     onReward(reward); // 外部に報酬通知
-    onClose(); // ポップアップを閉じる
+    onClose(); // ポップアチE�Eを閉じる
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-xl text-center max-w-sm w-full">
-        <h2 className="text-xl font-bold mb-4">🎉 ラッキーチャンス発生！</h2>
-        <p className="mb-4 text-gray-700">動画を見れば最大 {reward} パワーがもらえる！</p>
+        <h2 className="text-xl font-bold mb-4">🎉 ラチE��ーチャンス発生！E/h2>
+        <p className="mb-4 text-gray-700">動画を見れば最大 {reward} パワーがもらえる！E/p>
         <button
           className={`px-4 py-2 rounded ${getButtonStyle()} mb-4 w-full`}
           onClick={handleReward}

@@ -4,24 +4,24 @@ import ItemCard from "../components/ItemCard";
 
 const BattleBetPage = () => {
   const navigate = useNavigate();
-  const { state } = useLocation(); // ← selectedItem, enemyItem などを受け取る想定
+  const { state } = useLocation(); // ↁEselectedItem, enemyItem などを受け取る想宁E
   const { selectedItem, enemyItem, questionCount = 3 } = state || {};
 
   const [myBet, setMyBet] = useState(null);
   const [enemyBet, setEnemyBet] = useState(null);
 
-  // ✅ CPUのベット処理（シンプルなランダム or ロジック化も可能）
+  // ✁ECPUのベット�E琁E��シンプルなランダム or ロジチE��化も可能�E�E
   useEffect(() => {
     const timer = setTimeout(() => {
       const cpuOptions = [100, 200, 300, 400, 500];
       const randomBet = cpuOptions[Math.floor(Math.random() * cpuOptions.length)];
       setEnemyBet(randomBet);
-    }, 2000); // 2秒後にCPUがベット！
+    }, 2000); // 2秒後にCPUが�EチE���E�E
 
     return () => clearTimeout(timer);
   }, []);
 
-  // ✅ 両者ベット完了 → バトル開始へ
+  // ✁E両老E�EチE��完亁EↁEバトル開始へ
   useEffect(() => {
     if (myBet && enemyBet) {
       const timer = setTimeout(() => {
@@ -34,7 +34,7 @@ const BattleBetPage = () => {
             questionCount,
           },
         });
-      }, 1500); // 両者ベット後、1.5秒待って開始！
+      }, 1500); // 両老E�EチE��後、E.5秒征E��て開始！E
 
       return () => clearTimeout(timer);
     }
@@ -45,9 +45,9 @@ const BattleBetPage = () => {
       <h1 className="text-2xl font-bold text-center mb-6">💥 バトル開始準備 💥</h1>
 
       <div className="flex flex-wrap justify-center items-start gap-8">
-        {/* 👤 あなた */}
+        {/* 👤 あなぁE*/}
         <div className="w-72 bg-white p-4 rounded shadow">
-          <h2 className="text-center font-bold text-blue-600 mb-2">🧑 あなた</h2>
+          <h2 className="text-center font-bold text-blue-600 mb-2">🧁EあなぁE/h2>
           <ItemCard item={selectedItem} owned={true} />
           <p className="text-center mt-2">かけるPWを選んでね</p>
           <div className="flex flex-wrap justify-center gap-2 mt-2">
@@ -72,20 +72,20 @@ const BattleBetPage = () => {
           <p className="text-gray-600">VS</p>
         </div>
 
-        {/* 🤖 相手 */}
+        {/* 🤁E相扁E*/}
         <div className="w-72 bg-white p-4 rounded shadow">
           <h2 className="text-center font-bold text-purple-600 mb-2">👑 カブトムシくん</h2>
           <ItemCard item={enemyItem} owned={false} />
           <p className="text-center mt-4">
-            {enemyBet ? `🔒 ${enemyBet} PW ベット！` : "🤔 ベット中..."}
+            {enemyBet ? `🔒 ${enemyBet} PW ベット！` : "🤁Eベット中..."}
           </p>
         </div>
       </div>
 
       {/* 🔁 説明表示 */}
       <div className="text-center mt-8 text-sm text-gray-700">
-        <p>おたがいにベットがおわったら、対戦スタート！</p>
-        <p className="mt-1">ベット後、自動で次の画面に進むよ！</p>
+        <p>おたがいにベットがおわったら、対戦スタート！E/p>
+        <p className="mt-1">ベット後、�E動で次の画面に進むよ！E/p>
       </div>
     </div>
   );

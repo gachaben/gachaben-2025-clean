@@ -6,7 +6,7 @@ const RewardPanel = ({ onRewarded, combo = 0 }) => {
   const [adRank, setAdRank] = useState(""); // "chance", "great", "ultra"
   const [rewardAmount, setRewardAmount] = useState(0);
 
-  // 🌟 comboに応じた激アツ補正率
+  // 🌟 comboに応じた激アチE��正玁E
   const getUltraChanceRate = () => {
     if (combo >= 20) return 0.3;
     if (combo >= 10) return 0.2;
@@ -59,7 +59,7 @@ const RewardPanel = ({ onRewarded, combo = 0 }) => {
   const getButtonLabel = () => {
     switch (adRank) {
       case "ultra":
-        return "🔥 激アツボタン 🔥";
+        return "🔥 激アチE�Eタン 🔥";
       case "great":
         return "🎯 大チャンスボタン";
       case "chance":
@@ -70,28 +70,28 @@ const RewardPanel = ({ onRewarded, combo = 0 }) => {
 
   return (
     <div className="bg-white p-4 rounded shadow text-center max-w-md mx-auto mt-4">
-      <h2 className="text-xl font-bold mb-2">🎁 報酬をゲットしよう！</h2>
+      <h2 className="text-xl font-bold mb-2">🎁 報酬をゲチE��しよぁE��E/h2>
 
       {rewardType === "none" && (
         <>
-          <p className="text-green-600 mb-2">今回は広告なしでラッキー！</p>
+          <p className="text-green-600 mb-2">今回は庁E��なしでラチE��ー�E�E/p>
           <button
             className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600"
             onClick={() => onRewarded(100)}
           >
-            +100 パワーを受け取る
+            +100 パワーを受け取めE
           </button>
         </>
       )}
 
       {rewardType === "ad" && (
         <>
-          <p className="text-blue-600 mb-2">🎉 ランク付きボーナスチャンス！</p>
+          <p className="text-blue-600 mb-2">🎉 ランク付きボ�Eナスチャンス�E�E/p>
           <button
             className={`${getButtonStyle()} py-2 px-4 rounded text-lg font-bold hover:opacity-90`}
             onClick={handleReward}
           >
-            {getButtonLabel()}（+{rewardAmount}）
+            {getButtonLabel()}�E�E{rewardAmount}�E�E
           </button>
         </>
       )}

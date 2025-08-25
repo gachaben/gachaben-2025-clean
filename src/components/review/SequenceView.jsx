@@ -48,7 +48,7 @@ export default function SequenceView({ question, onCorrect, onWrong }) {
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <div>
-        組み立て中:&nbsp;
+        絁E��立て中:&nbsp;
         {picked.map((t, i) => (
           <button
             key={i + "-" + t}

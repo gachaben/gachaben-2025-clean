@@ -25,15 +25,15 @@ export default function LinkAccountPage() {
     const auth = getAuth();
     const user = auth.currentUser;
     if (!user) {
-      setMsg("未ログインです。まず匿名ログインしてください。");
+      setMsg("未ログインです。まず匿名ログインしてください、E);
       return;
     }
     if (!user.isAnonymous) {
-      setMsg("すでに匿名ユーザーではありません（リンク不要）。");
+      setMsg("すでに匿名ユーザーではありません�E�リンク不要E��、E);
       return;
     }
     if (!email || !pw) {
-      setMsg("メールとパスワードを入力してください。");
+      setMsg("メールとパスワードを入力してください、E);
       return;
     }
 
@@ -41,22 +41,22 @@ export default function LinkAccountPage() {
       setBusy(true);
       const cred = EmailAuthProvider.credential(email, pw);
       const res = await linkWithCredential(user, cred);
-      setMsg(`リンク完了！ UIDは継続: ${res.user.uid}`);
-      // そのまま戻るなら：
+      setMsg(`リンク完亁E��EUIDは継綁E ${res.user.uid}`);
+      // そ�Eまま戻るなら！E
       // navigate("/review");
     } catch (e) {
-      // 代表的なエラーだけ分かりやすく
+      // 代表皁E��エラーだけ�EかりめE��ぁE
       const code = e?.code || "";
       if (code === "auth/email-already-in-use") {
-        setMsg("このメールは既存アカウントで使われています。データ移行（マージ）が必要です。");
+        setMsg("こ�Eメールは既存アカウントで使われてぁE��す。データ移行（�Eージ�E�が忁E��です、E);
       } else if (code === "auth/invalid-email") {
-        setMsg("メールアドレスの形式が正しくありません。");
+        setMsg("メールアドレスの形式が正しくありません、E);
       } else if (code === "auth/weak-password") {
-        setMsg("パスワードが弱すぎます（6文字以上に）。");
+        setMsg("パスワードが弱すぎます！E斁E��以上に�E�、E);
       } else if (code === "auth/requires-recent-login") {
-        setMsg("安全のため再ログインが必要です。いったんサインインし直してください。");
+        setMsg("安�Eのため再ログインが忁E��です。いったんサインインし直してください、E);
       } else {
-        setMsg(`リンク失敗: ${code || e.message}`);
+        setMsg(`リンク失敁E ${code || e.message}`);
       }
       console.error("[link] error:", e);
     } finally {
@@ -69,8 +69,8 @@ export default function LinkAccountPage() {
       <h1 className="text-xl font-bold mb-2">匿名アカウントをメールにリンク</h1>
 
       <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 12 }}>
-        現在のUID: <code>{uid || "—"}</code>{" "}
-        {uid ? (isAnon ? "(匿名)" : "(匿名ではない)") : ""}
+        現在のUID: <code>{uid || " E}</code>{" "}
+        {uid ? (isAnon ? "(匿吁E" : "(匿名ではなぁE") : ""}
       </div>
 
       <form onSubmit={handleLink} style={{ display: "grid", gap: 8 }}>
@@ -84,7 +84,7 @@ export default function LinkAccountPage() {
         />
         <input
           type="password"
-          placeholder="パスワード（6文字以上）"
+          placeholder="パスワード！E斁E��以上！E
           value={pw}
           onChange={(e) => setPw(e.target.value)}
           style={{ padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
@@ -101,7 +101,7 @@ export default function LinkAccountPage() {
             cursor: busy ? "not-allowed" : "pointer",
           }}
         >
-          {busy ? "リンク中…" : "匿名→メールにリンクする"}
+          {busy ? "リンク中…" : "匿名�Eメールにリンクする"}
         </button>
       </form>
 
@@ -112,7 +112,7 @@ export default function LinkAccountPage() {
       )}
 
       <div style={{ marginTop: 16 }}>
-        <Link to="/review">← 復習一覧へ戻る</Link>
+        <Link to="/review">ↁE復習一覧へ戻めE/Link>
       </div>
     </div>
   );

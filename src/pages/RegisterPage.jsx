@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 
@@ -7,7 +7,7 @@ const RegisterPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [parentEmail, setParentEmail] = useState(""); // 🔸追加！
+  const [parentEmail, setParentEmail] = useState(""); // 🔸追加�E�E
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -16,16 +16,16 @@ const RegisterPage = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 🔽 Firestoreに保存
+      // 🔽 Firestoreに保孁E
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         displayName,
         email,
-        parentEmail, // 🔸ここに保護者のメールも保存！
+        parentEmail, // 🔸ここに保護老E�Eメールも保存！E
         createdAt: new Date(),
       });
 
-      alert("登録が完了しました！");
+      alert("登録が完亁E��ました�E�E);
     } catch (error) {
       console.error("登録エラー:", error);
       alert("登録に失敗しました");
@@ -38,7 +38,7 @@ const RegisterPage = () => {
       <form onSubmit={handleRegister}>
         <input
           type="text"
-          placeholder="ニックネーム"
+          placeholder="ニックネ�Eム"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
           required
@@ -52,14 +52,14 @@ const RegisterPage = () => {
         />
         <input
           type="password"
-          placeholder="パスワード"
+          placeholder="パスワーチE
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
         <input
           type="email"
-          placeholder="保護者のメールアドレス（任意）"
+          placeholder="保護老E�Eメールアドレス�E�任意！E
           value={parentEmail}
           onChange={(e) => setParentEmail(e.target.value)}
         />

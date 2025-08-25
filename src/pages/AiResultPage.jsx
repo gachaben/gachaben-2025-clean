@@ -1,7 +1,7 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
 import React, { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import { collection, addDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -32,31 +32,31 @@ const AiResultPage = () => {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">✅ 診断結果</h2>
-      <p className="mb-2">学年：{grade}</p>
+      <h2 className="text-2xl font-bold mb-4">✁E診断結果</h2>
+      <p className="mb-2">学年�E�{grade}</p>
       <p className="mb-4">苦手な教科：{subject}</p>
 
       <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4 mb-6">
-        <p className="font-semibold">👪 保護者の方へ：</p>
+        <p className="font-semibold">👪 保護老E�E方へ�E�E/p>
         <p>
-          お子さまは「{unit}」に苦手意識があるようです。
+          お子さまは「{unit}」に苦手意識があるようです、E
           <br />
-          この傾向にあわせて、AIが特訓問題を作成することができます。
+          こ�E傾向にあわせて、AIが特訓問題を作�Eすることができます、E
         </p>
       </div>
 
       <div className="flex gap-4 mb-8">
         <button className="bg-green-600 text-white px-4 py-2 rounded">
-          🤖 AIで特訓問題を作成（100円）
+          🤁EAIで特訓問題を作�E�E�E00冁E��E
         </button>
         <button className="bg-green-600 text-white px-4 py-2 rounded">
-          🤖 AIで特訓問題を作成（100円）
+          🤁EAIで特訓問題を作�E�E�E00冁E��E
         </button>
       </div>
 
-      <h3 className="text-lg font-bold mb-2">🐽 とっくんもんだい</h3>
+      <h3 className="text-lg font-bold mb-2">🐽 とっくんもんだぁE/h3>
       <p className="text-sm border p-4">
-        1. このきょうかには まだ もんだいが ありません
+        1. こ�EきょぁE��には まだ もんだぁE�� ありません
       </p>
     </div>
   );

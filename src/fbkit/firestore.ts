@@ -20,7 +20,7 @@ export const db = getFirestoreDb();
 export const col = (path: string): CollectionReference<DocumentData> => collection(db, path);
 export const ref = (path: string): DocumentReference<DocumentData> => doc(db, path);
 
-// サーバ時刻を必ず含めたい時の安全書き込み
+// サーバ時刻を忁E��含めたぁE��の安�E書き込み
 export async function setWithTimestamp<T extends DocumentData>(
   r: DocumentReference<T>,
   data: WithFieldValue<T>,
@@ -35,5 +35,5 @@ export async function addWithTimestamp<T extends DocumentData>(
   return addDoc(c, { ...data, createdAt: serverTimestamp(), updatedAt: serverTimestamp() } as any);
 }
 
-// よく使うものは再エクスポート
+// よく使ぁE��のは再エクスポ�EチE
 export { serverTimestamp, getDoc, setDoc, updateDoc, addDoc, collection, doc };

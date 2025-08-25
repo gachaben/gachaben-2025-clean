@@ -1,4 +1,4 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
 // src/components/GachaResultModal.jsx
 import React from "react";
 
@@ -6,7 +6,7 @@ const GachaResultModal = ({ point, onClose }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-8 shadow-2xl text-center animate-fade-in">
-        <h2 className="text-2xl font-bold mb-4">🎰 ガチャ結果！</h2>
+        <h2 className="text-2xl font-bold mb-4">🎰 ガチャ結果�E�E/h2>
         <p className="text-6xl font-extrabold text-green-600 drop-shadow-lg mb-4">
           +{point} pt
         </p>

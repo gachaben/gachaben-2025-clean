@@ -1,4 +1,4 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
 import { useState } from "react";
 import axios from "axios";
 
@@ -18,17 +18,17 @@ export const useSendSupportMail = () => {
       {
         childName,
         messageBody,
-        parentEmail // ← ★追加！
+        parentEmail // ↁE☁E��加�E�E
       }
     );
 
       if (res.data.success) {
         setSuccess(true);
       } else {
-        throw new Error("送信失敗");
+        throw new Error("送信失敁E);
       }
     } catch (err) {
-      console.error("送信失敗：", err);
+      console.error("送信失敗！E, err);
       setError(err.message);
     } finally {
       setLoading(false);

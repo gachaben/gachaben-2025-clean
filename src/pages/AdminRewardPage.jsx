@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import { doc, getDoc } from "firebase/firestore";
 import assignTournamentRewards from "../utils/assignTournamentRewards";
 
@@ -14,7 +14,7 @@ const AdminRewardPage = () => {
       const user = auth.currentUser;
 
       if (!user) {
-        // ログインしていない場合はログインページへ
+        // ログインしてぁE��ぁE��合�Eログインペ�Eジへ
         navigate("/login");
         return;
       }
@@ -25,8 +25,8 @@ const AdminRewardPage = () => {
       if (userData?.role === "admin") {
         setIsAdmin(true);
       } else {
-        alert("このページは管理者専用です。");
-        navigate("/"); // または "/child-home" など適切な場所へ
+        alert("こ�Eペ�Eジは管琁E��E��用です、E);
+        navigate("/"); // また�E "/child-home" など適刁E��場所へ
       }
 
       setLoading(false);
@@ -38,10 +38,10 @@ const AdminRewardPage = () => {
   const handleClick = async () => {
     try {
       await assignTournamentRewards();
-      alert("報酬を配布しました！");
+      alert("報酬を�E币E��ました�E�E);
     } catch (error) {
-      console.error("報酬配布エラー:", error);
-      alert("報酬配布中にエラーが発生しました。");
+      console.error("報酬配币E��ラー:", error);
+      alert("報酬配币E��にエラーが発生しました、E);
     }
   };
 
@@ -52,12 +52,12 @@ const AdminRewardPage = () => {
   return (
     isAdmin && (
       <div className="p-8">
-        <h1 className="text-2xl font-bold mb-4">🏆 トーナメント報酬配布</h1>
+        <h1 className="text-2xl font-bold mb-4">🏆 ト�Eナメント報酬配币E/h1>
         <button
           onClick={handleClick}
           className="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700"
         >
-          🥚 報酬を一括配布する
+          🥁E報酬を一括配币E��めE
         </button>
       </div>
     )

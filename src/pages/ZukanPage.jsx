@@ -10,20 +10,20 @@ const ZukanTopPage = () => {
 
   return (
     <div style={containerStyle}>
-      <h1 style={titleStyle}>🎒 がくしゅう図鑑へ ようこそ！</h1>
+      <h1 style={titleStyle}>🎒 がくしゅぁE��鑑へ ようこそ�E�E/h1>
       <p style={subTitleStyle}>シリーズをえらんでね ✨</p>
 
       <div style={buttonGroupStyle}>
         <button onClick={() => handleClick("kontyu")} style={buttonStyle}>
-          🐛 昆虫シリーズ
+          🐛 昁E��シリーズ
         </button>
 
-        {/* 🔜 他シリーズを追加するなら以下のように増やせるよ
+        {/* 🔜 他シリーズを追加するなら以下�Eように増やせるめE
         <button onClick={() => handleClick("kyouryuu")} style={buttonStyle}>
-          🦖 恐竜シリーズ
+          🦁E恐竜シリーズ
         </button>
         <button onClick={() => handleClick("sweets")} style={buttonStyle}>
-          🍰 スイーツシリーズ
+          🍰 スイーチE��リーズ
         </button>
         */}
       </div>
@@ -34,7 +34,7 @@ const ZukanTopPage = () => {
 const containerStyle = {
   padding: "40px",
   textAlign: "center",
-  background: "#fdf6e3", // 明るくてやさしい背景色
+  background: "#fdf6e3", // 明るくてめE��しい背景色
   minHeight: "100vh",
 };
 

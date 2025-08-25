@@ -7,7 +7,7 @@ const GachaVideoModal = ({ onClose, onFinish }) => {
     const video = videoRef.current;
     if (video) {
       video.play().catch((e) => {
-        console.error("動画の自動再生に失敗:", e);
+        console.error("動画の自動�E生に失敁E", e);
       });
     }
   }, []);
@@ -16,7 +16,7 @@ const GachaVideoModal = ({ onClose, onFinish }) => {
     <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
       <div className="relative bg-white p-4 rounded shadow-lg w-full max-w-xl">
         <h2 className="text-lg font-bold mb-2 text-center text-gray-700">
-          🎥 プレミアガチャチャレンジ！
+          🎥 プレミアガチャチャレンジ�E�E
         </h2>
         <video
           ref={videoRef}
@@ -29,7 +29,7 @@ const GachaVideoModal = ({ onClose, onFinish }) => {
           className="absolute top-2 right-2 text-gray-500 hover:text-black"
           onClick={onClose}
         >
-          ×
+          ÁE
         </button>
       </div>
     </div>

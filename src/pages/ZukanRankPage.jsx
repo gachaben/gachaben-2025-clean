@@ -3,12 +3,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { collection, getDoc, doc, getDocs } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import { itemNames } from "../data/itemNames";
 import ItemCard from "../components/ItemCard";
 
 const getSpeciesKey = (id) => {
-  // 2508_A_005_kabuto_stage1 → kabuto
+  // 2508_A_005_kabuto_stage1 ↁEkabuto
   const m = id.replace(/\.png$/i, "").match(/^\d{4}_[SAB]_\d+_([a-z0-9]+)_stage\d+$/i);
   return m ? m[1] : id;
 };
@@ -30,19 +30,19 @@ export default function ZukanRankPage() {
     return () => unsub();
   }, []);
 
-  // rank の 10体（stage1キー）を起点に species ごとに最高所持stageを決める
+  // rank の 10体！Etage1キー�E�を起点に species ごとに最高所持stageを決める
   const list = useMemo(() => {
-    // rank の stage1キーだけ抽出（=10体）
+    // rank の stage1キーだけ抽出�E�E10体！E
     const stage1Keys = Object.keys(itemNames).filter(
       (k) => new RegExp(`^\\d{4}_${rank}_\\d+_.*_stage1$`, "i").test(k)
     );
 
     return stage1Keys.map((k) => {
       const species = getSpeciesKey(k);
-      // その species の全 stage のID（1..4）
+      // そ�E species の全 stage のID�E�E..4�E�E
       const ids = [1,2,3,4].map((st) => k.replace(/_stage1$/i, `_stage${st}`));
 
-      // 所持している中で最大 stage を探す
+      // 所持してぁE��中で最大 stage を探ぁE
       const ownedStages = ids
         .filter((id) => ownedIds.includes(id))
         .map((id) => Number(id.match(/stage(\d+)/i)?.[1] || 1));
@@ -52,7 +52,7 @@ export default function ZukanRankPage() {
       const label = itemNames[idToShow] || itemNames[k]; // 名前は辞書から
       const seriesId = idToShow.slice(0,4); // "2508"
 
-      // Firestore のステータス（pw/cpt/bpt）があれば反映
+      // Firestore のスチE�Eタス�E�Ew/cpt/bpt�E�があれば反映
       const fs = fsItems.find((x) => x.itemId === idToShow) || {};
 
       return {
@@ -71,8 +71,8 @@ export default function ZukanRankPage() {
 
   return (
     <div className="p-4">
-      <button onClick={() => nav(-1)} className="mb-2 underline">←戻る</button>
-      <h1 className="text-xl font-bold mb-3">{rank}ランク（全10体）</h1>
+      <button onClick={() => nav(-1)} className="mb-2 underline">←戻めE/button>
+      <h1 className="text-xl font-bold mb-3">{rank}ランク�E��E10体！E/h1>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {list.map((it) => (

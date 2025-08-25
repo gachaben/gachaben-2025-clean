@@ -1,5 +1,5 @@
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
 export const updateItemStage = async (docId, nextStage) => {
   const itemRef = doc(db, "userItemPowers", docId);

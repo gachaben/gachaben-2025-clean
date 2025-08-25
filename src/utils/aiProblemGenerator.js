@@ -1,28 +1,28 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
 // src/utils/aiProblemGenerator.js
 
 export function generateSampleProblems(grade, subject) {
   // 実際はAPI連携、ここではサンプル返す
   const samples = {
-    "1年生": {
+    "1年甁E: {
       さんすう: [
-        { question: "りんごが3こ、みかんが2こあります。あわせてなんこ？", choices: ["3こ", "4こ", "5こ", "6こ"], answer: "5こ" },
-        { question: "1から5までのかずのなかで、いちばん大きいのはどれ？", choices: ["1", "3", "5", "2"], answer: "5" }
+        { question: "りんごが3こ、みかんぁEこあります。あわせてなんこ�E�E, choices: ["3ぁE, "4ぁE, "5ぁE, "6ぁE], answer: "5ぁE },
+        { question: "1から5までのかずのなかで、いちばん大きいのはどれ！E, choices: ["1", "3", "5", "2"], answer: "5" }
       ],
-      こくご: [
-        { question: "「はな」をひらがなで かいてあるのはどれ？", choices: ["はな", "ハナ", "花", "ハ"], answer: "はな" },
-        { question: "「あかいはな」のなかにある いろはどれ？", choices: ["あお", "あか", "みどり", "しろ"], answer: "あか" }
+      こくぁE [
+        { question: "「�Eな」をひらがなで かいてあるのはどれ！E, choices: ["はな", "ハナ", "花", "チE], answer: "はな" },
+        { question: "「あかいはな」�Eなかにある ぁE��はどれ！E, choices: ["あお", "あか", "みどめE, "しろ"], answer: "あか" }
       ]
     },
-    "2年生": {
+    "2年甁E: {
       さんすう: [
-        { question: "9-4 はいくつ？", choices: ["3", "4", "5", "6"], answer: "5" },
-        { question: "3×2 はどれ？", choices: ["5", "6", "7", "8"], answer: "6" }
+        { question: "9-4 はぁE��つ�E�E, choices: ["3", "4", "5", "6"], answer: "5" },
+        { question: "3ÁE はどれ！E, choices: ["5", "6", "7", "8"], answer: "6" }
       ]
     }
   };
 
   return samples[grade]?.[subject] || [
-    { question: "このきょうかには まだ もんだいが ありません", choices: [], answer: "" }
+    { question: "こ�EきょぁE��には まだ もんだぁE�� ありません", choices: [], answer: "" }
   ];
 }

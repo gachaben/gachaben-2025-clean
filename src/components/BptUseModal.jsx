@@ -1,4 +1,4 @@
-// ✅ ファイル：src/components/BptUseModal.jsx
+// ✁Eファイル�E�src/components/BptUseModal.jsx
 import React, { useState, useEffect } from 'react';
 
 const BptUseModal = ({ item, userBpt, onClose, onConfirm }) => {
@@ -27,8 +27,8 @@ const BptUseModal = ({ item, userBpt, onClose, onConfirm }) => {
           ))}
         </div>
 
-        <p className="mb-2">あなたの所持Bpt：{userBpt}</p>
-        {isOver && <p className="text-red-500">Bptが足りません！</p>}
+        <p className="mb-2">あなた�E所持Bpt�E�{userBpt}</p>
+        {isOver && <p className="text-red-500">Bptが足りません�E�E/p>}
 
         <div className="flex justify-around mt-4">
           <button onClick={onClose} className="bg-gray-400 text-white px-4 py-2 rounded">キャンセル</button>
@@ -36,7 +36,7 @@ const BptUseModal = ({ item, userBpt, onClose, onConfirm }) => {
             onClick={() => !isOver && onConfirm(selected)}
             className={`px-4 py-2 rounded ${isOver ? 'bg-gray-300' : 'bg-blue-500 text-white'}`}
           >
-            決定
+            決宁E
           </button>
         </div>
       </div>

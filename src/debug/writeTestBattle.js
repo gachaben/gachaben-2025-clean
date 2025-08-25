@@ -12,12 +12,12 @@ export async function writeTestBattle() {
     result: "win",
     rounds: 3,
   });
-  console.log("✅ local write ok docId:", ref.id);
+  console.log("✁Elocal write ok docId:", ref.id);
 
-  // サーバ反映待ち（エミュに届かないとここで失敗/ハングのはず）
+  // サーバ反映征E���E�エミュに届かなぁE��ここで失敁Eハングのはず！E
   await waitForPendingWrites(db);
 
-  // 「サーバ」から読んで存在確認（=通信発生を強制）
+  // 「サーバ」から読んで存在確認！E通信発生を強制�E�E
   const snap = await getDocFromServer(doc(db, "battles", ref.id));
-  console.log("✅ server read ok:", snap.exists());
+  console.log("✁Eserver read ok:", snap.exists());
 }

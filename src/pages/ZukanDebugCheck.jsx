@@ -5,7 +5,7 @@ import {
   doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc,
   arrayUnion, serverTimestamp
 } from "firebase/firestore";
-import { db, auth, ensureSignedIn } from "@/firebase"
+import { db, auth, ensureSignedIn } from "@/fbkit"
 
 function Img({ src, alt }) {
   const [ok, setOk] = useState(true);
@@ -53,14 +53,14 @@ export default function ZukanDebugCheck() {
     return ref;
   }, []);
 
-  // 取得リフレッシュ
+  // 取得リフレチE��ュ
   const refresh = useCallback(async () => {
     try {
       setBusy(true);
       await ensureSignedIn();
       const cur = auth.currentUser;
       if (!cur) {
-        append("❌ 未ログイン。/login からログインしてください");
+        append("❁E未ログイン、Elogin からログインしてください");
         return;
       }
       setUid(cur.uid);
@@ -73,7 +73,7 @@ export default function ZukanDebugCheck() {
       setUserDoc(udata);
       const ids = Array.isArray(udata.items) ? udata.items : [];
       setOwnedIds(ids);
-      append(`👤 users/${cur.uid} → items ${ids.length} 件, bpt: ${udata.bpt ?? 0}`);
+      append(`👤 users/${cur.uid} ↁEitems ${ids.length} 件, bpt: ${udata.bpt ?? 0}`);
 
       // items 全件
       const allSnap = await getDocs(collection(db, "items"));
@@ -84,10 +84,10 @@ export default function ZukanDebugCheck() {
       // 所持品 詳細
       const owned = all.filter((it) => ids.includes(it.id));
       setOwnedItems(owned);
-      append(`🎒 所持アイテム解決件数: ${owned.length}`);
+      append(`🎒 所持アイチE��解決件数: ${owned.length}`);
     } catch (e) {
       console.error(e);
-      append(`❌ エラー: ${String(e?.message || e)}`);
+      append(`❁Eエラー: ${String(e?.message || e)}`);
     } finally {
       setBusy(false);
     }
@@ -98,31 +98,31 @@ export default function ZukanDebugCheck() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 種データ投入（items に1件追加）
+  // 種チE�Eタ投�E�E�Etems に1件追加�E�E
   const seedOneItem = async () => {
     try {
       setBusy(true);
       await ensureSignedIn();
       const ref = await addDoc(collection(db, "items"), {
-        name: "カブト（S）",
+        name: "カブト�E�E�E�E,
         pw: 200,
         stage: 1,                   // 画像パス用
-        imageName: "kabuto",        // /images/kontyu/stage1/kabuto.png を想定
+        imageName: "kabuto",        // /images/kontyu/stage1/kabuto.png を想宁E
         seriesId: "kontyu",
         rank: "S",
         createdAt: serverTimestamp(),
       });
-      append(`✅ items に1件追加: ${ref.id}`);
+      append(`✁Eitems に1件追加: ${ref.id}`);
       await refresh();
     } catch (e) {
       console.error(e);
-      append(`❌ seed 失敗: ${e.message}`);
+      append(`❁Eseed 失敁E ${e.message}`);
     } finally {
       setBusy(false);
     }
   };
 
-  // さっき追加した items の最新1件をユーザー所持に付与
+  // さっき追加した items の最新1件をユーザー所持に付丁E
   const giveLastToUser = async () => {
     try {
       setBusy(true);
@@ -130,17 +130,17 @@ export default function ZukanDebugCheck() {
       const cur = auth.currentUser;
       const allSnap = await getDocs(collection(db, "items"));
       if (allSnap.empty) {
-        append("❗ items が空です（まず『種データを1件追加』を押してね）");
+        append("❁Eitems が空です（まず『種チE�EタめE件追加』を押してね�E�E);
         return;
       }
       const lastId = allSnap.docs[allSnap.docs.length - 1].id;
       const uref = await ensureUserDoc(cur.uid);
       await updateDoc(uref, { items: arrayUnion(lastId) });
-      append(`✅ users/${cur.uid}.items に ${lastId} を追加`);
+      append(`✁Eusers/${cur.uid}.items に ${lastId} を追加`);
       await refresh();
     } catch (e) {
       console.error(e);
-      append(`❌ 付与失敗: ${e.message}`);
+      append(`❁E付与失敁E ${e.message}`);
     } finally {
       setBusy(false);
     }
@@ -152,29 +152,29 @@ export default function ZukanDebugCheck() {
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">図鑑チェック＆シーダー</h1>
-        <Link to="/" className="text-blue-600 underline">ホームへ</Link>
+        <h1 className="text-lg font-bold">図鑑チェチE���E�E��ーダー</h1>
+        <Link to="/" className="text-blue-600 underline">ホ�Eムへ</Link>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <button onClick={refresh} disabled={busy} className="px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-50">再読込</button>
-        <button onClick={seedOneItem} disabled={busy} className="px-3 py-1 rounded bg-emerald-600 text-white disabled:opacity-50">items に種データを1件追加</button>
-        <button onClick={giveLastToUser} disabled={busy} className="px-3 py-1 rounded bg-indigo-600 text-white disabled:opacity-50">最新アイテムを所持に付与</button>
-        <button onClick={gotoList} className="px-3 py-1 rounded bg-blue-600 text-white">図鑑一覧を開く (/zukan/list)</button>
-        <button onClick={gotoSeriesS} className="px-3 py-1 rounded bg-pink-600 text-white">シリーズSを開く (/zukan/kontyu/S)</button>
+        <button onClick={seedOneItem} disabled={busy} className="px-3 py-1 rounded bg-emerald-600 text-white disabled:opacity-50">items に種チE�EタめE件追加</button>
+        <button onClick={giveLastToUser} disabled={busy} className="px-3 py-1 rounded bg-indigo-600 text-white disabled:opacity-50">最新アイチE��を所持に付丁E/button>
+        <button onClick={gotoList} className="px-3 py-1 rounded bg-blue-600 text-white">図鑑一覧を開ぁE(/zukan/list)</button>
+        <button onClick={gotoSeriesS} className="px-3 py-1 rounded bg-pink-600 text-white">シリーズSを開ぁE(/zukan/kontyu/S)</button>
       </div>
 
       <section className="p-3 border rounded">
-        <div className="font-semibold mb-2">ユーザー情報</div>
-        <div className="text-sm">uid: {uid || "—"}</div>
+        <div className="font-semibold mb-2">ユーザー惁E��</div>
+        <div className="text-sm">uid: {uid || " E}</div>
         <div className="text-sm">bpt: {userDoc?.bpt ?? 0}</div>
-        <div className="text-sm">items配列: {ownedIds.length} 件</div>
+        <div className="text-sm">items配�E: {ownedIds.length} 件</div>
       </section>
 
       <section className="p-3 border rounded">
-        <div className="font-semibold mb-2">所持アイテム（解決済み）</div>
+        <div className="font-semibold mb-2">所持アイチE���E�解決済み�E�E/div>
         {ownedItems.length === 0 ? (
-          <div className="text-sm text-gray-500">まだ所持アイテムがありません。</div>
+          <div className="text-sm text-gray-500">まだ所持アイチE��がありません、E/div>
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,140px)] gap-3">
             {ownedItems.map((it) => (
@@ -191,9 +191,9 @@ export default function ZukanDebugCheck() {
       </section>
 
       <section className="p-3 border rounded">
-        <div className="font-semibold mb-2">items コレクション（全件）</div>
+        <div className="font-semibold mb-2">items コレクション�E��E件�E�E/div>
         {allItems.length === 0 ? (
-          <div className="text-sm text-gray-500">items が空です。</div>
+          <div className="text-sm text-gray-500">items が空です、E/div>
         ) : (
           <div className="grid grid-cols-[repeat(auto-fill,140px)] gap-3">
             {allItems.map((it) => (

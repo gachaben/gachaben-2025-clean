@@ -1,9 +1,9 @@
 // src/utils/evolveItem.js
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import { getRandomStageUp } from "./getRandomStageUp";
 import { getZoneByPower } from "./getZoneByPower";
-import { getRankFromPower } from "./getRankFromPower"; // ← これ新規で必要なら作る
+import { getRankFromPower } from "./getRankFromPower"; // ↁEこれ新規で忁E��なら作る
 
 export const evolveItem = async (uid, itemId, adType = "none") => {
   const userRef = doc(db, "userItemPowers", uid);
@@ -13,7 +13,7 @@ export const evolveItem = async (uid, itemId, adType = "none") => {
   const data = snap.data();
   const item = data.items?.[itemId] || { pw: 0, stage: "stage1" };
 
-  // ✅ 進化量を決定
+  // ✁E進化量を決宁E
   let addPw = 100;
   if (adType === "5s") {
     addPw = Math.random() < 0.2 ? 200 : 100;
@@ -24,7 +24,7 @@ export const evolveItem = async (uid, itemId, adType = "none") => {
     addPw = r < 0.1 ? 300 : r < 0.7 ? 200 : 100;
   }
 
-  // ✅ ランク判定用に rank を決定（初期pwから）
+  // ✁Eランク判定用に rank を決定（�E期pwから�E�E
   const basePw = item.pw;
   let rank = "b";
   if (basePw >= 1100) {
@@ -33,7 +33,7 @@ export const evolveItem = async (uid, itemId, adType = "none") => {
     rank = "a";
   }
 
-  // ✅ ランクごとの最大pw上限
+  // ✁Eランクごとの最大pw上限
   const rankLimit = {
     b: basePw + 500,
     a: basePw + 1000,
@@ -43,10 +43,10 @@ export const evolveItem = async (uid, itemId, adType = "none") => {
   const maxPw = rankLimit[rank];
   const newPw = Math.min(basePw + addPw, maxPw);
 
-  // ✅ ステージも進化させる（getRandomStageUp関数で）
+  // ✁EスチE�Eジも進化させる�E�EetRandomStageUp関数で�E�E
   const newStage = getRandomStageUp(item.stage);
 
-  // ✅ Firestoreに保存
+  // ✁EFirestoreに保孁E
   await updateDoc(userRef, {
     [`items.${itemId}`]: {
       pw: newPw,

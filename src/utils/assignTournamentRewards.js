@@ -1,8 +1,8 @@
 // assignTournamentRewards.js
 import { collection, getDocs, doc, updateDoc } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
-// 👑 設定（スコアキーや報酬ID）
+// 👑 設定（スコアキーめE��酬ID�E�E
 const SCORE_KEY = "monthlyScore_202507";
 const SPECIAL_TICKET_ID = "S202508";
 const A_EGG_ID = "eggA001";
@@ -11,12 +11,12 @@ const assignTournamentRewards = async () => {
   const snapshot = await getDocs(collection(db, "users"));
   const teams = {};
 
-  // 🔍 データ整形：都道府県ごとのユーザーを分類
+  // 🔍 チE�Eタ整形�E��E道府県ごとのユーザーを�E顁E
   snapshot.forEach((docSnap) => {
     const data = docSnap.data();
     const prefecture = data.prefecture;
     const score = data[SCORE_KEY] || 0;
-    const name = data.name || "ななしさん";
+    const name = data.name || "ななしさめE;
 
     if (!prefecture || score <= 0) return;
 
@@ -28,7 +28,7 @@ const assignTournamentRewards = async () => {
     });
   });
 
-  // 🏆 上位3県を抽出（代表数を合わせる）
+  // 🏆 上佁E県を抽出�E�代表数を合わせる！E
   const teamList = Object.entries(teams).map(([pref, members]) => {
     return {
       prefecture: pref,
@@ -36,10 +36,10 @@ const assignTournamentRewards = async () => {
     };
   });
 
-  // 各都道府県の代表者数の最小値（全県の公平性）
+  // 吁E�E道府県の代表老E��の最小値�E��E県�E公平性�E�E
   const minSize = Math.min(...teamList.map((t) => t.members.length));
 
-  // チームごとの合計スコア（代表者数分）
+  // チ�Eムごとの合計スコア�E�代表老E��刁E��E
   const rankedTeams = teamList
     .map((team) => {
       const topMembers = team.members.slice(0, minSize);
@@ -52,13 +52,13 @@ const assignTournamentRewards = async () => {
     })
     .sort((a, b) => b.totalScore - a.totalScore);
 
-  // 🥇🥈🥉 上位3チーム
+  // 🥁E���🥁E上佁Eチ�Eム
   const top3Prefectures = rankedTeams.slice(0, 3).map((team) => team.prefecture);
 
-  // 🎁 ユーザーに報酬付与
+  // 🎁 ユーザーに報酬付丁E
   for (const team of rankedTeams) {
     const isTop3 = top3Prefectures.includes(team.prefecture);
-    const rewardTargetCount = Math.ceil(team.members.length * 0.1); // 上位1割
+    const rewardTargetCount = Math.ceil(team.members.length * 0.1); // 上佁E割
 
     const topUsers = team.members
       .sort((a, b) => b.score - a.score)
@@ -68,22 +68,22 @@ const assignTournamentRewards = async () => {
       const userRef = doc(db, "users", user.uid);
 
       if (isTop3) {
-        // 🏆 抽選チケットを付与
+        // 🏆 抽選チケチE��を付丁E
         await updateDoc(userRef, {
           specialTicket: SPECIAL_TICKET_ID,
         });
-        console.log(`🎫 ${user.name} に抽選券（${SPECIAL_TICKET_ID}）を付与`);
+        console.log(`🎫 ${user.name} に抽選券�E�E{SPECIAL_TICKET_ID}�E�を付与`);
       } else {
-        // 🥚 Aランクの卵をプレゼント
+        // 🥁EAランクの卵を�EレゼンチE
         await updateDoc(userRef, {
           [`eggs.${A_EGG_ID}`]: true,
         });
-        console.log(`🥚 ${user.name} に ${A_EGG_ID} を付与`);
+        console.log(`🥁E${user.name} に ${A_EGG_ID} を付与`);
       }
     }
   }
 
-  console.log("✅ 報酬の付与が完了しました！");
+  console.log("✁E報酬の付与が完亁E��ました�E�E);
 };
 
 export default assignTournamentRewards;

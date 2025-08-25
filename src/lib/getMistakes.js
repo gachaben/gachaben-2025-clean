@@ -1,4 +1,4 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
 // src/lib/getMistakes.js
 import {
   collection,
@@ -9,13 +9,13 @@ import {
 } from "firebase/firestore";
 
 /**
- * ログイン中ユーザーの間違い履歴を取得
- * まず userId で検索（旧互換）、0件なら uid でも検索するフォールバック
+ * ログイン中ユーザーの間違ぁE��歴を取征E
+ * まぁEuserId で検索�E�旧互換�E�、E件なめEuid でも検索するフォールバック
  */
 export async function getMistakes(userId) {
   if (!userId) throw new Error("getMistakes: userId is required");
 
-  // 1) 旧互換: userId で取得
+  // 1) 旧互換: userId で取征E
   const q1 = query(
     collection(db, "mistakes"),
     where("userId", "==", userId),
@@ -26,7 +26,7 @@ export async function getMistakes(userId) {
     return snap1.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   }
 
-  // 2) フォールバック: uid で取得
+  // 2) フォールバック: uid で取征E
   const q2 = query(
     collection(db, "mistakes"),
     where("uid", "==", userId),

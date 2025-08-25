@@ -8,7 +8,7 @@ export const decideEvolution = (adType) => {
     stageUp = 1;
     pw = 100;
   } else if (adType === "short") {
-    // 5秒広告
+    // 5秒庁E��
     if (rand < 0.2) {
       stageUp = 2;
       pw = 200;
@@ -17,7 +17,7 @@ export const decideEvolution = (adType) => {
       pw = 100;
     }
   } else if (adType === "medium") {
-    // 10秒広告
+    // 10秒庁E��
     if (rand < 0.4) {
       stageUp = 2;
       pw = 200;
@@ -26,7 +26,7 @@ export const decideEvolution = (adType) => {
       pw = 100;
     }
   } else if (adType === "long") {
-    // 60秒広告
+    // 60秒庁E��
     if (rand < 0.1) {
       stageUp = 3;
       pw = 300;

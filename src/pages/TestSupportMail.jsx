@@ -20,10 +20,10 @@ const TestSupportMail = () => {
 
   return (
     <div style={{ padding: "2rem" }}>
-      <h2>📤 テスト送信ページ</h2>
+      <h2>📤 チE��ト送信ペ�Eジ</h2>
 
       <div style={{ marginBottom: "1rem" }}>
-        <label>子どもの名前：</label>
+        <label>子ども�E名前�E�E/label>
         <input
           type="text"
           value={childName}
@@ -32,7 +32,7 @@ const TestSupportMail = () => {
       </div>
 
       <div style={{ marginBottom: "1rem" }}>
-        <label>メッセージ：</label>
+        <label>メチE��ージ�E�E/label>
         <input
           type="text"
           value={messageBody}
@@ -41,7 +41,7 @@ const TestSupportMail = () => {
       </div>
 
       <div style={{ marginBottom: "1rem" }}>
-        <label>保護者のメールアドレス：</label>
+        <label>保護老E�Eメールアドレス�E�E/label>
         <input
           type="email"
           value={parentEmail}
@@ -50,12 +50,12 @@ const TestSupportMail = () => {
       </div>
 
       <button onClick={handleSend} disabled={loading}>
-        テストメールを送信
+        チE��トメールを送信
       </button>
 
       {loading && <p>送信中...</p>}
-      {success && <p style={{ color: "green" }}>✅ 送信成功！</p>}
-      {error && <p style={{ color: "red" }}>❌ 送信失敗：{error}</p>}
+      {success && <p style={{ color: "green" }}>✁E送信成功�E�E/p>}
+      {error && <p style={{ color: "red" }}>❁E送信失敗：{error}</p>}
     </div>
   );
 };

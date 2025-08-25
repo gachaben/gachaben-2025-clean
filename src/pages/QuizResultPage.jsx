@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { updateEvolutionStage } from "../utils/updateEvolutionStage"; // ← 追加！
+import { updateEvolutionStage } from "../utils/updateEvolutionStage"; // ↁE追加�E�E
 
 const QuizResultPage = () => {
   useEffect(() => {
@@ -16,7 +16,7 @@ const QuizResultPage = () => {
 
       const oshiId = userSnap.data().oshi || "unknown";
 
-      // 🔸パワー＆推しポイント加算
+      // 🔸パワー�E�E��し�Eイント加箁E
       const itemRef = doc(db, "userItemPowers", uid);
       const itemSnap = await getDoc(itemRef);
 
@@ -38,13 +38,13 @@ const QuizResultPage = () => {
         });
       }
 
-      // 🔸卵アイテムゲット（egg001）
+      // 🔸卵アイチE��ゲチE���E�Egg001�E�E
       await addEggItem(uid, "egg001");
 
-      // 🔸進化ステージの更新（egg001）
+      // 🔸進化スチE�Eジの更新�E�Egg001�E�E
       await updateEvolutionStage(uid, "egg001");
 
-      alert("ポイント＆たまごをゲットしたよ！");
+      alert("ポイント！E��まごをゲチE��したよ！E);
     };
 
     handleResult();
@@ -52,8 +52,8 @@ const QuizResultPage = () => {
 
   return (
     <div className="text-center mt-10">
-      <h2 className="text-2xl font-bold">ぜんもんせいかい！</h2>
-      <p className="mt-4">ポイントとたまごをもらったよ〜🎁</p>
+      <h2 className="text-2xl font-bold">ぜんもんせいかい�E�E/h2>
+      <p className="mt-4">ポイントとたまごをもらったよ〜🎁E/p>
     </div>
   );
 };

@@ -2,11 +2,11 @@
 
 const badges = {
   "badge_victory_202507": {
-    name: "7月 MVPバッジ",
-    description: "都道府県別ランキングで上位10％に入った証！",
+    name: "7朁EMVPバッジ",
+    description: "都道府県別ランキングで上佁E0�E�E��入った証�E�E,
     image: "/images/badges/victory_202507.png",
   },
-  // 他のバッジも追加可
+  // 他�Eバッジも追加可
 };
 
 export default badges;

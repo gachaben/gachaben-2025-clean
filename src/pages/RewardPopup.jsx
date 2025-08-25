@@ -1,5 +1,5 @@
 import React from "react";
-import saveRewardPower from "../utils/saveRewardPower"; // ← 追加
+import saveRewardPower from "../utils/saveRewardPower"; // ↁE追加
 
 const RewardPopup = ({ onClose, onReward }) => {
   const chanceType = getRandomChance(); // "chance", "big", "super"
@@ -7,7 +7,7 @@ const RewardPopup = ({ onClose, onReward }) => {
   const handleReward = () => {
     const rewardAmount = getRandomReward(chanceType);
     onReward?.({ type: chanceType, amount: rewardAmount });
-    saveRewardPower(rewardAmount); // ← Firestore に保存
+    saveRewardPower(rewardAmount); // ↁEFirestore に保孁E
     onClose();
   };
 
@@ -25,18 +25,18 @@ const RewardPopup = ({ onClose, onReward }) => {
   const getButtonText = () => {
     switch (chanceType) {
       case "super":
-        return "🟣 激アツ\n動画を見てpwゲット！1000pw出るかも";
+        return "🟣 激アツ\n動画を見てpwゲチE���E�E000pw出るかめE;
       case "big":
-        return "🔴 大チャンス\n動画を見てpwゲット！500pw出るかも";
+        return "🔴 大チャンス\n動画を見てpwゲチE���E�E00pw出るかめE;
       default:
-        return "🟡 チャンス\n動画を見てpwゲット！200pw出るかも";
+        return "🟡 チャンス\n動画を見てpwゲチE���E�E00pw出るかめE;
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-        <h2 className="text-xl font-bold mb-4">🎁 ごほうびチャンス！</h2>
+        <h2 className="text-xl font-bold mb-4">🎁 ごほぁE�Eチャンス�E�E/h2>
         <button
           onClick={handleReward}
           className={`${getButtonStyle()} whitespace-pre-line py-3 px-6 rounded text-lg font-bold mb-4 w-full`}
@@ -45,13 +45,13 @@ const RewardPopup = ({ onClose, onReward }) => {
         </button>
         <button
           onClick={() => {
-            saveRewardPower(100); // ← 100pwだけ保存
+            saveRewardPower(100); // ↁE100pwだけ保孁E
             onReward?.({ type: "default", amount: 100 });
             onClose();
           }}
           className="mt-2 text-gray-500 hover:text-gray-700 text-sm"
         >
-          このまま終了（100pwだけ）
+          こ�Eまま終亁E��E00pwだけ！E
         </button>
       </div>
     </div>
@@ -60,10 +60,10 @@ const RewardPopup = ({ onClose, onReward }) => {
 
 export default RewardPopup;
 
-// 🔽 以下ユーティリティ関数
+// 🔽 以下ユーチE��リチE��関数
 function getRandomChance() {
   const rand = Math.random();
-  if (rand < 0.1) return "super"; // 10% 激アツ
+  if (rand < 0.1) return "super"; // 10% 激アチE
   if (rand < 0.4) return "big";   // 30% 大チャンス
   return "chance";               // 60% チャンス
 }

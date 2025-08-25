@@ -1,9 +1,9 @@
 // 📄 src/utils/initializeUserItems.js
 
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
-// ユーザーにアイテムIDを自動登録（egg形式ではなくS/A/B形式）
+// ユーザーにアイチE��IDを�E動登録�E�Egg形式ではなくS/A/B形式！E
 export const initializeUserItems = async (uid) => {
   const items = [
     "2508_A_001_herakuresu_stage1",
@@ -17,5 +17,5 @@ export const initializeUserItems = async (uid) => {
     { merge: true }
   );
 
-  console.log("初期化完了しました！");
+  console.log("初期化完亁E��ました�E�E);
 };

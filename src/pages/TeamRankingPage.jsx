@@ -1,7 +1,7 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
 const getCurrentMonthScoreKey = () => {
   const now = new Date();
@@ -24,7 +24,7 @@ const TeamRankingPage = () => {
       snapshot.forEach((doc) => {
         const data = doc.data();
         const prefecture = data.prefecture;
-        const name = data.name || "ななしさん";
+        const name = data.name || "ななしさめE;
         const score = data[scoreKey] || 0;
 
         if (!prefecture) return;
@@ -33,18 +33,18 @@ const TeamRankingPage = () => {
         teams[prefecture].push({ name, score });
       });
 
-      // 最小チームサイズを決定
+      // 最小チームサイズを決宁E
       const minSize = Math.min(...Object.values(teams).map(team => team.length));
       setMinTeamSize(minSize);
 
-      // 各県の上位 minSize 人のスコアを合計
+      // 吁E��の上佁EminSize 人のスコアを合訁E
       const rankedTeams = Object.entries(teams).map(([prefecture, members]) => {
         const sorted = members.sort((a, b) => b.score - a.score).slice(0, minSize);
         const totalScore = sorted.reduce((sum, user) => sum + user.score, 0);
         return { prefecture, totalScore, members: sorted };
       });
 
-      // スコア順にソート
+      // スコア頁E��ソーチE
       rankedTeams.sort((a, b) => b.totalScore - a.totalScore);
 
       setRanking(rankedTeams);
@@ -55,17 +55,17 @@ const TeamRankingPage = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">🏆 団体戦ランキング（代表{minTeamSize}人）</h2>
+      <h2 className="text-2xl font-bold mb-4">🏆 団体戦ランキング�E�代表{minTeamSize}人�E�E/h2>
       <ul>
         {ranking.map((team, index) => (
           <li key={team.prefecture} className="mb-4">
             <div className="font-bold text-lg">
-              {index + 1}位：{team.prefecture}（合計 {team.totalScore} パワー）
+              {index + 1}位：{team.prefecture}�E�合訁E{team.totalScore} パワー�E�E
             </div>
             <ul className="pl-4 text-sm text-gray-600">
               {team.members.map((user, i) => (
                 <li key={i}>
-                  {i + 1}. {user.name}（{user.score}）
+                  {i + 1}. {user.name}�E�Euser.score}�E�E
                 </li>
               ))}
             </ul>

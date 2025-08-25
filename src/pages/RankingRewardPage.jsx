@@ -1,8 +1,8 @@
-// ✅ /src/pages/RankingRewardPage.jsx
+// ✁E/src/pages/RankingRewardPage.jsx
 
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
 const getCurrentMonthId = () => {
   const now = new Date();
@@ -35,22 +35,22 @@ const RankingRewardPage = () => {
   }, []);
 
   const getMedalEmoji = (index) => {
-    if (index === 0) return "🥇"; // 🥇 = 🥇 金
-    if (index === 1) return "🥈"; // 🥈 = 🥈 銀
-    if (index === 2) return "🥉"; // 🥉 = 🥉 銅
+    if (index === 0) return "🥁E; // 🥁E= 🥁E釁E
+    if (index === 1) return "🥁E; // 🥁E= 🥁E銀
+    if (index === 2) return "🥁E; // 🥁E= 🥁E銁E
     return "";
   };
 
   const getMonthLabel = () => {
     const now = new Date();
-    return `${now.getFullYear()}年${now.getMonth() + 1}月`;
+    return `${now.getFullYear()}年${now.getMonth() + 1}朁E;
   };
 
   return (
     <div className="p-4 max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold text-center mb-4">🌏 月間パワーランキング</h1>
       <p className="text-center text-gray-500 mb-6">
-        対象月：{getMonthLabel()} ／ 上位10%のプレイヤーのみ表示
+        対象月：{getMonthLabel()} �E�E上佁E0%のプレイヤーのみ表示
       </p>
 
       {loading ? (
@@ -59,8 +59,8 @@ const RankingRewardPage = () => {
         <table className="w-full table-auto border-collapse">
           <thead>
             <tr className="bg-gray-200">
-              <th className="border px-2 py-1">順位</th>
-              <th className="border px-2 py-1">ニックネーム</th>
+              <th className="border px-2 py-1">頁E��E/th>
+              <th className="border px-2 py-1">ニックネ�Eム</th>
               <th className="border px-2 py-1">学年</th>
               <th className="border px-2 py-1">都道府県</th>
               <th className="border px-2 py-1">合計パワー</th>
@@ -70,7 +70,7 @@ const RankingRewardPage = () => {
             {ranking.map((user, index) => (
               <tr key={user.id} className="text-center">
                 <td className="border px-2 py-1">
-                  {index + 1}位 {getMedalEmoji(index)}
+                  {index + 1}佁E{getMedalEmoji(index)}
                 </td>
                 <td className="border px-2 py-1">{user.nickname}</td>
                 <td className="border px-2 py-1">{user.grade}</td>

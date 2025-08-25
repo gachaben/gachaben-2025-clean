@@ -1,17 +1,17 @@
 const items = [
   {
     id: "egg001",
-    name: "ふつうのたまご",
+    name: "ふつぁE�EたまぁE,
     image: "/images/egg001.png",
     pw: 0,
   },
   {
     id: "egg002",
-    name: "キラキラたまご",
+    name: "キラキラたまぁE,
     image: "/images/egg002.png",
     pw: 0,
   },
-  // 🥚 追加OK！
+  // 🥁E追加OK�E�E
 ];
 
 export default items;

@@ -21,7 +21,7 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
       <div className="relative bg-white rounded-lg p-6 shadow-xl w-80 text-center">
         <h2 className="text-lg font-bold mb-4">PW使用量を選んでください</h2>
 
-        {/* ボタン選択 */}
+        {/* ボタン選抁E*/}
         <div className="flex justify-center flex-wrap gap-2 mb-4">
           {options.map((amount) => {
             const isDisabled = amount > numericUserPw;
@@ -48,7 +48,7 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
 
         {/* 所持PW */}
         <p className="mb-4 text-gray-700">
-          あなたの所持PW：<span className="font-bold">{numericUserPw}</span>
+          あなた�E所持PW�E�Espan className="font-bold">{numericUserPw}</span>
         </p>
 
         {/* ボタン */}
@@ -63,7 +63,7 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
             onClick={() => onConfirm(selected)}
             className="px-4 py-2 rounded bg-red-500 text-white font-bold hover:bg-red-600"
           >
-            決定
+            決宁E
           </button>
         </div>
       </div>

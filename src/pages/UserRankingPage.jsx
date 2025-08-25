@@ -1,7 +1,7 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
 const getCurrentMonthScoreKey = () => {
   const now = new Date();
@@ -24,7 +24,7 @@ const UserRankingPage = () => {
       snapshot.forEach((doc) => {
         const data = doc.data();
         const score = data[scoreKey] || 0;
-        const name = data.name || "ななしさん";
+        const name = data.name || "ななしさめE;
         const prefecture = data.prefecture || "";
 
         if (score > 0) {
@@ -45,8 +45,8 @@ const UserRankingPage = () => {
       <ul>
         {ranking.map((user, index) => (
           <li key={index} className="mb-2">
-            <span className="font-bold">{index + 1}位：</span>
-            {user.name}（{user.prefecture} / {user.score} パワー）
+            <span className="font-bold">{index + 1}位！E/span>
+            {user.name}�E�Euser.prefecture} / {user.score} パワー�E�E
           </li>
         ))}
       </ul>

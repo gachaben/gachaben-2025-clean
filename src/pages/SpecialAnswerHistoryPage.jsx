@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
@@ -19,7 +19,7 @@ const SpecialAnswerHistoryPage = () => {
       }
 
       try {
-        // 回答ログ取得
+        // 回答ログ取征E
         const logsQuery = query(
           collection(db, "specialAnswerLogs"),
           where("userId", "==", user.uid),
@@ -32,7 +32,7 @@ const SpecialAnswerHistoryPage = () => {
         }));
         setLogs(logsData);
 
-        // 問題データ取得
+        // 問題データ取征E
         const qSnap = await getDocs(collection(db, "specialQuestions"));
         const qMap = {};
         qSnap.docs.forEach((doc) => {
@@ -40,14 +40,14 @@ const SpecialAnswerHistoryPage = () => {
         });
         setQuestionsMap(qMap);
       } catch (error) {
-        console.error("データ取得エラー：", error);
-        alert("データの取得に失敗しました");
+        console.error("チE�Eタ取得エラー�E�E, error);
+        alert("チE�Eタの取得に失敗しました");
       } finally {
         setLoading(false);
       }
     });
 
-    return () => unsubscribe(); // クリーンアップ
+    return () => unsubscribe(); // クリーンアチE�E
   }, []);
 
   if (loading) return <p>読み込み中...</p>;
@@ -65,11 +65,11 @@ const SpecialAnswerHistoryPage = () => {
           checked={showOnlyWrong}
           onChange={(e) => setShowOnlyWrong(e.target.checked)}
         />
-        ❌ まちがったもんだい だけを表示
+        ❁EまちがったもんだぁEだけを表示
       </label>
 
       {filteredLogs.length === 0 ? (
-        <p>表示できる履歴がありません。</p>
+        <p>表示できる履歴がありません、E/p>
       ) : (
         <ul>
           {filteredLogs.map((log, i) => {
@@ -88,15 +88,15 @@ const SpecialAnswerHistoryPage = () => {
               >
                 <p>
                   <strong>Q{i + 1}.</strong>{" "}
-                  {question ? question.question : "（問題が削除されています）"}
+                  {question ? question.question : "�E�問題が削除されてぁE��す！E}
                 </p>
                 <p>
-                  あなたのこたえ：{" "}
-                  <strong>{question ? question.choices[log.selectedIndex] : "？"}</strong>（
-                  {isCorrect ? "⭕せいかい" : "❌まちがい"}）
+                  あなた�Eこたえ：{" "}
+                  <strong>{question ? question.choices[log.selectedIndex] : "�E�E}</strong>�E�E
+                  {isCorrect ? "⭕せぁE��ぁE : "❌まちがい"}�E�E
                 </p>
                 <p style={{ fontSize: "0.9em", color: "#555" }}>
-                  {log.timestamp?.toDate?.().toLocaleString() || "日付なし"}
+                  {log.timestamp?.toDate?.().toLocaleString() || "日付なぁE}
                 </p>
               </li>
             );

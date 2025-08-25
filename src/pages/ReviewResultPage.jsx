@@ -1,7 +1,7 @@
 // src/pages/ReviewPlayPage.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import {
   doc, getDoc, updateDoc, writeBatch, collection, addDoc, serverTimestamp
 } from "firebase/firestore";
@@ -42,7 +42,7 @@ export default function ReviewPlayPage() {
   }
 
   async function finish() {
-    // ① セッション保存
+    // ① セチE��ョン保孁E
     const auth = getAuth();
     const uid = auth.currentUser?.uid ?? "guest";
     await addDoc(collection(db, "reviews"), {
@@ -53,7 +53,7 @@ export default function ReviewPlayPage() {
       createdAt: serverTimestamp(),
     });
 
-    // ② OK だったものは閉じる（status=reviewed）
+    // ② OK だったものは閉じる！Etatus=reviewed�E�E
     const batch = writeBatch(db);
     result.filter(r => r.ok).forEach(r => {
       batch.update(doc(db, "mistakes", r.id), {
@@ -69,16 +69,16 @@ export default function ReviewPlayPage() {
   if (!loaded || !current) return <div>読み込み中...</div>;
   return (
     <div style={{ padding: 16 }}>
-      <h2>復習 ({cursor+1}/{ids.length})</h2>
+      <h2>復翁E({cursor+1}/{ids.length})</h2>
       <div style={{ margin: "16px 0", fontSize: 18 }}>
         <div>Q: {current.question}</div>
         <div style={{ color: "#888", marginTop: 8 }}>
-          正解: {current.correctAnswer}（自分の解答: {current.userAnswer}）
+          正解: {current.correctAnswer}�E��E刁E�E解筁E {current.userAnswer}�E�E
         </div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => answer(true)}>理解できた 👍</button>
-        <button onClick={() => answer(false)}>まだ不安 👀</button>
+        <button onClick={() => answer(true)}>琁E��できた 👍</button>
+        <button onClick={() => answer(false)}>まだ不宁E👀</button>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
-// utils/gacha.js （またはコンポーネント内でもOK）
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
+// utils/gacha.js �E�また�Eコンポ�Eネント�EでもOK�E�E
 export const rollGachaPoint = () => {
   const rand = Math.random();
   if (rand < 0.6) return 1;    // 60%

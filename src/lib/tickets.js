@@ -1,5 +1,5 @@
 // src/lib/tickets.js
-// まずはビルドを通すための最小スタブ。本実装は後で差し替え。
+// まず�Eビルドを通すための最小スタブ。本実裁E�E後で差し替え、E
 export async function consumeOneTicket(userId) {
   console.log("consumeOneTicket (stub)", { userId });
   return true;

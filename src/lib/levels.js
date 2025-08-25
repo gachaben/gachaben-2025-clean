@@ -1,4 +1,4 @@
-// 例：Cpt/Bptの素点→段階 0〜5 に変換（しきい値は暫定）
+// 例：Cpt/Bptの素点→段隁E0、E に変換�E�しきい値は暫定！E
 export function toLevelFromPoints(points = 0) {
   const p = Number(points) || 0;
   if (p >= 250) return 5;

@@ -1,6 +1,6 @@
 // src/pages/LinkFamilyPage.jsx
 import React, { useState, useEffect } from "react";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -19,13 +19,13 @@ export default function LinkFamilyPage() {
   const handleLink = async (e) => {
     e.preventDefault();
     setError("");
-    if (!uid) return setError("ログイン状態を確認できません。");
+    if (!uid) return setError("ログイン状態を確認できません、E);
 
     try {
       const familyCode = code.trim().toUpperCase();
       const famRef = doc(db, "families", familyCode);
       const famSnap = await getDoc(famRef);
-      if (!famSnap.exists()) return setError("ファミリーコードが見つかりません。");
+      if (!famSnap.exists()) return setError("ファミリーコードが見つかりません、E);
 
       const parentId = famSnap.data().parentId;
 
@@ -42,13 +42,13 @@ export default function LinkFamilyPage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100 px-4">
-      <h1 className="text-2xl font-bold mb-4">👨‍👩‍👧 ファミリーコードを入力</h1>
+      <h1 className="text-2xl font-bold mb-4">👨‍👩‍👧 ファミリーコードを入劁E/h1>
       <form onSubmit={handleLink} className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md">
         <input
           value={code}
           onChange={(e) => setCode(e.target.value)}
           className="w-full mb-4 px-4 py-2 border rounded"
-          placeholder="例: ABC123"
+          placeholder="侁E ABC123"
           maxLength={8}
         />
         {error && <p className="text-red-500 text-sm mb-2">{error}</p>}

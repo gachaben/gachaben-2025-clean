@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import {
   collection,
   getDocs,
@@ -18,7 +18,7 @@ const RetryWrongQuestionsPage = () => {
   const [selectedIndexes, setSelectedIndexes] = useState({});
   const auth = getAuth();
 
-  // 間違った問題を取得
+  // 間違った問題を取征E
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -27,7 +27,7 @@ const RetryWrongQuestionsPage = () => {
       }
 
       try {
-        // 間違いログを取得
+        // 間違ぁE��グを取征E
         const logsQuery = query(
           collection(db, "specialAnswerLogs"),
           where("userId", "==", user.uid),
@@ -37,7 +37,7 @@ const RetryWrongQuestionsPage = () => {
         const logsSnap = await getDocs(logsQuery);
         const wrongLogs = logsSnap.docs.map((doc) => doc.data());
 
-        // questionIdをユニークにして再取得
+        // questionIdをユニ�Eクにして再取征E
         const questionIds = [...new Set(wrongLogs.map((log) => log.questionId))];
 
         const questions = [];
@@ -82,18 +82,18 @@ const RetryWrongQuestionsPage = () => {
         isCorrect,
         timestamp: serverTimestamp(),
       });
-      alert("✅ 回答を保存しました！");
+      alert("✁E回答を保存しました�E�E);
     } catch (error) {
       console.error("保存エラー:", error);
-      alert("❌ 回答の保存に失敗しました");
+      alert("❁E回答�E保存に失敗しました");
     }
   };
 
   return (
     <div>
-      <h2>🔁 まちがったもんだいに もういちど チャレンジ！</h2>
+      <h2>🔁 まちがったもんだぁE�� もうぁE��ど チャレンジ�E�E/h2>
       {wrongQuestions.length === 0 ? (
-        <p>まちがったもんだいは ありません。</p>
+        <p>まちがったもんだぁE�E ありません、E/p>
       ) : (
         wrongQuestions.map((q, index) => (
           <div

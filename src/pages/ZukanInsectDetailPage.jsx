@@ -1,4 +1,4 @@
-// ⬆️ ファイル：src/pages/ZukanInsectDetailPage.jsx
+// ⬁E��Eファイル�E�src/pages/ZukanInsectDetailPage.jsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { getFirestore, collection, query, where, getDocs, doc, getDoc, increment, updateDoc } from "firebase/firestore";
@@ -89,8 +89,8 @@ const ZukanInsectDetailPage = () => {
 
       setSelectedItem(null);
     } catch (e) {
-      console.error("PW使用失敗", e);
-      alert("PWの使用に失敗しました。");
+      console.error("PW使用失敁E, e);
+      alert("PWの使用に失敗しました、E);
     }
   };
 
@@ -103,10 +103,10 @@ const ZukanInsectDetailPage = () => {
     const userRef = doc(db, "users", user.uid);
 
     const premiumItem = items.find(item => item.stage === 99);
-    if (!premiumItem) return alert("プレミアアイテムが見つかりません");
+    if (!premiumItem) return alert("プレミアアイチE��が見つかりません");
 
     const alreadyOwned = !!userItems[premiumItem.itemId];
-    if (alreadyOwned) return alert("すでにプレミアを持っています");
+    if (alreadyOwned) return alert("すでにプレミアを持ってぁE��ぁE);
 
     const isWin = Math.random() < 0.5;
 
@@ -119,7 +119,7 @@ const ZukanInsectDetailPage = () => {
           }
         });
 
-        alert("🎉 当たり！プレミアゲット！");
+        alert("🎉 当たり！�EレミアゲチE���E�E);
         setUserItems(prev => ({
           ...prev,
           [premiumItem.itemId]: {
@@ -127,19 +127,19 @@ const ZukanInsectDetailPage = () => {
           }
         }));
       } catch (e) {
-        console.error("プレミア追加失敗", e);
-        alert("プレミア付与に失敗しました。");
+        console.error("プレミア追加失敁E, e);
+        alert("プレミア付与に失敗しました、E);
       }
     } else {
-      alert("😥 はずれ…また動画を見てチャレンジしよう！");
+      alert("😥 はずれ…また動画を見てチャレンジしよぁE��E);
     }
   };
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">{name}（{rank}ランク）の詳細</h2>
+      <h2 className="text-xl font-bold mb-4">{name}�E�Erank}ランク�E��E詳細</h2>
       <p className="mb-2 text-right text-gray-700 font-bold">
-        あなたの所持PW：<span className="text-blue-600">{userPw}</span>
+        あなた�E所持PW�E�Espan className="text-blue-600">{userPw}</span>
       </p>
 
       <div className="flex flex-wrap gap-4">
@@ -169,7 +169,7 @@ const ZukanInsectDetailPage = () => {
         />
       )}
 
-      {/* 🔽 3体揃ってるかチェック & ガチャ演出 */}
+      {/* 🔽 3体揃ってるかチェチE�� & ガチャ演�E */}
       {(() => {
         const requiredStages = [1, 2, 3];
         const hasAll = requiredStages.every(stage =>
@@ -190,15 +190,15 @@ const ZukanInsectDetailPage = () => {
 
               <div className="flex-1 text-left">
                 <p className="text-sm text-gray-800 mb-2">
-                  <span className="font-bold text-yellow-700">「やったね！3体コンプリートだよ！」</span><br />
-                  このチャンスを見逃すな！<br />
-                  動画を見たら50%の確率でプレミアがもらえるかも…🏱
+                  <span className="font-bold text-yellow-700">「やった�E�E�E体コンプリートだよ！、E/span><br />
+                  こ�Eチャンスを見送E��な�E�Ebr />
+                  動画を見ためE0%の確玁E��プレミアがもらえるかも…🏱
                 </p>
                 <button
                   className="px-6 py-2 bg-red-500 text-white font-bold rounded hover:bg-red-600"
                   onClick={() => setShowGachaModal(true)}
                 >
-                  ▶️ 動画を見てガチャを引く
+                  ▶�E�E動画を見てガチャを引く
                 </button>
               </div>
             </div>

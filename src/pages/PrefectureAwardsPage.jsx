@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
 const getCurrentMonthScoreKey = () => {
   const now = new Date();
@@ -21,7 +21,7 @@ const PrefectureAwardsPage = () => {
 
       snapshot.forEach((doc) => {
         const data = doc.data();
-        const name = data.name || "ななしさん";
+        const name = data.name || "ななしさめE;
         const prefecture = data.prefecture;
         const score = data[scoreKey] || 0;
 
@@ -34,15 +34,15 @@ const PrefectureAwardsPage = () => {
       const awardsList = [];
 
       for (const [prefecture, members] of Object.entries(teams)) {
-        // スコア順に並び替え
+        // スコア頁E��並び替ぁE
         const sorted = members.sort((a, b) => b.score - a.score);
         const count = sorted.length;
-        const topCount = Math.max(1, Math.floor(count * 0.1)); // 上位1割（最低1人）
+        const topCount = Math.max(1, Math.floor(count * 0.1)); // 上佁E割�E�最佁E人�E�E
 
         const bestPlayers = sorted.slice(0, topCount);
 
         bestPlayers.forEach((user, index) => {
-          const title = index === 0 ? "🏆 MVP" : "⭐ ベストプレイヤー";
+          const title = index === 0 ? "🏆 MVP" : "⭁Eベスト�Eレイヤー";
           awardsList.push({
             prefecture,
             name: user.name,
@@ -52,7 +52,7 @@ const PrefectureAwardsPage = () => {
         });
       }
 
-      // スコア順に並べ替え（全体的に）
+      // スコア頁E��並べ替え（�E体的に�E�E
       awardsList.sort((a, b) => b.score - a.score);
       setAwards(awardsList);
     };
@@ -62,11 +62,11 @@ const PrefectureAwardsPage = () => {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4">🎖 都道府県べつ MVP / ベストプレイヤー</h2>
+      <h2 className="text-2xl font-bold mb-4">🎖 都道府県べつ MVP / ベスト�Eレイヤー</h2>
       <ul>
         {awards.map((entry, index) => (
           <li key={index} className="mb-2">
-            {entry.title} - {entry.name}（{entry.prefecture} / {entry.score} パワー）
+            {entry.title} - {entry.name}�E�Eentry.prefecture} / {entry.score} パワー�E�E
           </li>
         ))}
       </ul>

@@ -1,6 +1,6 @@
 // utils/updateBadges.js
 import { doc, getDoc, setDoc, arrayUnion } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
 // ユーザー1人にバッジを追加する
 export const giveBadgeToUser = async (uid, badgeName) => {
@@ -16,5 +16,5 @@ export const giveBadgeToUser = async (uid, badgeName) => {
     badgeList: arrayUnion(badgeName)
   }, { merge: true });
 
-  console.log(`✅ ${badgeName} バッジを付与しました → ${uid}`);
+  console.log(`✁E${badgeName} バッジを付与しました ↁE${uid}`);
 };

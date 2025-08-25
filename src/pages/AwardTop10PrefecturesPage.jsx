@@ -4,8 +4,8 @@ import React from "react";
 const AwardTop10PrefecturesPage = () => {
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold">🏅 都道府県ベスト10ページ</h2>
-      <p>このページは現在準備中です。</p>
+      <h2 className="text-2xl font-bold">🏅 都道府県ベスチE0ペ�Eジ</h2>
+      <p>こ�Eペ�Eジは現在準備中です、E/p>
     </div>
   );
 };

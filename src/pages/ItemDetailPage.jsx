@@ -7,7 +7,7 @@ const ItemDetailPage = ({ docId, item }) => {
 
   const handleEvolveClick = () => {
     if (!docId || !item?.stage) {
-      alert("必要な情報が不足しています");
+      alert("忁E��な惁E��が不足してぁE��ぁE);
       return;
     }
     navigate("/evolve-roulette", {
@@ -20,20 +20,20 @@ const ItemDetailPage = ({ docId, item }) => {
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">🪲 アイテムのしょうさい</h2>
+      <h2 className="text-xl font-bold mb-4">🪲 アイチE��のしょぁE��ぁE/h2>
 
       <div className="mb-4">
         <p><strong>ID:</strong> {docId}</p>
-        <p><strong>なまえ:</strong> {item?.name || "名前なし"}</p>
-        <p><strong>ステージ:</strong> {item?.stage || "不明"}</p>
-        {/* 他の情報も必要ならここに追加！ */}
+        <p><strong>なまぁE</strong> {item?.name || "名前なぁE}</p>
+        <p><strong>スチE�Eジ:</strong> {item?.stage || "不�E"}</p>
+        {/* 他�E惁E��も忁E��ならここに追加�E�E*/}
       </div>
 
       <button
   className="bg-green-500 text-white px-4 py-2 rounded"
   onClick={() => navigate("/evolve-drag", { state: { docId, currentStage } })}
 >
-  しんかさせる！
+  しんかさせる�E�E
 </button>
 
     </div>

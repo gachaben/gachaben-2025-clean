@@ -14,13 +14,13 @@ connectFirestoreEmulator(db, "localhost", 8080);
 
 async function seed() {
   await setDoc(doc(db, "items", "test-item-1"), {
-    name: "テスト昆虫",
+    name: "チE��ト�E虫",
     seriesId: "kontyu",
     rank: "S",
     stage: 3,
     imageName: "kabuto_test",
   });
-  console.log("✅ seed完了");
+  console.log("✁Eseed完亁E);
 }
 
 seed();

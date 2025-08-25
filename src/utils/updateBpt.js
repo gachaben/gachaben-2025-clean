@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 
 // Bptを加算する関数
 export const addBptToUser = async (amount) => {

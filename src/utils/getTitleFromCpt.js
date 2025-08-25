@@ -1,10 +1,10 @@
 const getTitleFromCpt = (cpt) => {
-  if (cpt >= 250) return "神";
+  if (cpt >= 250) return "祁E;
   if (cpt >= 200) return "極";
-  if (cpt >= 150) return "龍";
-  if (cpt >= 100) return "王";
+  if (cpt >= 150) return "龁E;
+  if (cpt >= 100) return "玁E;
   if (cpt >= 50) return "優";
-  return "初心者";
+  return "初忁E��E;
 };
 
 export default getTitleFromCpt;

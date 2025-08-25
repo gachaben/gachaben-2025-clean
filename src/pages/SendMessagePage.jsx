@@ -8,21 +8,21 @@ const SendMessagePage = () => {
   const handleSend = async () => {
     const res = await sendSupportMail({
       parentEmail: "hogehoge@gmail.com",
-      childName: "たろう",
-      messageBody: "いつもおうえんありがとう！",
+      childName: "たろぁE,
+      messageBody: "ぁE��もおぁE��んありがとぁE��E,
     });
 
     if (res.success) {
-      setStatus("📨 メール送信に成功しました！");
+      setStatus("📨 メール送信に成功しました�E�E);
     } else {
-      setStatus("⚠️ 送信に失敗しました…");
+      setStatus("⚠�E�E送信に失敗しました…");
     }
   };
 
   return (
     <div>
-      <h2>保護者にメッセージを送る</h2>
-      <button onClick={handleSend}>メッセージを送信</button>
+      <h2>保護老E��メチE��ージを送る</h2>
+      <button onClick={handleSend}>メチE��ージを送信</button>
       <p>{status}</p>
     </div>
   );

@@ -1,4 +1,4 @@
-// ✅ ファイル：src/components/CptUseModal.jsx
+// ✁Eファイル�E�src/components/CptUseModal.jsx
 import React, { useState, useEffect } from 'react';
 
 const CptUseModal = ({ item, userCpt, onClose, onConfirm }) => {
@@ -27,8 +27,8 @@ const CptUseModal = ({ item, userCpt, onClose, onConfirm }) => {
           ))}
         </div>
 
-        <p className="mb-2">あなたの所持Cpt：{userCpt}</p>
-        {isOver && <p className="text-red-500">Cptが足りません！</p>}
+        <p className="mb-2">あなた�E所持Cpt�E�{userCpt}</p>
+        {isOver && <p className="text-red-500">Cptが足りません�E�E/p>}
 
         <div className="flex justify-around mt-4">
           <button onClick={onClose} className="bg-gray-400 text-white px-4 py-2 rounded">キャンセル</button>
@@ -36,7 +36,7 @@ const CptUseModal = ({ item, userCpt, onClose, onConfirm }) => {
             onClick={() => !isOver && onConfirm(selected)}
             className={`px-4 py-2 rounded ${isOver ? 'bg-gray-300' : 'bg-red-500 text-white'}`}
           >
-            決定
+            決宁E
           </button>
         </div>
       </div>

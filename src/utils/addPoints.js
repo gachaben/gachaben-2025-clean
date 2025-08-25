@@ -1,5 +1,5 @@
 import { doc, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/firebase"; // ← パスは環境に合わせて！
+import { db } from "@/fbkit"; // ↁEパスは環墁E��合わせて�E�E
 
 export async function addPoints(uid, amount) {
   const userRef = doc(db, "users", uid);
@@ -7,8 +7,8 @@ export async function addPoints(uid, amount) {
     await updateDoc(userRef, {
       points: increment(amount),
     });
-    console.log(`✅ ${amount}ポイント加算しました`);
+    console.log(`✁E${amount}ポイント加算しました`);
   } catch (error) {
-    console.error("❌ ポイント加算エラー:", error);
+    console.error("❁Eポイント加算エラー:", error);
   }
 }

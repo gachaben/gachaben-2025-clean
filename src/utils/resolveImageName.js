@@ -1,24 +1,24 @@
 // src/utils/resolveImageName.js
 import { itemNames } from "../data/itemNames.js";
 
-// 表示名 → 正式名のエイリアス
+// 表示吁EↁE正式名のエイリアス
 const ALIASES = {
   "カブト": "カブトムシ",
   "ヘラクレス": "ヘラクレスオオカブト",
   "モンシロ": "モンシロチョウ",
-  "アゲハ": "アゲハチョウ",
+  "アゲチE: "アゲハチョウ",
   "クワガタ": "クワガタムシ",
 };
 
-// 表記ゆれを正規化（括弧や空白を除去）
+// 表記ゆれを正規化�E�括弧めE��白を除去�E�E
 function normalizeLabel(s = "") {
   return String(s)
-    .replace(/[（(].*?[)）]/g, "") // 括弧内削除
+    .replace(/[�E�E].*?[)�E�]/g, "") // 括弧冁E��除
     .replace(/\s+/g, "")          // 空白削除
     .trim();
 }
 
-// itemNames から「ラベル一致 + rank/stage一致」でキーを探す
+// itemNames から「ラベル一致 + rank/stage一致」でキーを探ぁE
 function findKeyFromItemNames(name, rank, stage) {
   const canonical = ALIASES[normalizeLabel(name)] || normalizeLabel(name);
   const rankNeedle = `_${String(rank).toUpperCase()}_`;
@@ -34,31 +34,31 @@ function findKeyFromItemNames(name, rank, stage) {
 }
 
 /**
- * 画像ベース名（拡張子なし）を決定する
- * 優先順位:
- *  1) itemNames から name/rank/stage で確定（これが正解）
- *  2) legacy imageName が 公式フォーマットなら採用（保険）
- *  3) item.itemId/id が 公式フォーマットなら採用（保険）
- *  4) 見つからなければ空文字
+ * 画像�Eース名（拡張子なし）を決定すめE
+ * 優先頁E��E
+ *  1) itemNames から name/rank/stage で確定（これが正解�E�E
+ *  2) legacy imageName ぁE公式フォーマットなら採用�E�保険�E�E
+ *  3) item.itemId/id ぁE公式フォーマットなら採用�E�保険�E�E
+ *  4) 見つからなければ空斁E��E
  *
- * 公式フォーマット: 2508_S_005_kabuto_stage1
+ * 公式フォーマッチE 2508_S_005_kabuto_stage1
  */
 export function resolveImageBaseName(item = {}) {
   const rank = String(item?.rank || item?.rarity || "").toUpperCase(); // "S" | "A" | "B"
   const stage = Number(item?.stage || 1);
   const name = String(item?.name || "");
 
-  // 1) itemNames を最優先
+  // 1) itemNames を最優允E
   const fromMap = findKeyFromItemNames(name, rank, stage);
   if (fromMap) return fromMap;
 
-  // 2) 旧 imageName が公式フォーマットなら採用（.png は外す）
+  // 2) 旧 imageName が�E式フォーマットなら採用�E�Epng は外す�E�E
   const legacy = String(item?.imageName || "").replace(/\.png$/i, "");
   const looksFormal =
     /^\d{4}_[SAB]_\d{3}_[a-z0-9]+_stage\d$/i.test(legacy) || /_stage\d$/i.test(legacy);
   if (legacy && looksFormal) return legacy;
 
-  // 3) itemId / id が公式フォーマットなら採用
+  // 3) itemId / id が�E式フォーマットなら採用
   const idLike = String(item?.itemId || item?.id || "").replace(/\.png$/i, "");
   if (/^\d{4}_[SAB]_\d{3}_[a-z0-9]+_stage\d$/i.test(idLike)) return idLike;
 

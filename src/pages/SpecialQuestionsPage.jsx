@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db } from "@/firebase"; // ← あなたのfirebase設定に合わせてパス調整
+import { db } from "@/fbkit"; // ↁEあなた�Efirebase設定に合わせてパス調整
 import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
@@ -8,7 +8,7 @@ const SpecialQuestionsPage = () => {
   const [selectedIndexes, setSelectedIndexes] = useState({});
   const auth = getAuth();
 
-  // Firestoreから特訓問題を取得
+  // Firestoreから特訓問題を取征E
   useEffect(() => {
     const fetchQuestions = async () => {
       const snapshot = await getDocs(collection(db, "specialQuestions"));
@@ -21,7 +21,7 @@ const SpecialQuestionsPage = () => {
     fetchQuestions();
   }, []);
 
-  // 選択肢をクリックしたときの処理（問題ごとに管理）
+  // 選択肢をクリチE��したとき�E処琁E��問題ごとに管琁E��E
   const handleSelect = (questionId, choiceIndex) => {
     setSelectedIndexes((prev) => ({
       ...prev,
@@ -29,11 +29,11 @@ const SpecialQuestionsPage = () => {
     }));
   };
 
-  // 回答ログをFirestoreに保存
+  // 回答ログをFirestoreに保孁E
   const handleSubmit = async (question) => {
     const user = auth.currentUser;
     if (!user) {
-      alert("ログインが必要です");
+      alert("ログインが忁E��でぁE);
       return;
     }
 
@@ -53,10 +53,10 @@ const SpecialQuestionsPage = () => {
         isCorrect,
         timestamp: serverTimestamp(),
       });
-      alert("✅ 回答を保存しました！");
+      alert("✁E回答を保存しました�E�E);
     } catch (error) {
-      console.error("回答の保存に失敗しました", error);
-      alert("❌ 回答の保存に失敗しました");
+      console.error("回答�E保存に失敗しました", error);
+      alert("❁E回答�E保存に失敗しました");
     }
   };
 

@@ -14,7 +14,7 @@ export default function McqView({ question, onCorrect, onWrong }) {
     const ok = String(opt) === String(question.correctAnswer ?? "");
     if (ok) onCorrect();
     else {
-      setChoices(prev => prev.filter(c => c !== opt)); // 不正解は減らす
+      setChoices(prev => prev.filter(c => c !== opt)); // 不正解は減らぁE
       onWrong();
     }
   }

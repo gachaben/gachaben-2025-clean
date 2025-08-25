@@ -1,7 +1,7 @@
 // src/pages/SupportHistoryPage.jsx
 
 import React, { useEffect, useState } from "react";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import {
   collection,
   query,
@@ -39,10 +39,10 @@ const SupportHistoryPage = () => {
 
   return (
     <div style={{ padding: "20px" }}>
-      <h2>📖 応援メッセージ履歴</h2>
+      <h2>📖 応援メチE��ージ履歴</h2>
 
       {messages.length === 0 ? (
-        <p>メッセージはまだありません。</p>
+        <p>メチE��ージはまだありません、E/p>
       ) : (
         <ul style={{ listStyle: "none", padding: 0 }}>
           {messages.map((msg) => (
@@ -55,12 +55,12 @@ const SupportHistoryPage = () => {
                 borderRadius: "8px",
               }}
             >
-              <div>✉️ <strong>{msg.message}</strong></div>
+              <div>✉︁E<strong>{msg.message}</strong></div>
               <div style={{ fontSize: "12px", marginTop: "4px" }}>
-                📅 {msg.sentAt?.toDate().toLocaleString() || "日時不明"}
+                📅 {msg.sentAt?.toDate().toLocaleString() || "日時不�E"}
               </div>
               <div style={{ fontSize: "12px", color: "#636e72" }}>
-                👤 送信者：{msg.parentEmail}
+                👤 送信老E��{msg.parentEmail}
               </div>
             </li>
           ))}

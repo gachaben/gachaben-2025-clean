@@ -19,7 +19,7 @@ const BattleSelectPage = () => {
 
   return (
     <div className="p-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-center mb-4">バトル設定</h2>
+      <h2 className="text-2xl font-bold text-center mb-4">バトル設宁E/h2>
 
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">ラウンド数を選ぶ</h3>
@@ -62,7 +62,7 @@ const BattleSelectPage = () => {
         className="w-full py-3 bg-red-500 text-white font-bold rounded hover:bg-red-600"
         onClick={handleStart}
       >
-        ▶ バトルスタート
+        ▶ バトルスターチE
       </button>
     </div>
   );

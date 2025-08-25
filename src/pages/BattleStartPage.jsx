@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import { consumeOneTicket, fullRecoverTickets } from "../lib/tickets";
 import { fullRecoverHearts } from "../lib/hearts";
 
@@ -14,7 +14,7 @@ function makeKey() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-// 型ゆらぎに強い ms 変換
+// 型ゆらぎに強ぁEms 変換
 function tsToMs(v) {
   if (!v) return 0;
   if (typeof v === "number") return v;
@@ -43,7 +43,7 @@ export default function BattleStartPage() {
 
   const [user, setUser] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [nowMs, setNowMs] = useState(Date.now()); // ← 毎秒更新してカウントダウン
+  const [nowMs, setNowMs] = useState(Date.now()); // ↁE毎秒更新してカウントダウン
 
   // User 購読
   useEffect(() => {
@@ -54,7 +54,7 @@ export default function BattleStartPage() {
     return () => un && un();
   }, [uid]);
 
-  // 1秒タイマー
+  // 1秒タイマ�E
   useEffect(() => {
     const t = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(t);
@@ -75,11 +75,11 @@ export default function BattleStartPage() {
   const cdTicketsRemain = Math.max(0, cdTicketsTotal - (nowMs - lastAdTicketsMs));
   const canAdRecoverTickets = tickets < 3 && cdTicketsRemain === 0;
 
-  // バトル開始（券を1枚消費）
+  // バトル開始（券めE枚消費�E�E
   const startBattle = async () => {
     if (!uid) return alert("ログインを確認してください");
     if (tickets <= 0) {
-      alert("バトル券が足りません。回復してから再挑戦してね！");
+      alert("バトル券が足りません。回復してから再挑戦してね�E�E);
       return;
     }
     try {
@@ -89,25 +89,25 @@ export default function BattleStartPage() {
     } catch (e) {
       console.error("startBattle error:", e);
       if (e?.code === "NO_TICKET") {
-        alert("バトル券が0です。回復してから再挑戦してね！");
+        alert("バトル券ぁEです。回復してから再挑戦してね�E�E);
       } else {
-        alert("バトル開始に失敗しました。時間をおいて再度お試しください。");
+        alert("バトル開始に失敗しました。時間をおいて再度お試しください、E);
       }
     } finally {
       setBusy(false);
     }
   };
 
-  // 広告回復（❤／券）
+  // 庁E��回復�E�❤�E�券�E�E
   const doAdRecoverHearts = async () => {
     if (!uid) return;
     if (!canAdRecoverHearts) return;
     try {
       await fullRecoverHearts(uid, { reason: "ad" });
-      alert("広告視聴ボーナス：❤が全回復しました！");
+      alert("庁E��視�Eボ�Eナス�E�❤が�E回復しました�E�E);
     } catch (e) {
       console.error("ad recover hearts error:", e);
-      alert("回復に失敗しました。時間をおいて再度お試しください。");
+      alert("回復に失敗しました。時間をおいて再度お試しください、E);
     }
   };
   const doAdRecoverTickets = async () => {
@@ -115,68 +115,68 @@ export default function BattleStartPage() {
     if (!canAdRecoverTickets) return;
     try {
       await fullRecoverTickets(uid, { reason: "ad" });
-      alert("広告視聴ボーナス：バトル券が全回復しました！");
+      alert("庁E��視�Eボ�Eナス�E�バトル券が�E回復しました�E�E);
     } catch (e) {
       console.error("ad recover tickets error:", e);
-      alert("回復に失敗しました。時間をおいて再度お試しください。");
+      alert("回復に失敗しました。時間をおいて再度お試しください、E);
     }
   };
 
   return (
     <div style={{ padding: 16 }}>
-      <h2>バトル開始</h2>
+      <h2>バトル開姁E/h2>
 
-      {/* バトル開始ブロック */}
+      {/* バトル開始ブロチE�� */}
       <div style={{ margin: "12px 0", padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
         <div style={{ fontWeight: 600, marginBottom: 6 }}>
-          バトル券：{tickets} / 3
+          バトル券�E�{tickets} / 3
         </div>
         <button
           className={`px-4 py-2 rounded border ${tickets <= 0 || busy ? "opacity-60 cursor-not-allowed" : ""}`}
           disabled={tickets <= 0 || busy}
           onClick={startBattle}
         >
-          {busy ? "開始中..." : "バトル開始"}
+          {busy ? "開始中..." : "バトル開姁E}
         </button>
         {tickets <= 0 && (
           <div style={{ marginTop: 8, fontSize: 12 }}>
-            バトル券が足りません。下の「広告で回復」か、<Link to="/review">/review</Link> から回復できます。
+            バトル券が足りません。下�E「庁E��で回復」か、ELink to="/review">/review</Link> から回復できます、E
           </div>
         )}
       </div>
 
       {/* ❤パネル */}
       <div style={{ padding: 12, border: "1px dashed #bbb", borderRadius: 8, margin: "12px 0", background: "#fafafa" }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>❤スタミナ：{hearts} / 5</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>❤スタミナ�E�{hearts} / 5</div>
         <button
           className={`px-3 py-2 rounded border ${!canAdRecoverHearts ? "opacity-60 cursor-not-allowed" : ""}`}
           disabled={!canAdRecoverHearts}
           onClick={doAdRecoverHearts}
         >
-          {canAdRecoverHearts ? "広告で❤全回復（今すぐ）" : `広告で❤全回復（${COOLDOWN_MIN_HEART}分クールダウン）`}
+          {canAdRecoverHearts ? "庁E��で❤全回復�E�今すぐ！E : `庁E��で❤全回復�E�E{COOLDOWN_MIN_HEART}刁E��ールダウン�E�`}
         </button>
         <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-          {hearts >= 5 ? "❤は満タンです。" : cdHeartsRemain > 0 ? `再使用まで ${formatMMSS(cdHeartsRemain)}` : "今すぐ使用できます。"}
+          {hearts >= 5 ? "❤は満タンです、E : cdHeartsRemain > 0 ? `再使用まで ${formatMMSS(cdHeartsRemain)}` : "今すぐ使用できます、E}
         </div>
       </div>
 
       {/* バトル券パネル */}
       <div style={{ padding: 12, border: "1px dashed #bbb", borderRadius: 8, margin: "12px 0", background: "#fafafa" }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>バトル券：{tickets} / 3</div>
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>バトル券�E�{tickets} / 3</div>
         <button
           className={`px-3 py-2 rounded border ${!canAdRecoverTickets ? "opacity-60 cursor-not-allowed" : ""}`}
           disabled={!canAdRecoverTickets}
           onClick={doAdRecoverTickets}
         >
-          {canAdRecoverTickets ? "広告でバトル券 全回復（今すぐ）" : `広告でバトル券 全回復（${COOLDOWN_MIN_TICKET}分クールダウン）`}
+          {canAdRecoverTickets ? "庁E��でバトル券 全回復�E�今すぐ！E : `庁E��でバトル券 全回復�E�E{COOLDOWN_MIN_TICKET}刁E��ールダウン�E�`}
         </button>
         <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-          {tickets >= 3 ? "バトル券は満タンです。" : cdTicketsRemain > 0 ? `再使用まで ${formatMMSS(cdTicketsRemain)}` : "今すぐ使用できます。"}
+          {tickets >= 3 ? "バトル券は満タンです、E : cdTicketsRemain > 0 ? `再使用まで ${formatMMSS(cdTicketsRemain)}` : "今すぐ使用できます、E}
         </div>
       </div>
 
       <div style={{ marginTop: 12 }}>
-        <Link to="/">ホームへ</Link>
+        <Link to="/">ホ�Eムへ</Link>
       </div>
     </div>
   );

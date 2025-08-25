@@ -3,12 +3,12 @@ import React, { useEffect, useMemo, useState } from "react";
 
 /**
  * props:
- * - items: [{id:"1", text:"カ"}, ...] or ["カ","ブ","ト"]
- * - answer: ["カ","ブ","ト"] もしくは [["カ","ブ","ト"], ["甲","武","土"]]
+ * - items: [{id:"1", text:"カ"}, ...] or ["カ","チE,"チE]
+ * - answer: ["カ","チE,"チE] もしく�E [["カ","チE,"チE], ["甲","武","圁E]]
  * - onCorrect, onWrong, questionId
  */
 export default function SequenceView({ items = [], answer = [], onCorrect, onWrong, questionId }) {
-  // items を {id,text} に正規化
+  // items めE{id,text} に正規化
   const base = useMemo(() => {
     const arr = Array.isArray(items) ? items : [];
     return arr.map((it, i) =>
@@ -18,10 +18,10 @@ export default function SequenceView({ items = [], answer = [], onCorrect, onWro
     );
   }, [items]);
 
-  const [order, setOrder] = useState([]); // 並べた id の配列
+  const [order, setOrder] = useState([]); // 並べぁEid の配�E
 
   useEffect(() => {
-    setOrder([]); // 問題切り替えでリセット
+    setOrder([]); // 問題�Eり替えでリセチE��
   }, [questionId]);
 
   const remaining = base.filter((b) => !order.includes(b.id));
@@ -44,16 +44,16 @@ export default function SequenceView({ items = [], answer = [], onCorrect, onWro
     <div className="space-y-3">
       {/* 並び結果 */}
       <div className="p-2 rounded-md border">
-        <div className="text-sm opacity-70 mb-1">並べた順序</div>
+        <div className="text-sm opacity-70 mb-1">並べた頁E��E/div>
         <div className="flex flex-wrap gap-2 min-h-[2.5rem]">
-          {chosen.length === 0 && <span className="opacity-50">（未選択）</span>}
+          {chosen.length === 0 && <span className="opacity-50">�E�未選択！E/span>}
           {chosen.map((c, idx) => (
             <button
               key={c.id}
               type="button"
               onClick={() => removeAt(idx)}
               className="px-3 py-1 rounded-md border"
-              title="この要素を外す"
+              title="こ�E要素を外す"
             >
               {c.text}
             </button>
@@ -61,7 +61,7 @@ export default function SequenceView({ items = [], answer = [], onCorrect, onWro
         </div>
       </div>
 
-      {/* 候補 */}
+      {/* 候裁E*/}
       <div className="flex flex-wrap gap-2">
         {remaining.map((r) => (
           <button
@@ -82,7 +82,7 @@ export default function SequenceView({ items = [], answer = [], onCorrect, onWro
           disabled={order.length === 0}
           className={`px-4 py-2 rounded-md border ${order.length === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
         >
-          確定
+          確宁E
         </button>
       </div>
     </div>

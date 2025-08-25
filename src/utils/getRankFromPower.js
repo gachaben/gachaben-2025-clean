@@ -1,12 +1,12 @@
 // src/utils/getRankFromPower.js
 
-// パワーに応じてランク（b, a, s）を返す
+// パワーに応じてランク�E�E, a, s�E�を返す
 export const getRankFromPower = (pw) => {
   if (pw >= 1100) {
-    return "s"; // Sランク（神化ゾーン対応）
+    return "s"; // Sランク�E�神化ゾーン対応！E
   } else if (pw >= 600) {
-    return "a"; // Aランク（超越ゾーン対応）
+    return "a"; // Aランク�E�趁E��ゾーン対応！E
   } else {
-    return "b"; // Bランク（爆裂ゾーンどまり）
+    return "b"; // Bランク�E��E裂ゾーンどまり！E
   }
 };

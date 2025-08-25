@@ -1,9 +1,9 @@
-// @KEEP 理由: 柱（❤/ガチャ/ミッション/ランキング/問題履歴）に一致
+// @KEEP 琁E��: 柱�E�❤/ガチャ/ミッション/ランキング/問題履歴�E�に一致
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
-import { itemNames } from "./itemNames.js"; // ← 相対パス注意
+import { itemNames } from "./itemNames.js"; // ↁE相対パス注愁E
 
-// Firebase設定（あなたのままでOK）
+// Firebase設定（あなた�EままでOK�E�E
 const firebaseConfig = {
   apiKey: "AIzaSyCV8UNRLnbdoeWkLA_azeMWJyflw0iw",
   authDomain: "gachaben-2025.firebaseapp.com",
@@ -13,7 +13,7 @@ const firebaseConfig = {
   appId: "1:929195735227:web:94167de85ef28bf724942f"
 };
 
-// Firebase 初期化
+// Firebase 初期匁E
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -22,7 +22,7 @@ async function updateAllNames() {
   for (const [itemId, name] of Object.entries(itemNames)) {
     const docRef = doc(db, "items", itemId);
     await setDoc(docRef, { name }, { merge: true });
-    console.log(`✅ Updated: ${itemId} → ${name}`);
+    console.log(`✁EUpdated: ${itemId} ↁE${name}`);
   }
 }
 

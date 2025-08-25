@@ -1,15 +1,15 @@
 // src/utils/getRandomStageUp.js
 
-// ランダムに進化ステージを決定する関数
+// ランダムに進化スチE�Eジを決定する関数
 export const getRandomStageUp = (currentStage) => {
   const stages = ["stage1", "stage2", "stage3", "stage4"];
 
   const currentIndex = stages.indexOf(currentStage);
   if (currentIndex === -1 || currentIndex >= stages.length - 1) {
-    return currentStage; // 進化できない場合はそのまま
+    return currentStage; // 進化できなぁE��合�Eそ�Eまま
   }
 
-  // 1〜3段階進化をランダムに決定
+  // 1、E段階進化をランダムに決宁E
   const randomStep = Math.floor(Math.random() * 3) + 1;
 
   const nextIndex = Math.min(currentIndex + randomStep, stages.length - 1);

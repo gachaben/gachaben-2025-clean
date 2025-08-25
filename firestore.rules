@@ -1,26 +1,8 @@
-// firestore.rules
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // 自分のユーザードキュメントのみ更新可（Bptインクリだけ想定）
-    match /users/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-      allow create: if request.auth != null && request.auth.uid == uid;
-      allow update: if request.auth != null && request.auth.uid == uid;
-    }
-
-    // バトル結果（自分のもののみ参照可、rewardsClaimed の更新は本人のみ）
-    match /battles/{battleId} {
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid;
-
-      allow read: if request.auth != null
-        && resource.data.userId == request.auth.uid;
-
-      // 受取フラグの更新のみ許可（厳密に書くなら項目チェック）
-      allow update: if request.auth != null
-        && resource.data.userId == request.auth.uid;
+    match /{document=**} {
+      allow read, write: if true; // ← エミュ開発専用。公開NG
     }
   }
 }

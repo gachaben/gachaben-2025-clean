@@ -1,7 +1,7 @@
 // src/pages/ReviewListPage.jsx
 import React, { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import {
   collection, getDocs, query, where, orderBy, limit
 } from "firebase/firestore";
@@ -51,7 +51,7 @@ export default function ReviewListPage() {
             onClick={() => navigate("/review/play", { state: { ids: items.map(i=>i.id) } })}
             style={{ marginTop: 12 }}
           >
-            この一覧で復習を開始
+            こ�E一覧で復習を開姁E
           </button>
         </>
       )}

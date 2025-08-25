@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { doc, setDoc } from "firebase/firestore";
 import { itemNames } from "./itemNames.js";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCV8UNRLnbdoeWkLA_azeMWJyflw0iw",

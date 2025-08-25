@@ -7,7 +7,7 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
   const options = [100, 200, 300, 400, 500];
 
   useEffect(() => {
-    console.log("選択:", selected, "/ 所持:", userPw, "/ 超過?:", selected > userPw);
+    console.log("選抁E", selected, "/ 所持E", userPw, "/ 趁E��?:", selected > userPw);
     setIsOverLimit(selected > userPw);
   }, [selected, userPw]);
 
@@ -18,25 +18,25 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      {/* 🚫 テスト表示：左上固定 */}
+      {/* 🚫 チE��ト表示�E�左上固宁E*/}
       {isOverLimit && (
         <div className="fixed top-4 left-4 z-[9999] bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg text-2xl">
-          🚫 オーバーリミット状態！
+          🚫 オーバ�Eリミット状態！E
         </div>
       )}
 
-      {/* ✅ relative 必須 */}
+      {/* ✁Erelative 忁E��E*/}
       <div className="relative bg-white rounded-lg p-6 shadow-xl w-80 text-center">
-        {/* 🚫 モーダル内中央重ね表示 */}
+        {/* 🚫 モーダル冁E��央重�E表示 */}
         {isOverLimit && (
           <div className="absolute inset-0 bg-white/70 z-[9999] flex items-center justify-center pointer-events-none">
             <div className="text-6xl text-red-600 animate-pulse">🚫</div>
           </div>
         )}
 
-        <h2 className="text-xl font-bold mb-2">PWを使う</h2>
+        <h2 className="text-xl font-bold mb-2">PWを使ぁE/h2>
         <p className="mb-4 text-gray-700">
-          あなたの所持PW：<span className="font-bold text-blue-600">{userPw}</span>
+          あなた�E所持PW�E�Espan className="font-bold text-blue-600">{userPw}</span>
         </p>
 
         {/* ボタン群 */}
@@ -58,7 +58,7 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
           ))}
         </div>
 
-        {/* 決定ボタン */}
+        {/* 決定�Eタン */}
         <button
           className={`w-full px-4 py-2 rounded font-bold text-white ${
             isOverLimit ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'
@@ -66,7 +66,7 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
           onClick={() => !isOverLimit && onConfirm(selected)}
           disabled={isOverLimit}
         >
-          決定（{selected} PW使う）
+          決定！Eselected} PW使ぁE��E
         </button>
       </div>
     </div>

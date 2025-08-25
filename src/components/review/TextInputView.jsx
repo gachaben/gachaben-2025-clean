@@ -1,10 +1,10 @@
 import React, { useState, useMemo } from "react";
 
 /**
- * 記述式ビュー（type: 'text'）
- * - 正解は question.correctAnswer（文字列）
- * - 複数正解は question.altAnswers (string[]) に渡す（任意）
- * - 大文字小文字/空白/全角半角を正規化して比較
+ * 記述式ビュー�E�Eype: 'text'�E�E
+ * - 正解は question.correctAnswer�E�文字�E�E�E
+ * - 褁E��正解は question.altAnswers (string[]) に渡す（任意！E
+ * - 大斁E��小文孁E空白/全角半角を正規化して比輁E
  */
 export default function TextInputView({ question, onCorrect, onWrong }) {
   const [val, setVal] = useState("");
@@ -30,7 +30,7 @@ export default function TextInputView({ question, onCorrect, onWrong }) {
       setMsg("OK!");
       onCorrect();
     } else {
-      setMsg("ちがう… もう一度。");
+      setMsg("ちがう… もう一度、E);
       onWrong();
     }
   }
@@ -45,7 +45,7 @@ export default function TextInputView({ question, onCorrect, onWrong }) {
         value={val}
         onChange={e => setVal(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="ここに入力"
+        placeholder="ここに入劁E
         style={{
           padding: "10px 12px",
           borderRadius: 10,

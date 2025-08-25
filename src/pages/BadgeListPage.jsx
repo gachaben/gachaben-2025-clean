@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 import { doc, getDoc } from "firebase/firestore";
 
 const BadgeListPage = () => {
@@ -18,7 +18,7 @@ const BadgeListPage = () => {
       if (userSnap.exists()) {
         const data = userSnap.data();
         setBadgeList(data.badgeList || []);
-        setUserName(data.name || "あなた");
+        setUserName(data.name || "あなぁE);
       }
     };
 
@@ -29,7 +29,7 @@ const BadgeListPage = () => {
     <div className="p-6 max-w-md mx-auto">
       <h2 className="text-xl font-bold mb-4">🎖 {userName} のバッジ一覧</h2>
       {badgeList.length === 0 ? (
-        <p>まだバッジを持っていません 🐣</p>
+        <p>まだバッジを持ってぁE��せん 🐣</p>
       ) : (
         <ul className="space-y-2">
           {badgeList.map((badge, index) => (

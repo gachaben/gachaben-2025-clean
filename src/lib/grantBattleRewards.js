@@ -1,5 +1,5 @@
 // src/lib/grantBattleRewards.js
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import {
   doc, runTransaction, increment, getDoc, serverTimestamp,
 } from "firebase/firestore";
@@ -31,7 +31,7 @@ export async function grantBattleRewards(battleId) {
     const bonus = battle.winner === "you" ? 10 : 0;
     const bptEarned = base + bonus;
 
-    // users/{uid}.bpt をインクリメント（無ければ0から）
+    // users/{uid}.bpt をインクリメント（無ければ0から�E�E
     tx.set(
       userRef,
       {

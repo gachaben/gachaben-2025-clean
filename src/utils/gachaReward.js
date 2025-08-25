@@ -1,15 +1,15 @@
 // src/utils/gachaReward.js
 
-// 報酬候補（pw と チャンスカードをごちゃまぜに）
+// 報酬候補！Ew と チャンスカードをごちめE��ぜに�E�E
 const rewardPool = [
   { type: "pw", value: 100 },
   { type: "pw", value: 200 },
   { type: "pw", value: 300 },
   { type: "pw", value: 500 },
-  { type: "card", value: "いちげきひっさつ" },
+  { type: "card", value: "ぁE��げきひっさつ" },
   { type: "card", value: "ダメージかいひ" },
-  { type: "card", value: "ダメージアップ" },
-  { type: "card", value: "てきをよわらせる" },
+  { type: "card", value: "ダメージアチE�E" },
+  { type: "card", value: "てきをよわらせめE },
   { type: "pw", value: 400 },
   { type: "card", value: "こうげき2かい" },
 ];

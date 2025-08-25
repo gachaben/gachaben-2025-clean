@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { db } from "@/firebase";
+import { db } from "@/fbkit";
 import {
   collection,
   query,
@@ -82,7 +82,7 @@ export default function ReviewQuickStart() {
         background: "#fafafa",
       }}
     >
-      <div style={{ fontSize: 16, marginBottom: 8 }}>復習項目はまだありません 🎉</div>
+      <div style={{ fontSize: 16, marginBottom: 8 }}>復習頁E��はまだありません 🎉</div>
       <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 16 }}>
         練習やチャレンジで新しい問題に挑戦してみよう
       </div>
@@ -97,7 +97,7 @@ export default function ReviewQuickStart() {
           onClick={() => navigate("/review/quick-seed")}
           style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #0aa", background: "#0ff2" }}
         >
-          サンプル投入
+          サンプル投�E
         </button>
       </div>
     </div>
@@ -105,7 +105,7 @@ export default function ReviewQuickStart() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h1 className="text-xl font-bold mb-2">復習モード（QuickStart）</h1>
+      <h1 className="text-xl font-bold mb-2">復習モード！EuickStart�E�E/h1>
 
       {mistakes.length === 0 ? (
         <Empty />
@@ -126,10 +126,10 @@ export default function ReviewQuickStart() {
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{m.text}</div>
-                <div>あなたの選択: {String(m.picked ?? "")}</div>
+                <div>あなた�E選抁E {String(m.picked ?? "")}</div>
                 <div>正解: {Array.isArray(m.answer) ? JSON.stringify(m.answer) : String(m.answer ?? "")}</div>
                 <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  追加日時: {created ? fmt.format(created) : "—"}
+                  追加日晁E {created ? fmt.format(created) : " E}
                 </div>
                 <div>
                   <button
@@ -142,7 +142,7 @@ export default function ReviewQuickStart() {
                       background: "#09f2",
                     }}
                   >
-                    この問題で復習する
+                    こ�E問題で復習すめE
                   </button>
                 </div>
               </li>

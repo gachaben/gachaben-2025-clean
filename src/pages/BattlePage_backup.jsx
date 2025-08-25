@@ -15,7 +15,7 @@ const BattlePage = () => {
   const [battleLog, setBattleLog] = useState([]);
   const [question, setQuestion] = useState(null);
 
-  // ✅ selectedItem を state からマージして保持
+  // ✁EselectedItem めEstate からマ�Eジして保持
   useEffect(() => {
     if (!state?.selectedItem) return;
 
@@ -29,27 +29,27 @@ const BattlePage = () => {
 
     setSelectedItem(merged);
 
-    console.log("selectedItemの中身（BattlePage）:", merged);
-    console.log("攻撃力 (cpt)：", merged.cpt || 0);
-    console.log("防御力 (bpt)：", merged.bpt || 0);
+    console.log("selectedItemの中身�E�EattlePage�E�E", merged);
+    console.log("攻撁E�� (cpt)�E�E, merged.cpt || 0);
+    console.log("防御劁E(bpt)�E�E, merged.bpt || 0);
   }, [state]);
 
-  // ✅ 問題データ（例）
+  // ✁E問題データ�E�例！E
   const allQuestions = [
     {
-      text: "カブトムシの幼虫が食べるものは？",
-      options: ["木の葉", "腐葉土", "果物"],
-      answer: "腐葉土",
+      text: "カブトムシの幼虫が食べるものは�E�E,
+      options: ["木の葁E, "腐葉圁E, "果物"],
+      answer: "腐葉圁E,
     },
     {
-      text: "セミの鳴き声は？",
-      options: ["ミーンミーン", "チュンチュン", "ケロケロ"],
-      answer: "ミーンミーン",
+      text: "セミ�E鳴き声は�E�E,
+      options: ["ミ�Eンミ�Eン", "チュンチュン", "ケロケロ"],
+      answer: "ミ�Eンミ�Eン",
     },
     {
-      text: "トンボの羽はいくつ？",
-      options: ["2枚", "4枚", "6枚"],
-      answer: "4枚",
+      text: "トンボ�E羽はぁE��つ�E�E,
+      options: ["2极E, "4极E, "6极E],
+      answer: "4极E,
     },
   ];
 
@@ -62,14 +62,14 @@ const BattlePage = () => {
 
     const correct = option === question.answer;
     const log = correct
-      ? `✅ 正解！${selectedPw}PW分 相手にダメージ！`
-      : `❌ 不正解…攻撃できなかった`;
+      ? `✁E正解�E�E{selectedPw}PW刁E相手にダメージ�E�`
+      : `❁E不正解…攻撁E��きなかった`;
 
     if (correct) {
       setEnemyTotalPw((prev) => Math.max(prev - selectedPw, 0));
     }
 
-    setBattleLog((prev) => [...prev, `Round ${currentRound}：${log}`]);
+    setBattleLog((prev) => [...prev, `Round ${currentRound}�E�E{log}`]);
 
     if (currentRound < questionCount) {
       setCurrentRound((prev) => prev + 1);
@@ -90,7 +90,7 @@ const BattlePage = () => {
     return (
       <div className="min-h-screen bg-yellow-100 flex flex-col items-center justify-center p-4">
         <p className="text-xl font-bold text-red-600 mb-4">
-          ⚠️ キャラが選ばれていません
+          ⚠�E�Eキャラが選ばれてぁE��せん
         </p>
         <button
           className="px-4 py-2 bg-blue-500 text-white rounded shadow"
@@ -122,32 +122,32 @@ const BattlePage = () => {
       </h1>
 
       <p className="text-center text-lg mb-2">
-        🧑 あなた vs 👑 {enemy}
+        🧁EあなぁEvs 👑 {enemy}
       </p>
 
       <div className="flex justify-center items-center mb-4 gap-4 flex-wrap">
-        {renderGauge("🧑 あなた", myTotalPw, 500, "bg-blue-400")}
+        {renderGauge("🧁EあなぁE, myTotalPw, 500, "bg-blue-400")}
         <span className="font-bold">VS</span>
         {renderGauge(`👑 ${enemy}`, enemyTotalPw, 500, "bg-purple-400")}
       </div>
 
-      {/* アイテムカード表示 */}
+      {/* アイチE��カード表示 */}
       <div className="flex justify-center my-4">
         <ItemCard item={selectedItem} owned={true} />
       </div>
 
       <div className="text-center text-sm text-gray-700 mb-4">
         <p>
-          🥊 <span className="font-bold text-red-500">攻撃力：</span>{selectedItem.cpt ?? 0}　
-          💪 <span className="font-bold text-blue-500">防御力：</span>{selectedItem.bpt ?? 0}
+          🥁E<span className="font-bold text-red-500">攻撁E���E�E/span>{selectedItem.cpt ?? 0}　
+          💪 <span className="font-bold text-blue-500">防御力！E/span>{selectedItem.bpt ?? 0}
         </p>
       </div>
 
-      {/* ✅ PW選択ボタン：questionがなくても表示 */}
+      {/* ✁EPW選択�Eタン�E�questionがなくても表示 */}
       {!selectedPw && (
         <>
           <p className="text-center text-blue-800 font-bold mb-2">
-            あなたのターン！まず PW を選んでください
+            あなた�Eターン�E�まぁEPW を選んでください
           </p>
           <div className="flex justify-center mb-4 flex-wrap gap-2">
             {[100, 200, 300, 400, 500].map((pw) => (
@@ -167,7 +167,7 @@ const BattlePage = () => {
         </>
       )}
 
-      {/* ✅ 問題と選択肢（PW選択後に表示） */}
+      {/* ✁E問題と選択肢�E�EW選択後に表示�E�E*/}
       {selectedPw && question && (
         <div className="text-center mb-4">
           <p className="text-lg font-semibold mb-2">{question.text}</p>
@@ -186,7 +186,7 @@ const BattlePage = () => {
       )}
 
       <div className="mt-6 bg-white rounded p-4 shadow">
-        <h2 className="font-bold mb-2">📜 バトルログ：</h2>
+        <h2 className="font-bold mb-2">📜 バトルログ�E�E/h2>
         {battleLog.map((log, idx) => (
           <p key={idx} className="text-sm">
             {log}

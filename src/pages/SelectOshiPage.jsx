@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { doc, updateDoc } from "firebase/firestore";
-import { auth, db } from "@/firebase";
+import { auth, db } from "@/fbkit";
 
 const oshiList = [
   { id: "wanwan", name: "ワンワン", image: "/images/wanwan.png" },
@@ -30,10 +30,10 @@ export default function SelectOshiPage() {
 
   return (
   <div style={{ textAlign: "center" }}>
-    <h2>推しキャラをえらんでね！</h2>
+    <h2>推しキャラをえらんでね�E�E/h2>
     <div style={{ display: "flex", justifyContent: "center", gap: 20 }}>
       {oshiList.map((oshi) => {
-        console.log("🧪 表示確認:", oshi.name);
+        console.log("🧪 表示確誁E", oshi.name);
         return (
           <div
             key={oshi.id}
@@ -53,4 +53,4 @@ export default function SelectOshiPage() {
       })}
     </div>
   </div>
-); }// ← ⭐⭐ これが足りてなかった！
+); }// ↁE⭐⭁Eこれが足りてなかった！E

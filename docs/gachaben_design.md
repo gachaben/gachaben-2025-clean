@@ -326,3 +326,49 @@ PW／BPT／CPTなど複数通貨制 → シンプルさに反する、❤とガ�
 削除＝複数通貨、複雑バトル、収益に逆行する要素
 
 👉 この形にすれば、「ガチャ弁25」＝部品倉庫として使いながら、design.md の柱にピッタリ合う構築ができます。
+
+
+📂 docs に追記しておくと安心なこと
+1. 環境変数運用ルール
+
+.env（または .env.local）はルート直下のみを使うこと
+
+/src 配下には置かない
+
+ポート番号は .env と firebase.json を必ず揃える
+
+2. Git 運用ルール
+
+通常作業 → 小刻みコミット（英語でも日本語でもOK）
+
+大きな区切り → baseline-YYYY-MM-DD タグを切る
+
+「ここに戻せば完全復活できる」ポイントを明確化
+
+3. エミュレータ起動コマンド
+npx firebase emulators:start --only auth,firestore,storage --project gachaben-2025
+npm run dev
+
+
+Firestore: 8089
+
+Auth: 9099
+
+Storage: 9199
+
+UI: 4000
+
+4. チェック方法
+
+ブラウザ Console → [FBKIT] Firestore -> emulator ...
+
+Emulator UI → http://127.0.0.1:4000/firestore
+
+users/seed_xxx が増えていればOK
+
+💡 docs の「環境設定」セクションに
+
+.env はルート直下のみ！
+
+baseline タグ運用ルール
+を追記すると、将来混乱せずに済みます。

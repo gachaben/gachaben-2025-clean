@@ -1,0 +1,51 @@
+📘 今日の作業メモ（2025-08-25）
+✅ 進捗内容
+
+LoginPage.jsx の修正
+
+seed 書き込みボタンを実装
+
+Firestore Emulator への書き込み確認ができた
+
+環境変数整理
+
+.env.local が /src にも存在していて競合していた
+
+/src/.env.local を削除し、ルート直下の .env（または .env.local）に一本化
+
+Firestore Emulator のポートを 8089 に統一
+
+Console ログで [FBKIT] Firestore -> emulator { port: 8089 } を確認済み
+
+エミュレータ環境調整
+
+firebase.json のポート番号を .env と揃えた（8089）
+
+storage.rules を追加して Storage Emulator の起動エラーを解消
+
+Git 保存
+
+日本語コミット: 「起点: エミュ接続復旧・Login seed テスト画面の確定」
+
+タグ付け: baseline-2025-08-25 → 完全リセット可能な起点を確保
+
+
+📌 明日の予定
+
+HistoryPage の実装開始
+
+Firestore の users コレクションから一覧を取得して表示する
+
+表示内容：id, displayName, createdAt
+
+LoginPage で書き込んだ seed データが一覧で見えることを確認
+
+Firestore 読み込み確認
+
+getDocs + collection(db, "users") を使う
+
+読み込みエラーが出た場合は Rules と Permission を再確認
+
+次のGit保存ポイント
+
+「users 一覧がブラウザで表示できた状態」でコミット＆タグ付け予定

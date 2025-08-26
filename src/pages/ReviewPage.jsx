@@ -1,7 +1,8 @@
+// src/pages/ReviewPage.jsx
 import React, { useEffect, useState, useMemo } from "react";
 import { getAuth } from "firebase/auth";
 import { useNavigate, Link } from "react-router-dom";
-import { db } from "@/fbkit";
+import { getFirestoreDb } from "@/fbkit";
 import {
   collection,
   query,
@@ -11,13 +12,15 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 
+const db = getFirestoreDb();
+
 export default function ReviewPage() {
   const [mistakes, setMistakes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const uid = getAuth().currentUser?.uid;
+  const uid = getAuth().currentUser?.uid || null;
 
   const fmt = useMemo(() => {
     try {
@@ -81,7 +84,7 @@ export default function ReviewPage() {
         background: "#fafafa",
       }}
     >
-      <div style={{ fontSize: 16, marginBottom: 8 }}>間違えた問題�Eありません 🎉</div>
+      <div style={{ fontSize: 16, marginBottom: 8 }}>間違えた問題はありません 🎉</div>
       <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 16 }}>
         練習やチャレンジで新しい問題に挑戦してみよう
       </div>
@@ -104,7 +107,7 @@ export default function ReviewPage() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h1 className="text-xl font-bold mb-2">復習モーチE/h1>
+      <h1 className="text-xl font-bold mb-2">復習モード</h1>
 
       {mistakes.length === 0 ? (
         <Empty />
@@ -125,10 +128,10 @@ export default function ReviewPage() {
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{m.text}</div>
-                <div>あなた�E選抁E {m.picked}</div>
+                <div>あなたの選択: {m.picked}</div>
                 <div>正解: {m.answer}</div>
                 <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  追加日晁E {created ? fmt.format(created) : " E}
+                  追加日時: {created ? fmt.format(created) : "-"}
                 </div>
                 <div>
                   <button
@@ -141,7 +144,7 @@ export default function ReviewPage() {
                       background: "#09f2",
                     }}
                   >
-                    こ�E問題で復習すめE
+                    この問題で復習する
                   </button>
                 </div>
               </li>

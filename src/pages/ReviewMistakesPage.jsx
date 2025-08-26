@@ -48,6 +48,12 @@ export default function ReviewMistakesPage() {
   const [live, setLive] = useState(true);
   const [pageSize, setPageSize] = useState(20);
 
+  // 追加フィルタ（科目/単元）
+  const [subject, setSubject] = useState(""); // ""=すべて
+  const [unit, setUnit] = useState("");       // ""=すべて
+  const [subjectOptions, setSubjectOptions] = useState([]);
+  const [unitOptions, setUnitOptions] = useState([]);
+
   // 取得データ
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
@@ -67,9 +73,29 @@ export default function ReviewMistakesPage() {
       }
       setUid(u.uid);
       loadStats(u.uid);
+      loadFacets(u.uid); // ← 科目/単元の候補をロード
     });
     return () => unsub();
   }, [nav]);
+
+  // 科目/単元の候補をロード（自分のmistakes全体からユニーク抽出）
+  async function loadFacets(uid) {
+    try {
+      const qAll = query(collection(db, "mistakes"), where("userId","==",uid));
+      const snap = await getDocs(qAll);
+      const subs = new Set();
+      const units = new Set();
+      snap.forEach(d=>{
+        const m = d.data() || {};
+        if (m.subject) subs.add(String(m.subject));
+        if (m.unit) units.add(String(m.unit));
+      });
+      setSubjectOptions(["", ...Array.from(subs).sort()]);
+      setUnitOptions(["", ...Array.from(units).sort()]);
+    } catch (e) {
+      console.error("[mistakes facets]", e);
+    }
+  }
 
   async function loadStats(uid) {
     try {
@@ -93,24 +119,15 @@ export default function ReviewMistakesPage() {
     }
   }
 
+  // 一覧クエリ（ユーザー＋任意のsubject/unit）
   const qBase = useMemo(() => {
     if (!uid) return null;
     const conds = [where("userId", "==", uid)];
-    if (showOnlyUnreviewed) {
-      conds.push(where("isReviewed", "==", false));
-    }
+    if (showOnlyUnreviewed) conds.push(where("isReviewed", "==", false));
+    if (subject) conds.push(where("subject", "==", subject));
+    if (unit) conds.push(where("unit", "==", unit));
     return query(collection(db, "mistakes"), ...conds, orderBy("createdAt", "desc"), limit(pageSize));
-  }, [uid, showOnlyUnreviewed, pageSize]);
-
-  // リストを単発で読み直す（live=false のとき用）
-  async function reloadPage() {
-    if (!qBase) return;
-    const snap = await getDocs(qBase);
-    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
-    setItems(list);
-    setCursor(list.length ? snap.docs[snap.docs.length - 1] : null);
-  }
-
+  }, [uid, showOnlyUnreviewed, pageSize, subject, unit]);
 
   // 初回/依存変更読み込み
   useEffect(() => {
@@ -163,6 +180,8 @@ export default function ReviewMistakesPage() {
     try {
       const conds = [where("userId", "==", uid)];
       if (showOnlyUnreviewed) conds.push(where("isReviewed", "==", false));
+      if (subject) conds.push(where("subject", "==", subject));
+      if (unit) conds.push(where("unit", "==", unit));
       const qMore = query(
         collection(db, "mistakes"),
         ...conds,
@@ -180,7 +199,7 @@ export default function ReviewMistakesPage() {
     } finally {
       setLoading(false);
     }
-  }, [uid, cursor, showOnlyUnreviewed, pageSize]);
+  }, [uid, cursor, showOnlyUnreviewed, pageSize, subject, unit]);
 
   const current = items[index] || null;
 
@@ -194,8 +213,8 @@ export default function ReviewMistakesPage() {
       });
       setReveal(false);
       setIndex((i) => Math.min(i + 1, Math.max(items.length - 1, 0)));
-      // 集計更新
-      loadStats(uid);
+      // 集計も更新
+      if (uid) loadStats(uid);
     } catch (e) {
       alert("更新に失敗: " + e);
     }
@@ -209,8 +228,7 @@ export default function ReviewMistakesPage() {
     setReveal(false);
     setIndex((i) => Math.max(i - 1, 0));
   };
- 
-  // ------- ダミー Mistake 作成（count 件） -------
+// ------- ダミー Mistake 作成（count 件） -------
   async function addDummyMistakes(count = 1) {
     if (!uid) return;
     try {
@@ -228,28 +246,30 @@ export default function ReviewMistakesPage() {
           createdAt: serverTimestamp(),
           question: { text: pick },
           answer:   { text: wrong ? "まちがい" : "？" },
-          correct:  { text: pick === "3×7 は？" ? "21"
-                      : pick === "英語で『りんご』は？" ? "apple"
-                      : pick === "47都道府県の数は？" ? "47"
-                      : pick === "水の化学式は？" ? "H2O"
-                      : "3.1" },
-          // お好みでメタ情報
-          subject: "demo",
-          unit: "sample",
+          correct:  { text:
+            pick === "3×7 は？" ? "21" :
+            pick === "英語で『りんご』は？" ? "apple" :
+            pick === "47都道府県の数は？" ? "47" :
+            pick === "水の化学式は？" ? "H2O" : "3.1" },
+          // フィルタに効くフィールド
+          subject: subject || "demo",
+          unit: unit || "sample",
           difficulty: ["easy","normal","hard"][Math.floor(Math.random()*3)],
         };
         await addDoc(collection(db, "mistakes"), docData);
       }
-      // 反映
+      // 集計を更新（LiveがOFFでもダッシュボードが更新されるように）
       await loadStats(uid);
-      if (!live) await reloadPage();
       alert(`${count} 件追加しました`);
     } catch (e) {
       console.error("[mistakes seed] add error", e);
       alert("作成に失敗: " + e);
     }
-   }
-
+  }
+  // subject 変更時に unit をリセット（クロスフィルタの混乱を防止）
+  useEffect(() => {
+    setUnit("");
+  }, [subject]);
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -281,7 +301,8 @@ export default function ReviewMistakesPage() {
         Got率: {stats.total ? Math.round((stats.got / stats.total)*100) : 0}%
       </div>
 
-       <div className="flex items-center gap-4">
+      {/* フィルタ群 */}
+      <div className="flex flex-wrap items-center gap-3">
         <label className="text-sm flex items-center gap-2">
           <input
             type="checkbox"
@@ -290,6 +311,7 @@ export default function ReviewMistakesPage() {
           />
           未復習のみ
         </label>
+
         <label className="text-sm flex items-center gap-2">
           <input
             type="checkbox"
@@ -298,7 +320,37 @@ export default function ReviewMistakesPage() {
           />
           Live更新
         </label>
+
+        {/* 科目 */}
         <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">科目</span>
+          <select
+            className="border px-2 py-1 text-sm rounded"
+            value={subject}
+            onChange={(e)=>setSubject(e.target.value)}
+          >
+            {subjectOptions.map((s, i)=>(
+              <option key={i} value={s}>{s || "すべて"}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 単元 */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">単元</span>
+          <select
+            className="border px-2 py-1 text-sm rounded"
+            value={unit}
+            onChange={(e)=>setUnit(e.target.value)}
+            disabled={!subject && unitOptions.length===0}
+          >
+            {["", ...unitOptions.filter(u => u !== "")].map((u, i)=>(
+              <option key={i} value={u}>{u || "すべて"}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
           <span className="text-sm text-gray-600">件数</span>
           <select
             className="border px-2 py-1 text-sm rounded"
@@ -308,8 +360,8 @@ export default function ReviewMistakesPage() {
             {[10,20,50].map(n => <option key={n} value={n}>{n}</option>)}
           </select>
         </div>
-        {/* デモ投入（ログイン中のみ使用可） */}
-        <div className="flex items-center gap-2 ml-auto">
+        {/* デモ投入（ログイン中の自分名義で追加） */}
+        <div className="flex items-center gap-2">
           <button
             onClick={() => addDummyMistakes(1)}
             className="border px-3 py-1 text-sm rounded hover:bg-gray-50"

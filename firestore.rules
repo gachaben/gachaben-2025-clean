@@ -48,17 +48,34 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // ----- battles / mistakes（参照のみ想定） -----
+    // ----- battles コレクション -----
     match /battles/{id} {
-      // 読み取り: admin は全件、自分は userId==自分 のものだけ
+      // 読み取り: admin は全件、自分は自分のものだけ
       allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      // 書き込みはアプリの設計に合わせて。今は運用保護のため禁止
-      allow create, update, delete: if false;
+
+      // 作成: サインイン済み && userId が自分
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+      // 更新: admin のみ
+      allow update: if isAdmin();
+
+      // 削除: admin のみ
+      allow delete: if isAdmin();
     }
 
+    // ----- mistakes コレクション -----
     match /mistakes/{id} {
+      // 読み取り: admin は全件、自分は自分のものだけ
       allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create, update, delete: if false;
+
+      // 作成: サインイン済み && userId が自分
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+
+      // 更新: 自分 or admin
+      allow update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      // 削除: admin のみ
+      allow delete: if isAdmin();
     }
 
     // それ以外は閉じる

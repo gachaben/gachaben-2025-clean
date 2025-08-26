@@ -39,6 +39,9 @@ export default function ReviewMistakesPage() {
   const nav = useNavigate();
   const [uid, setUid] = useState(null);
 
+  // 集計
+  const [stats, setStats] = useState({ total:0, unreviewed:0, got:0, retry:0 });
+
   // フィルタ
   const [showOnlyUnreviewed, setShowOnlyUnreviewed] = useState(true);
   const [live, setLive] = useState(true);
@@ -62,16 +65,37 @@ export default function ReviewMistakesPage() {
         return;
       }
       setUid(u.uid);
+      loadStats(u.uid);
     });
     return () => unsub();
   }, [nav]);
+
+  async function loadStats(uid) {
+    try {
+      const qAll = query(collection(db,"mistakes"), where("userId","==",uid));
+      const snap = await getDocs(qAll);
+      let total=0, unreviewed=0, got=0, retry=0;
+      snap.forEach(d=>{
+        total++;
+        const m = d.data() || {};
+        if (!m.isReviewed) {
+          unreviewed++;
+        } else if (m.reviewStatus==="got") {
+          got++;
+        } else if (m.reviewStatus==="retry") {
+          retry++;
+        }
+      });
+      setStats({ total, unreviewed, got, retry });
+    } catch(e){
+      console.error("[mistakes stats]",e);
+    }
+  }
 
   const qBase = useMemo(() => {
     if (!uid) return null;
     const conds = [where("userId", "==", uid)];
     if (showOnlyUnreviewed) {
-      // 未復習として isReviewed=false または reviewedAt==null を想定
-      // どちらかのフィールドに寄せるのが理想だが、まずは isReviewed を優先
       conds.push(where("isReviewed", "==", false));
     }
     return query(collection(db, "mistakes"), ...conds, orderBy("createdAt", "desc"), limit(pageSize));
@@ -157,13 +181,14 @@ export default function ReviewMistakesPage() {
         reviewStatus: status, // "got" | "retry"
         reviewedAt: serverTimestamp(),
       });
-      // 次カードへ
       setReveal(false);
       setIndex((i) => Math.min(i + 1, Math.max(items.length - 1, 0)));
+      // 集計更新
+      loadStats(uid);
     } catch (e) {
       alert("更新に失敗: " + e);
     }
-  }, [current, items.length]);
+  }, [current, items.length, uid]);
 
   const next = () => {
     setReveal(false);
@@ -178,33 +203,58 @@ export default function ReviewMistakesPage() {
     <div className="p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Mistakes Review</h1>
-        <div className="flex items-center gap-4">
-          <label className="text-sm flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={showOnlyUnreviewed}
-              onChange={(e) => { setShowOnlyUnreviewed(e.target.checked); }}
-            />
-            未復習のみ
-          </label>
-          <label className="text-sm flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={live}
-              onChange={(e) => setLive(e.target.checked)}
-            />
-            Live更新
-          </label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">件数</span>
-            <select
-              className="border px-2 py-1 text-sm rounded"
-              value={pageSize}
-              onChange={(e) => setPageSize(Number(e.target.value))}
-            >
-              {[10,20,50].map(n => <option key={n} value={n}>{n}</option>)}
-            </select>
-          </div>
+      </div>
+
+      {/* 集計表示 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="border rounded p-3 bg-white shadow-sm">
+          <div className="text-xs text-gray-500">総数</div>
+          <div className="text-lg font-bold">{stats.total}</div>
+        </div>
+        <div className="border rounded p-3 bg-white shadow-sm">
+          <div className="text-xs text-gray-500">未復習</div>
+          <div className="text-lg font-bold text-red-600">{stats.unreviewed}</div>
+        </div>
+        <div className="border rounded p-3 bg-white shadow-sm">
+          <div className="text-xs text-gray-500">分かった(Got)</div>
+          <div className="text-lg font-bold text-green-600">{stats.got}</div>
+        </div>
+        <div className="border rounded p-3 bg-white shadow-sm">
+          <div className="text-xs text-gray-500">もう一回(Retry)</div>
+          <div className="text-lg font-bold text-yellow-600">{stats.retry}</div>
+        </div>
+      </div>
+
+      <div className="text-sm text-gray-600">
+        Got率: {stats.total ? Math.round((stats.got / stats.total)*100) : 0}%
+      </div>
+
+      <div className="flex items-center gap-4">
+        <label className="text-sm flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={showOnlyUnreviewed}
+            onChange={(e) => { setShowOnlyUnreviewed(e.target.checked); }}
+          />
+          未復習のみ
+        </label>
+        <label className="text-sm flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={live}
+            onChange={(e) => setLive(e.target.checked)}
+          />
+          Live更新
+        </label>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">件数</span>
+          <select
+            className="border px-2 py-1 text-sm rounded"
+            value={pageSize}
+            onChange={(e) => setPageSize(Number(e.target.value))}
+          >
+            {[10,20,50].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
         </div>
       </div>
 

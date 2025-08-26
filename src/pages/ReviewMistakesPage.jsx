@@ -5,6 +5,7 @@ import {
   collection,
   doc,
   getDocs,
+  addDoc,
   limit,
   onSnapshot,
   orderBy,
@@ -100,6 +101,16 @@ export default function ReviewMistakesPage() {
     }
     return query(collection(db, "mistakes"), ...conds, orderBy("createdAt", "desc"), limit(pageSize));
   }, [uid, showOnlyUnreviewed, pageSize]);
+
+  // リストを単発で読み直す（live=false のとき用）
+  async function reloadPage() {
+    if (!qBase) return;
+    const snap = await getDocs(qBase);
+    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+    setItems(list);
+    setCursor(list.length ? snap.docs[snap.docs.length - 1] : null);
+  }
+
 
   // 初回/依存変更読み込み
   useEffect(() => {
@@ -198,6 +209,47 @@ export default function ReviewMistakesPage() {
     setReveal(false);
     setIndex((i) => Math.max(i - 1, 0));
   };
+ 
+  // ------- ダミー Mistake 作成（count 件） -------
+  async function addDummyMistakes(count = 1) {
+    if (!uid) return;
+    try {
+      const textsQ = [
+        "3×7 は？", "英語で『りんご』は？", "47都道府県の数は？",
+        "水の化学式は？", "π(パイ)を小数第1位まで"
+      ];
+      for (let i = 0; i < count; i++) {
+        const pick = textsQ[Math.floor(Math.random() * textsQ.length)];
+        const wrong = Math.random() < 0.5;
+        const docData = {
+          userId: uid,
+          isReviewed: false,
+          reviewStatus: null,
+          createdAt: serverTimestamp(),
+          question: { text: pick },
+          answer:   { text: wrong ? "まちがい" : "？" },
+          correct:  { text: pick === "3×7 は？" ? "21"
+                      : pick === "英語で『りんご』は？" ? "apple"
+                      : pick === "47都道府県の数は？" ? "47"
+                      : pick === "水の化学式は？" ? "H2O"
+                      : "3.1" },
+          // お好みでメタ情報
+          subject: "demo",
+          unit: "sample",
+          difficulty: ["easy","normal","hard"][Math.floor(Math.random()*3)],
+        };
+        await addDoc(collection(db, "mistakes"), docData);
+      }
+      // 反映
+      await loadStats(uid);
+      if (!live) await reloadPage();
+      alert(`${count} 件追加しました`);
+    } catch (e) {
+      console.error("[mistakes seed] add error", e);
+      alert("作成に失敗: " + e);
+    }
+   }
+
 
   return (
     <div className="p-4 md:p-6 space-y-4">
@@ -229,7 +281,7 @@ export default function ReviewMistakesPage() {
         Got率: {stats.total ? Math.round((stats.got / stats.total)*100) : 0}%
       </div>
 
-      <div className="flex items-center gap-4">
+       <div className="flex items-center gap-4">
         <label className="text-sm flex items-center gap-2">
           <input
             type="checkbox"
@@ -255,6 +307,23 @@ export default function ReviewMistakesPage() {
           >
             {[10,20,50].map(n => <option key={n} value={n}>{n}</option>)}
           </select>
+        </div>
+        {/* デモ投入（ログイン中のみ使用可） */}
+        <div className="flex items-center gap-2 ml-auto">
+          <button
+            onClick={() => addDummyMistakes(1)}
+            className="border px-3 py-1 text-sm rounded hover:bg-gray-50"
+            title="デモ用に1件追加"
+          >
+            +1件 追加
+          </button>
+          <button
+            onClick={() => addDummyMistakes(10)}
+            className="border px-3 py-1 text-sm rounded hover:bg-gray-50"
+            title="デモ用に10件追加"
+          >
+            +10件 追加
+          </button>
         </div>
       </div>
 

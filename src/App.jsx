@@ -7,6 +7,7 @@ import HistoryPage from "./pages/HistoryPage";
 import UserDetailPage from "./pages/UserDetailPage";
 import BannedPage from "./pages/BannedPage";                // ← 追加
 import RequireAdmin from "./components/RequireAdmin";       // ← 追加
+import ReviewMistakesPage from "./pages/ReviewMistakesPage";
 
 function Shell({ children }) {
   return (
@@ -18,6 +19,7 @@ function Shell({ children }) {
             <Link to="/" className="hover:underline">Home</Link>
             <Link to="/login" className="hover:underline">Login</Link>
             <Link to="/history" className="hover:underline">History</Link>
+            <Link to="/review" className="hover:underline">Review</Link>
           </nav>
         </div>
       </header>
@@ -42,6 +44,11 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/banned" element={<BannedPage />} />     {/* ← 追加 */}
+
+
+     {/* 一般ユーザー向け：自分の復習UI（ログイン前提） */}
+     <Route path="/review" element={<ReviewMistakesPage />} />
+
 
         {/* 管理者専用ルート */}
         <Route

@@ -178,17 +178,47 @@ export default function UserDetailPage() {
       </div>
 
       {tab==="profile" && (
-        <table className="border min-w-[600px]">
-          <tbody>
-            <tr><th className="border px-2 py-1 text-left">id</th><td className="border px-2 py-1">{user.id}</td></tr>
-            <tr><th className="border px-2 py-1 text-left">displayName</th><td className="border px-2 py-1">{user.displayName ?? "-"}</td></tr>
-            <tr><th className="border px-2 py-1 text-left">displayNameLower</th><td className="border px-2 py-1">{user.displayNameLower ?? "-"}</td></tr>
-            <tr><th className="border px-2 py-1 text-left">email</th><td className="border px-2 py-1">{user.email ?? "-"}</td></tr>
-            <tr><th className="border px-2 py-1 text-left">role</th><td className="border px-2 py-1">{user.role ?? "-"}</td></tr>
-            <tr><th className="border px-2 py-1 text-left">createdAt</th><td className="border px-2 py-1">{fmt(user.createdAt)}</td></tr>
-            <tr><th className="border px-2 py-1 text-left">lastLoginAt</th><td className="border px-2 py-1">{fmt(user.lastLoginAt)}</td></tr>
-          </tbody>
-        </table>
+       <div className="space-y-4">
+          <table className="border min-w-[600px]">
+            <tbody>
+              <tr><th className="border px-2 py-1 text-left">id</th><td className="border px-2 py-1">{user.id}</td></tr>
+              <tr><th className="border px-2 py-1 text-left">displayName</th><td className="border px-2 py-1">{user.displayName ?? "-"}</td></tr>
+              <tr><th className="border px-2 py-1 text-left">displayNameLower</th><td className="border px-2 py-1">{user.displayNameLower ?? "-"}</td></tr>
+              <tr><th className="border px-2 py-1 text-left">email</th><td className="border px-2 py-1">{user.email ?? "-"}</td></tr>
+              <tr><th className="border px-2 py-1 text-left">role</th><td className="border px-2 py-1">{user.role ?? "-"}</td></tr>
+              <tr><th className="border px-2 py-1 text-left">createdAt</th><td className="border px-2 py-1">{fmt(user.createdAt)}</td></tr>
+              <tr><th className="border px-2 py-1 text-left">lastLoginAt</th><td className="border px-2 py-1">{fmt(user.lastLoginAt)}</td></tr>
+            </tbody>
+          </table>
+
+          {/* role編集フォーム */}
+          <div className="border p-3 rounded space-y-2">
+            <label className="text-sm font-semibold">Role 編集</label>
+            <div className="flex gap-2">
+              {["user","admin","banned"].map(r=>(
+                <button
+                  key={r}
+                  onClick={async ()=>{
+                    try {
+                      await updateDoc(doc(db,"users",uid),{ role:r });
+                      alert(`roleを ${r} に変更しました。再読み込みします。`);
+                      location.reload();
+                    } catch(e) {
+                      alert("更新失敗: "+e);
+                    }
+                  }}
+                  className={`px-3 py-1 rounded border text-sm ${
+                    user.role===r ? "bg-blue-100 border-blue-400" : "hover:bg-gray-50"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>  
+
+
       )}
 
       {tab==="battles" && (

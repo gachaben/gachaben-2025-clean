@@ -1,34 +1,63 @@
 // src/fbkit/app.ts
+// TypeScriptならこのまま、JSなら型を削ってOK
+
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
+import {
+  connectFirestoreEmulator,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
 import { getStorage, connectStorageEmulator, type FirebaseStorage } from "firebase/storage";
-import { firebaseConfig, AUTH_PORT, FIRESTORE_PORT, USE_EMU } from "./config";
 
-let _app: FirebaseApp | undefined;
-let _db: Firestore | undefined;
-let _auth: Auth | undefined;
-let _storage: FirebaseStorage | undefined;
+const firebaseConfig = { apiKey: "demo", projectId: "demo-gachaben", appId: "demo" };
 
-export function getFirebaseApp() {
+const isBrowser = typeof window !== "undefined";
+const isLocalhost = isBrowser && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+const USE_EMU = import.meta.env.VITE_USE_EMU === "true";
+
+let _app: FirebaseApp;
+let _db: Firestore;
+let _auth: Auth;
+let _storage: FirebaseStorage;
+
+export function getFirebaseApp(): FirebaseApp {
   if (!_app) _app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  return _app!;
+  return _app;
 }
-export function getFirestoreDb() { if (!_db) _db = getFirestore(getFirebaseApp()); return _db!; }
-export function getAuthInstance() { if (!_auth) _auth = getAuth(getFirebaseApp()); return _auth!; }
-export function getStorageInstance() { if (!_storage) _storage = getStorage(getFirebaseApp()); return _storage!; }
 
-export const app = getFirebaseApp();
-export const db = getFirestoreDb();
-export const auth = getAuthInstance();
-export const storage = getStorageInstance();
+export function getFirestoreDb(): Firestore {
+  if (!_db) {
+    _db = initializeFirestore(getFirebaseApp(), {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      ignoreUndefinedProperties: true,
+    });
+    if (isLocalhost && USE_EMU) {
+      const port = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8088);
+      connectFirestoreEmulator(_db, "localhost", port);
+    }
+  }
+  return _db;
+}
 
-// Emulator�E�EMR多重対策！E
-const useEmu = USE_EMU;
-if (useEmu && !(globalThis as any).__EMU_CONNECTED__) {
-  const HOST = "127.0.0.1";
-  try { connectAuthEmulator(auth, `http://${HOST}:${AUTH_PORT}`, { disableWarnings: true }); } catch {}
-  try { connectFirestoreEmulator(db, HOST, FIRESTORE_PORT); } catch {}
-  try { connectStorageEmulator(storage, HOST, 9199); } catch {}
-  (globalThis as any).__EMU_CONNECTED__ = true;
+export function getFirebaseAuth(): Auth {
+  if (!_auth) {
+    _auth = getAuth(getFirebaseApp());
+    if (isLocalhost && USE_EMU) {
+      connectAuthEmulator(_auth, "http://localhost:9099", { disableWarnings: true });
+    }
+  }
+  return _auth;
+}
+
+export function getFirebaseStorage(): FirebaseStorage {
+  if (!_storage) {
+    _storage = getStorage(getFirebaseApp());
+    if (isLocalhost && USE_EMU) {
+      connectStorageEmulator(_storage, "localhost", 9199);
+    }
+  }
+  return _storage;
 }

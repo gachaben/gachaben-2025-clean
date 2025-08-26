@@ -18,34 +18,10 @@ let _db: Firestore;
 let _auth: Auth;
 let _storage: FirebaseStorage;
 
-export function getFirebaseApp(): FirebaseApp {
-  if (!_app) _app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  return _app;
-}
-
-export function getFirestoreDb(): Firestore {
-  if (!_db) {
-    _db = initializeFirestore(getFirebaseApp(), {
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
-      ignoreUndefinedProperties: true,
-    });
-    if (isLocalhost && USE_EMU) connectFirestoreEmulator(_db, "localhost", Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8088));
-  }
-  return _db;
-}
-
-export function getFirebaseAuth(): Auth {
-  if (!_auth) {
-    _auth = getAuth(getFirebaseApp());
-    if (isLocalhost && USE_EMU) connectAuthEmulator(_auth, "http://localhost:9099", { disableWarnings: true });
-  }
-  return _auth;
-}
-
-export function getFirebaseStorage(): FirebaseStorage {
-  if (!_storage) {
-    _storage = getStorage(getFirebaseApp());
-    if (isLocalhost && USE_EMU) connectStorageEmulator(_storage, "localhost", 9199);
-  }
-  return _storage;
-}
+// src/fbkit/index.ts
+export {
+  getFirebaseApp,
+  getFirestoreDb,
+  getFirebaseAuth,
+  getFirebaseStorage,
+} from "./app";

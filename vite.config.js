@@ -6,9 +6,10 @@ import { fileURLToPath, URL } from 'node:url'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      '@/firebase': fileURLToPath(new URL('./src/fbkit', import.meta.url)), // ←これ
-    },
+    alias: [
+      // 先に「より具体的な」@/firebase を置く！
+      { find: '@/firebase', replacement: fileURLToPath(new URL('./src/fbkit', import.meta.url)) },
+      { find: '@',           replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+    ],
   },
 })

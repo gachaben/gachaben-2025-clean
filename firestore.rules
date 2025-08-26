@@ -1,8 +1,69 @@
 rules_version = '2';
 service cloud.firestore {
-  match /databases/{database}/documents {
+  match /databases/{db}/documents {
+
+    function userDoc(uid) {
+      return get(/databases/$(db)/documents/users/$(uid));
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    function isAdmin() {
+      return isSignedIn() && userDoc(request.auth.uid).data.role == 'admin';
+    }
+    function isBanned() {
+      return isSignedIn() && userDoc(request.auth.uid).data.role == 'banned';
+    }
+
+    // ----- users コレクション -----
+    match /users/{uid} {
+
+      // 読み取り: 自分 or admin。banned も自分の user doc だけは読める
+      allow get, list: if isSelf(uid) || isAdmin();
+
+      // 作成: 自分の doc だけ作成可（サインアップ直後: ensureUserDoc を想定）
+      allow create: if isSelf(uid) && !isBanned();
+
+      // 更新: 
+      //  - 自分: プロフィール系の限定フィールドのみ
+      //  - admin: 何でも可（role 変更を含む）
+      allow update: if
+        (!isBanned()) && (
+          isAdmin() ||
+          (isSelf(uid) &&
+            request.resource.data.diff(resource.data).changedKeys()
+              .hasOnly([
+                'displayName',
+                'displayNameLower',
+                'lastLoginAt',
+                'email' // 任意（不要なら外す）
+              ])
+          )
+        );
+
+      // 削除: admin のみ
+      allow delete: if isAdmin();
+    }
+
+    // ----- battles / mistakes（参照のみ想定） -----
+    match /battles/{id} {
+      // 読み取り: admin は全件、自分は userId==自分 のものだけ
+      allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      // 書き込みはアプリの設計に合わせて。今は運用保護のため禁止
+      allow create, update, delete: if false;
+    }
+
+    match /mistakes/{id} {
+      allow get, list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    // それ以外は閉じる
     match /{document=**} {
-      allow read, write: if true; // ← エミュ開発専用。公開NG
+      allow read, write: if false;
     }
   }
 }

@@ -1,6 +1,12 @@
+// src/App.jsx
 import React from "react";
 import { Routes, Route, Link } from "react-router-dom";
+
 import LoginPage from "./pages/LoginPage";
+import HistoryPage from "./pages/HistoryPage";
+import UserDetailPage from "./pages/UserDetailPage";
+import BannedPage from "./pages/BannedPage";                // ← 追加
+import RequireAdmin from "./components/RequireAdmin";       // ← 追加
 
 function Shell({ children }) {
   return (
@@ -35,6 +41,25 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/banned" element={<BannedPage />} />     {/* ← 追加 */}
+
+        {/* 管理者専用ルート */}
+        <Route
+          path="/history"
+          element={
+            <RequireAdmin>
+              <HistoryPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/users/:uid"
+          element={
+            <RequireAdmin>
+              <UserDetailPage />
+            </RequireAdmin>
+          }
+        />
       </Routes>
     </Shell>
   );

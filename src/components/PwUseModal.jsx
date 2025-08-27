@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
   const [selected, setSelected] = useState(100);
-  const numericUserPw = Number(userPw);
+  const numericUserPw = Number(userPw) || 0;
 
   const options = [100, 200, 300, 400, 500];
 
@@ -21,7 +21,7 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
       <div className="relative bg-white rounded-lg p-6 shadow-xl w-80 text-center">
         <h2 className="text-lg font-bold mb-4">PW使用量を選んでください</h2>
 
-        {/* ボタン選抁E*/}
+        {/* ボタン選択 */}
         <div className="flex justify-center flex-wrap gap-2 mb-4">
           {options.map((amount) => {
             const isDisabled = amount > numericUserPw;
@@ -34,13 +34,13 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
                 disabled={isDisabled}
                 className={`px-4 py-2 rounded font-bold border text-sm ${
                   isDisabled
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                     : isSelected
-                    ? 'bg-red-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                    ? "bg-red-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-100"
                 }`}
               >
-                {amount}
+                {amount} PW
               </button>
             );
           })}
@@ -48,10 +48,10 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
 
         {/* 所持PW */}
         <p className="mb-4 text-gray-700">
-          あなた�E所持PW�E�Espan className="font-bold">{numericUserPw}</span>
+          あなたの所持PW：<span className="font-bold">{numericUserPw}</span>
         </p>
 
-        {/* ボタン */}
+        {/* 操作ボタン */}
         <div className="flex justify-center gap-4">
           <button
             onClick={onClose}
@@ -63,7 +63,7 @@ const PwUseModal = ({ item, userPw, onClose, onConfirm, onAmountChange }) => {
             onClick={() => onConfirm(selected)}
             className="px-4 py-2 rounded bg-red-500 text-white font-bold hover:bg-red-600"
           >
-            決宁E
+            決定
           </button>
         </div>
       </div>

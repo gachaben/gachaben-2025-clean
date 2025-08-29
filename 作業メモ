@@ -116,3 +116,74 @@ BattleResultPage で勝敗表示
 Firestore保存（battles）は引き続き onBattleEnd で処理
 
 👉 明日は ジャンケンUI をまず実装 → その後に「正解 / 不正解 → 勝敗分岐」部分を組み込み。
+
+
+作業メモ（2025-08-28）
+✅ 今日やったこと
+
+PW痕跡削除
+
+旧PW関連（PwGauge, TugOfWarBar, userItemPowers など）を停止/削除
+
+ZukanInsectDetailPage もチェックして PW の参照を整理
+
+favicon 実装
+
+ガチャマシン画像から 256×256 PNG 作成 → .ico 化 → public/favicon.ico に設置
+
+index.html に <link rel="icon" href="/favicon.ico" /> を追加
+
+ブラウザタブにガチャアイコンが表示されるようになった
+
+BattlePage をジャンケン式に改造
+
+グー/チョキ/パーで先攻を決定
+
+出題フロー（問題抽選、CPU判定）を組み込み
+
+3ターン上限 → 引き分け
+
+Firestore にバトル結果保存
+
+タイムラインにラウンドログを表示
+
+「あなたの手／CPUの手」も表示できるよう改修
+
+⚠️ 残タスク（明日以降）
+
+ジャンケンアイコン導入
+
+public/images/janken/ に gu.png, choki.png, pa.png を追加
+
+ボタン → 画像アイコンに変更
+
+タイムライン → 文字ではなくアイコンで表示
+
+UI調整
+
+上下分割レイアウト（自分／CPU）にアイコンを配置する案
+
+子どもでも直感的に分かるようにする（背景色・大きさ調整など）
+
+結果ページ (/battle/result)
+
+今は BattlePage 内で「end」を表示している → /battle/result に分離予定
+
+勝敗・ラウンド数・ポイント獲得表示
+
+battles コレクションへの保存はできているので、リダイレクト処理だけ追加すればOK
+
+📌 Git セーブデータ
+
+今日の保存ポイント名：
+
+checkpoint-2025-08-28_battle-ui-v2_janken
+
+
+→ 「ジャンケンバトルUI完成」状態に復元可能
+
+👉 明日はまず「グーチョキパーのアイコン探し」からスタート！
+それを配置すれば、ビジュアル的に遊べるジャンケンバトルに仕上がります 🎉
+
+このメモを次回スタート時に呼び出せば、スムーズに続行できます！
+次の保存タグは「checkpoint-2025-08-29_battle-ui-v2_janken-icons」あたりでどうでしょう？

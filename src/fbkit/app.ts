@@ -1,63 +1,63 @@
 // src/fbkit/app.ts
-// TypeScriptならこのまま、JSなら型を削ってOK
-
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import {
-  connectFirestoreEmulator,
   initializeFirestore,
+  getFirestore,
   persistentLocalCache,
   persistentMultipleTabManager,
   type Firestore,
 } from "firebase/firestore";
-import { getAuth, connectAuthEmulator, type Auth } from "firebase/auth";
-import { getStorage, connectStorageEmulator, type FirebaseStorage } from "firebase/storage";
+import { getAuth, type Auth, connectAuthEmulator } from "firebase/auth";
+import { getStorage, type FirebaseStorage, connectStorageEmulator } from "firebase/storage";
+import { firebaseConfig, isLocalhost } from "./config";
 
-const firebaseConfig = { apiKey: "demo", projectId: "demo-gachaben", appId: "demo" };
+let _app: FirebaseApp | undefined;
+let _db: Firestore | undefined;
+let _auth: Auth | undefined;
+let _storage: FirebaseStorage | undefined;
 
-const isBrowser = typeof window !== "undefined";
-const isLocalhost = isBrowser && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-const USE_EMU = import.meta.env.VITE_USE_EMU === "true";
-
-let _app: FirebaseApp;
-let _db: Firestore;
-let _auth: Auth;
-let _storage: FirebaseStorage;
+// 2重初期化防止フラグ（HMR対応）
+declare global { interface Window { __GBEN_FS_INIT__?: boolean } }
 
 export function getFirebaseApp(): FirebaseApp {
-  if (!_app) _app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  return _app;
+  return (_app ??= (getApps().length ? getApp() : initializeApp(firebaseConfig)));
 }
 
 export function getFirestoreDb(): Firestore {
-  if (!_db) {
-    _db = initializeFirestore(getFirebaseApp(), {
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+  if (_db) return _db;
+  const app = getFirebaseApp();
+
+  if (!window.__GBEN_FS_INIT__) {
+    _db = initializeFirestore(app, {
       ignoreUndefinedProperties: true,
+      experimentalAutoDetectLongPolling: true,
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
     });
-    if (isLocalhost && USE_EMU) {
-      const port = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8088);
-      connectFirestoreEmulator(_db, "localhost", port);
-    }
+    window.__GBEN_FS_INIT__ = true;
+  } else {
+    _db = getFirestore(app);
   }
-  return _db;
+  return _db!;
 }
 
 export function getFirebaseAuth(): Auth {
-  if (!_auth) {
-    _auth = getAuth(getFirebaseApp());
-    if (isLocalhost && USE_EMU) {
-      connectAuthEmulator(_auth, "http://localhost:9099", { disableWarnings: true });
-    }
+  if (_auth) return _auth;
+  const a = getAuth(getFirebaseApp());
+  if (isLocalhost) {
+    try { connectAuthEmulator(a, "http://localhost:9099"); } catch {}
   }
+  _auth = a;
   return _auth;
 }
 
 export function getFirebaseStorage(): FirebaseStorage {
-  if (!_storage) {
-    _storage = getStorage(getFirebaseApp());
-    if (isLocalhost && USE_EMU) {
-      connectStorageEmulator(_storage, "localhost", 9199);
-    }
+  if (_storage) return _storage;
+  const s = getStorage(getFirebaseApp());
+  if (isLocalhost) {
+    try { connectStorageEmulator(s, "localhost", 9199); } catch {}
   }
+  _storage = s;
   return _storage;
 }

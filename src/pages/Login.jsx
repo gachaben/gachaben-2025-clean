@@ -85,7 +85,7 @@ export default function Login() {
       } else if (err?.code === "auth/too-many-requests") {
         setError("試行回数が多すぎます。しばらくしてからお試しください");
       } else {
-        setError("ログインに失敗しました: " + (err?.message ?? ""));
+        setError("ログインに失敗しました: " + (err?.message ?? "")); 
       }
     }
   };

@@ -32,7 +32,8 @@ const getSeasonKey = (d = new Date()) => {
 // ---- タイミング（調整OK） ----
 const T = {
   afterPon: 600,     // 「ポン！」押下後、勝敗テキストを出すまで
-  cpuThink: 900,     // CPUが解答中
+  cpuThink: 900,
+  judgePause: 800,   // 「答え合わせ」解禁までの小休止
 };
 
 // ---- バイブ（対応端末のみ） ----
@@ -114,6 +115,27 @@ async function loadOpponentAccuracy(db, opponentId) {
   } catch { return {1:0.85,2:0.70,3:0.45}; }
 }
 
+// --- 演出コンポーネント ---
+function ThinkingDots({ className = "" }) {
+  return (
+    <span className={`inline-flex gap-1 ${className}`} aria-label="thinking">
+      <span className="w-2 h-2 rounded-full bg-gray-500 animate-bounce [animation-delay:-0.2s]"></span>
+      <span className="w-2 h-2 rounded-full bg-gray-500 animate-bounce [animation-delay:-0.1s]"></span>
+      <span className="w-2 h-2 rounded-full bg-gray-500 animate-bounce"></span>
+    </span>
+  );
+}
+function ProgressBar({ progress = 0 }) {
+  return (
+    <div className="w-56 h-2 bg-gray-200 rounded-full overflow-hidden shadow-inner" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+      <div
+        className="h-full bg-gray-700 transition-[width] duration-100 ease-linear"
+        style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
+      />
+    </div>
+  );
+}
+
 // ---- UI小物 ----
 const Section = ({title, children}) => (
   <div className="border rounded-xl p-4 bg-white shadow-sm">
@@ -142,7 +164,7 @@ function PlayerPanel({ side="enemy", name, hand, question, extra, cpuAnswer }) {
   );
 }
 
-// ---- 回答UI（選択肢があればボタン、なければ入力） ----
+// ---- 回答UI ----
 function AnswerArea({ q, onSubmit }) {
   const [text, setText] = useState("");
   if (q?.choices?.length) {
@@ -174,7 +196,7 @@ function AnswerArea({ q, onSubmit }) {
   );
 }
 
-// ---- 出題（出題者の履歴から）/ サンプルは choices + answer を付与 ----
+// ---- 出題（出題者の履歴から） ----
 async function drawQuestionFrom(userId, gachaResult, lastQuestionId = null) {
   const wantLv = pickLevelByGacha(gachaResult);
   if (!userId) {
@@ -196,13 +218,11 @@ async function drawQuestionFrom(userId, gachaResult, lastQuestionId = null) {
   const pickFrom = candidatesLv.length ? candidatesLv : all.filter(x=>x.id!==lastQuestionId);
 
   if (!pickFrom.length) {
-    // サンプルへフォールバック
     return drawQuestionFrom(null, gachaResult, null);
   }
   const p = pickFrom[Math.floor(Math.random()*pickFrom.length)];
   const text = p.question?.text ?? p.q?.text ?? p.text ?? "(no question text)";
   const lvl = p.level ?? wantLv;
-  // Firestore由来は choices/answer 不明 → 自由入力として扱う
   return { questionId:p.id, question:text, level:lvl };
 }
 
@@ -212,6 +232,10 @@ export default function BattlePage() {
   const [tickets, setTickets] = useState(0);
   const [checking, setChecking] = useState(true);
   const [revealHands, setRevealHands] = useState(false); // ポンするまで手を隠す
+
+  // 出題フェーズ演出
+  const [checkReady, setCheckReady] = useState(false);   // 「答え合わせ」ボタン解禁
+  const [phaseProgress, setPhaseProgress] = useState(0); // プログレス表示用（0-100）
 
   const [state, setState] = useState("idle"); // idle|janken|end
   const [rounds, setRounds] = useState([]);
@@ -273,7 +297,7 @@ export default function BattlePage() {
     return () => unsub();
   }, [nav]);
 
-  // イベントフラグ（なければfalse）
+  // イベントフラグ
   useEffect(()=> {
     let unsub = () => {};
     try {
@@ -317,27 +341,28 @@ export default function BattlePage() {
 
       setEnemyHasAnswered(false); setPlannedCpuCorrect(null);
       setMyHasAnswered(false); setMyPendingAnswer(null);
+      setCheckReady(false); setPhaseProgress(0);
     } catch (e) {
       setErrorMsg(String(e?.message||e));
       alert(`バトル開始に失敗しました。\n${String(e?.message||e)}`);
     } finally { setBusy(false); }
   }
 
-  // ①手を選ぶ → ②「ポン」ボタンを表示
+  // 手選択
   function onSelectHand(hand) {
     if (busy || state!=="janken") return;
     setSelMyHand(hand);
-    setShowPonBtn(true);   // 「ポン」ボタン出す
-    setRevealHands(false); // まだ両手非表示
+    setShowPonBtn(true);
+    setRevealHands(false);
   }
 
-  // ③「ポン」→ 双方の手を出す & バイブ → 間 → 勝敗表示
+  // ポン → 同時表示 → 勝敗
   async function onPon() {
     if (!selMyHand || busy) return;
     setBusy(true);
     const r = doJanken(selMyHand);
     setCpuHand(r.house);
-    setRevealHands(true); // 同時表示
+    setRevealHands(true);
 
     if (r.result==="userWin") buzz(VIB.win);
     else if (r.result==="draw") buzz(VIB.short);
@@ -358,9 +383,10 @@ export default function BattlePage() {
 
     setEnemyHasAnswered(false); setPlannedCpuCorrect(null);
     setMyHasAnswered(false); setMyPendingAnswer(null);
+    setCheckReady(false); setPhaseProgress(0);
   }
 
-  // 「問題へ」：相手の勝ち→上に問題＆下に回答欄 / 自分の勝ち→CPU解答ボタン
+  // 「問題へ」
   async function toQuestion() {
     if (!result || busy) return;
     if (result==="draw") {
@@ -370,6 +396,7 @@ export default function BattlePage() {
       setRevealHands(false);
       setEnemyHasAnswered(false); setPlannedCpuCorrect(null);
       setMyHasAnswered(false); setMyPendingAnswer(null);
+      setCheckReady(false); setPhaseProgress(0);
       return;
     }
 
@@ -385,26 +412,44 @@ export default function BattlePage() {
     setBusy(false);
   }
 
-  // --- 自分が出題 → 相手（CPU）側：二段階（相手の解答 → 答え合わせ） ---
+  // 自分が出題 → 相手の解答（演出つき）
   async function enemyAnswer() {
     if (busy || !qobj || result!=="userWin" || enemyHasAnswered) return;
     setBusy(true);
     setBanner("相手が考え中…");
+    setCheckReady(false);
+    setPhaseProgress(0);
+
+    // プログレス
+    const start = Date.now();
+    const tick = setInterval(() => {
+      const p = Math.min(100, ((Date.now() - start) / T.cpuThink) * 100);
+      setPhaseProgress(p);
+    }, 100);
+
     await sleep(T.cpuThink);
+    clearInterval(tick);
+    setPhaseProgress(100);
+
+    // 正誤を保持（まだ公開しない）
     const ok = cpuAnswerCorrect(qobj.level);
-    setPlannedCpuCorrect(ok);     // 予定結果を保存（まだ公開しない）
-    setEnemyHasAnswered(true);    // 解答完了
+    setPlannedCpuCorrect(ok);
+    setEnemyHasAnswered(true);
+
+    // 採点前の一呼吸
+    await sleep(T.judgePause);
+    setCheckReady(true);
     setBusy(false);
-    setBanner("相手の解答が終わった！『答え合わせ』を押してね");
+    setBanner("");
   }
 
   async function checkEnemyAnswer() {
-    if (!enemyHasAnswered || plannedCpuCorrect == null || busy) return;
+    if (!enemyHasAnswered || plannedCpuCorrect === null || busy) return;
     setBusy(true);
 
     const ok = plannedCpuCorrect;
     setCpuAnswer(ok);                 // ここで公開
-    if (!ok) buzz(VIB.good);          // 相手が不正解＝自分に有利 → バイブ
+    if (!ok) buzz(VIB.good);          // 自分に有利 → バイブ
 
     const committed = {
       janken: "userWin",
@@ -435,16 +480,34 @@ export default function BattlePage() {
       setBanner(""); setRevealHands(false);
       setEnemyHasAnswered(false); setPlannedCpuCorrect(null);
       setMyHasAnswered(false); setMyPendingAnswer(null);
+      setCheckReady(false); setPhaseProgress(0);
     }
     setBusy(false);
   }
 
-  // --- 相手が出題 → 自分側：二段階（自分の解答 → 答え合わせ） ---
+  // 相手が出題 → 自分の解答（演出つき）
   function submitMyAnswer(ans) {
     if (busy || !qobj || result!=="opponentWin" || myHasAnswered) return;
-    setMyPendingAnswer(ans);      // まずは保存のみ
+    setMyPendingAnswer(ans);
     setMyHasAnswered(true);
-    setBanner("あなたの解答を受け付けたよ。『答え合わせ』を押してね");
+    setCheckReady(false);
+    setPhaseProgress(0);
+    setBanner("");
+
+    // 軽い演出タイマー
+    const total = Math.max(600, T.judgePause);
+    const start = Date.now();
+    const tick = setInterval(() => {
+      const p = Math.min(100, ((Date.now() - start) / total) * 100);
+      setPhaseProgress(p);
+    }, 100);
+
+    (async () => {
+      await sleep(total);
+      clearInterval(tick);
+      setPhaseProgress(100);
+      setCheckReady(true);
+    })();
   }
 
   async function checkMyAnswer() {
@@ -489,6 +552,7 @@ export default function BattlePage() {
       setBanner(""); setRevealHands(false);
       setEnemyHasAnswered(false); setPlannedCpuCorrect(null);
       setMyHasAnswered(false); setMyPendingAnswer(null);
+      setCheckReady(false); setPhaseProgress(0);
     }
     setBusy(false);
   }
@@ -514,7 +578,7 @@ export default function BattlePage() {
   // 表示用
   const enemyCpuAnswer = typeof cpuAnswer==="boolean" ? cpuAnswer : undefined;
 
-  // 出題フェーズ中は手を隠す（ご要望①）
+  // 出題フェーズ中は手を隠す
   const hideHandsDuringQuestion = !!(qobj && (result==="userWin" || result==="opponentWin"));
   const showHandEnemy = (!hideHandsDuringQuestion) && (revealHands ? cpuHand : null);
   const showHandMe    = (!hideHandsDuringQuestion) && (revealHands ? selMyHand : null);
@@ -558,15 +622,15 @@ export default function BattlePage() {
         >
           <div className="absolute inset-0 z-0 bg-white/25 pointer-events-none" />
 
-          {/* 勝敗などのバナー */}
+          {/* 勝敗などのバナー（カード間のやや下） */}
           {banner && (
-           <div className="absolute inset-x-0 z-30 flex items-center justify-center pointer-events-none"
-        style={{ top: "55%", transform: "translateY(-50%)" }}>
-     <div className="px-5 py-2 rounded-full bg-black/70 backdrop-blur text-white text-xl md:text-2xl font-bold tracking-widest">
-       {banner}
-     </div>
-   </div>
- )}
+            <div className="absolute inset-x-0 z-30 flex items-center justify-center pointer-events-none"
+                 style={{ top: "55%", transform: "translateY(-50%)" }}>
+              <div className="px-5 py-2 rounded-full bg-black/70 backdrop-blur text-white text-xl md:text-2xl font-bold tracking-widest">
+                {banner}
+              </div>
+            </div>
+          )}
 
           {/* 見出し「ジャンケン」＋ 右にポンボタン */}
           {state === "janken" && (
@@ -585,7 +649,7 @@ export default function BattlePage() {
           )}
 
           {/* 上下パネル */}
-           <div className="relative z-10 grid grid-rows-[1fr_auto_1fr] gap-10">
+          <div className="relative z-10 grid grid-rows-[1fr_auto_1fr] gap-10">
             <PlayerPanel
               side="enemy"
               name="相手（他ユーザー）"
@@ -657,7 +721,7 @@ export default function BattlePage() {
 
           {/* 自分が出題（userWin） → 二段階UI */}
           {result === "userWin" && qobj && (
-            <div className="mt-3 flex flex-col items-center gap-2">
+            <div className="mt-3 flex flex-col items-center gap-3 relative z-10 pointer-events-auto">
               <div className="text-sm text-gray-700">ガチャ: <b>{gacha}%</b> / Lv{qobj.level}</div>
 
               {!enemyHasAnswered ? (
@@ -670,21 +734,31 @@ export default function BattlePage() {
                   相手の解答
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={checkEnemyAnswer}
-                  disabled={busy}
-                  className="px-4 py-2 rounded-lg border shadow bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  答え合わせ
-                </button>
+                <>
+                  {!checkReady ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <ThinkingDots />
+                      <ProgressBar progress={phaseProgress} />
+                      <div className="text-xs text-gray-500">採点準備中…</div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={checkEnemyAnswer}
+                      disabled={busy}
+                      className="px-4 py-2 rounded-lg border shadow bg-white hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      答え合わせ
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}
 
           {/* 相手が出題（opponentWin） → 二段階UI */}
           {result==="opponentWin" && qobj && (
-            <div className="mt-3 flex flex-col items-center gap-2">
+            <div className="mt-3 flex flex-col items-center gap-3">
               <div className="text-sm text-gray-700">ガチャ: <b>{gacha}%</b> / Lv{qobj.level}</div>
 
               {!myHasAnswered ? (
@@ -692,14 +766,24 @@ export default function BattlePage() {
                   <AnswerArea q={qobj} onSubmit={submitMyAnswer}/>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={checkMyAnswer}
-                  disabled={busy}
-                  className="px-4 py-2 rounded-lg border shadow bg-white hover:bg-gray-50 disabled:opacity-50"
-                >
-                  答え合わせ
-                </button>
+                <>
+                  {!checkReady ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <ThinkingDots />
+                      <ProgressBar progress={phaseProgress} />
+                      <div className="text-xs text-gray-500">採点準備中…</div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={checkMyAnswer}
+                      disabled={busy}
+                      className="px-4 py-2 rounded-lg border shadow bg-white hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      答え合わせ
+                    </button>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -747,6 +831,7 @@ export default function BattlePage() {
 
                 setEnemyHasAnswered(false); setPlannedCpuCorrect(null);
                 setMyHasAnswered(false); setMyPendingAnswer(null);
+                setCheckReady(false); setPhaseProgress(0);
               }}
               className="border px-3 py-1 rounded hover:bg-gray-50"
             >もう一度</button>

@@ -1,17 +1,13 @@
-// src/lib/userState.js
-import { db } from "@/fbkit"; // ↁEこれ忁E��E
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-  updateDoc,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { getFirestoreDb } from "@/fbkit";   // ← 追加
 
-// users/{uid} の参�E
-export const userDocRef = (uid) => doc(db, "users", uid);
+// Firestore インスタンスを取得
+const db = getFirestoreDb();
 
-// 初回作�E�E�存在しなければ作る�E�E
+// users/{uid} の参照
+export const userDocRef = (uid) => doc(db, "users", String(uid));
+
+// 初回作成（存在しなければ作る）
 export async function ensureUserDoc(uid) {
   const ref = userDocRef(uid);
   const snap = await getDoc(ref);
@@ -27,7 +23,7 @@ export async function ensureUserDoc(uid) {
   return ref;
 }
 
-// 日次リセチE���E�例：日付が変わってぁE��らリセチE���E�E
+// 日次リセット処理（例：日付が変わっていたらリセット）
 export async function refreshUserDaily(uid) {
   const ref = userDocRef(uid);
   const snap = await getDoc(ref);

@@ -16,7 +16,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { getFirebaseAuth, getFirestoreDb } from "@/firebase";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 
 const auth = getFirebaseAuth();
 const db = getFirestoreDb();
@@ -36,12 +36,32 @@ function fmt(ts) {
   }
 }
 
+// 互換: status / isReviewed / reviewStatus から「未復習か」を求める
+function isUnreviewed(m) {
+  if (typeof m?.status === "string") return m.status === "open";
+  if (typeof m?.isReviewed === "boolean") return !m.isReviewed;
+  return true; // フィールドが無い古いデータは一旦「未復習」とみなす
+}
+
+// 互換: 集計用の状態名を返す "unreviewed" | "got" | "retry" | "reviewed"
+function normalizeReviewState(m) {
+  if (typeof m?.status === "string") {
+    return m.status === "open" ? "unreviewed" : "reviewed";
+  }
+  if (m?.isReviewed) {
+    if (m?.reviewStatus === "got") return "got";
+    if (m?.reviewStatus === "retry") return "retry";
+    return "reviewed";
+  }
+  return "unreviewed";
+}
+
 export default function ReviewMistakesPage() {
   const nav = useNavigate();
   const [uid, setUid] = useState(null);
 
   // 集計
-  const [stats, setStats] = useState({ total:0, unreviewed:0, got:0, retry:0 });
+  const [stats, setStats] = useState({ total: 0, unreviewed: 0, got: 0, retry: 0 });
 
   // フィルタ
   const [showOnlyUnreviewed, setShowOnlyUnreviewed] = useState(true);
@@ -73,7 +93,7 @@ export default function ReviewMistakesPage() {
       }
       setUid(u.uid);
       loadStats(u.uid);
-      loadFacets(u.uid); // ← 科目/単元の候補をロード
+      loadFacets(u.uid); // 科目/単元の候補をロード
     });
     return () => unsub();
   }, [nav]);
@@ -81,11 +101,11 @@ export default function ReviewMistakesPage() {
   // 科目/単元の候補をロード（自分のmistakes全体からユニーク抽出）
   async function loadFacets(uid) {
     try {
-      const qAll = query(collection(db, "mistakes"), where("userId","==",uid));
+      const qAll = query(collection(db, "mistakes"), where("userId", "==", uid));
       const snap = await getDocs(qAll);
       const subs = new Set();
       const units = new Set();
-      snap.forEach(d=>{
+      snap.forEach((d) => {
         const m = d.data() || {};
         if (m.subject) subs.add(String(m.subject));
         if (m.unit) units.add(String(m.unit));
@@ -99,35 +119,33 @@ export default function ReviewMistakesPage() {
 
   async function loadStats(uid) {
     try {
-      const qAll = query(collection(db,"mistakes"), where("userId","==",uid));
+      const qAll = query(collection(db, "mistakes"), where("userId", "==", uid));
       const snap = await getDocs(qAll);
-      let total=0, unreviewed=0, got=0, retry=0;
-      snap.forEach(d=>{
+      let total = 0, unreviewed = 0, got = 0, retry = 0;
+      snap.forEach((d) => {
         total++;
         const m = d.data() || {};
-        if (!m.isReviewed) {
-          unreviewed++;
-        } else if (m.reviewStatus==="got") {
-          got++;
-        } else if (m.reviewStatus==="retry") {
-          retry++;
-        }
+        const st = normalizeReviewState(m);
+        if (st === "unreviewed") unreviewed++;
+        else if (st === "got") got++;
+        else if (st === "retry") retry++;
       });
       setStats({ total, unreviewed, got, retry });
-    } catch(e){
-      console.error("[mistakes stats]",e);
+    } catch (e) {
+      console.error("[mistakes stats]", e);
     }
   }
 
   // 一覧クエリ（ユーザー＋任意のsubject/unit）
+  // ※ status / isReviewed の混在に対応するため、クエリでは userId と createdAt のみ絞り込み
   const qBase = useMemo(() => {
     if (!uid) return null;
     const conds = [where("userId", "==", uid)];
-    if (showOnlyUnreviewed) conds.push(where("isReviewed", "==", false));
+    // subject/unit はクエリ条件に入れてOK（存在しない古いデータは落ちる点に注意）
     if (subject) conds.push(where("subject", "==", subject));
     if (unit) conds.push(where("unit", "==", unit));
     return query(collection(db, "mistakes"), ...conds, orderBy("createdAt", "desc"), limit(pageSize));
-  }, [uid, showOnlyUnreviewed, pageSize, subject, unit]);
+  }, [uid, pageSize, subject, unit]);
 
   // 初回/依存変更読み込み
   useEffect(() => {
@@ -144,7 +162,9 @@ export default function ReviewMistakesPage() {
           unsub = onSnapshot(
             qBase,
             (snap) => {
-              const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+              let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+              // 未復習フィルタはクライアントで
+              if (showOnlyUnreviewed) list = list.filter(isUnreviewed);
               setItems(list);
               setCursor(list.length ? snap.docs[snap.docs.length - 1] : null);
               setLoading(false);
@@ -157,7 +177,8 @@ export default function ReviewMistakesPage() {
           );
         } else {
           const snap = await getDocs(qBase);
-          const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+          let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+          if (showOnlyUnreviewed) list = list.filter(isUnreviewed);
           setItems(list);
           setCursor(list.length ? snap.docs[snap.docs.length - 1] : null);
         }
@@ -170,7 +191,7 @@ export default function ReviewMistakesPage() {
     })();
 
     return () => unsub && unsub();
-  }, [qBase, live]);
+  }, [qBase, live, showOnlyUnreviewed]);
 
   // 次のページ（単発読み込み）
   const loadMore = useCallback(async () => {
@@ -179,7 +200,6 @@ export default function ReviewMistakesPage() {
     setErr(null);
     try {
       const conds = [where("userId", "==", uid)];
-      if (showOnlyUnreviewed) conds.push(where("isReviewed", "==", false));
       if (subject) conds.push(where("subject", "==", subject));
       if (unit) conds.push(where("unit", "==", unit));
       const qMore = query(
@@ -190,7 +210,8 @@ export default function ReviewMistakesPage() {
         limit(pageSize)
       );
       const snap = await getDocs(qMore);
-      const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+      let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+      if (showOnlyUnreviewed) list = list.filter(isUnreviewed);
       setItems((prev) => [...prev, ...list]);
       setCursor(list.length ? snap.docs[snap.docs.length - 1] : null);
     } catch (e) {
@@ -203,22 +224,27 @@ export default function ReviewMistakesPage() {
 
   const current = items[index] || null;
 
-  const markReviewed = useCallback(async (status) => {
-    if (!current) return;
-    try {
-      await updateDoc(doc(db, "mistakes", current.id), {
-        isReviewed: true,
-        reviewStatus: status, // "got" | "retry"
-        reviewedAt: serverTimestamp(),
-      });
-      setReveal(false);
-      setIndex((i) => Math.min(i + 1, Math.max(items.length - 1, 0)));
-      // 集計も更新
-      if (uid) loadStats(uid);
-    } catch (e) {
-      alert("更新に失敗: " + e);
-    }
-  }, [current, items.length, uid]);
+  const markReviewed = useCallback(
+    async (status) => {
+      if (!current) return;
+      try {
+        // 統一スキーマ: status="reviewed"
+        // 互換フィールドも更新しておく
+        await updateDoc(doc(db, "mistakes", current.id), {
+          status: "reviewed",
+          isReviewed: true,
+          reviewStatus: status, // "got" | "retry"
+          reviewedAt: serverTimestamp(),
+        });
+        setReveal(false);
+        setIndex((i) => Math.min(i + 1, Math.max(items.length - 1, 0)));
+        if (uid) loadStats(uid);
+      } catch (e) {
+        alert("更新に失敗: " + e);
+      }
+    },
+    [current, items.length, uid]
+  );
 
   const next = () => {
     setReveal(false);
@@ -228,37 +254,58 @@ export default function ReviewMistakesPage() {
     setReveal(false);
     setIndex((i) => Math.max(i - 1, 0));
   };
-// ------- ダミー Mistake 作成（count 件） -------
+
+  // ------- ダミー Mistake 作成（count 件） -------
   async function addDummyMistakes(count = 1) {
     if (!uid) return;
     try {
       const textsQ = [
-        "3×7 は？", "英語で『りんご』は？", "47都道府県の数は？",
-        "水の化学式は？", "π(パイ)を小数第1位まで"
+        "3×7 は？",
+        "英語で『りんご』は？",
+        "47都道府県の数は？",
+        "水の化学式は？",
+        "π(パイ)を小数第1位まで",
       ];
       for (let i = 0; i < count; i++) {
         const pick = textsQ[Math.floor(Math.random() * textsQ.length)];
-        const wrong = Math.random() < 0.5;
-        const docData = {
+
+        // 統一スキーマで作成
+        const make = (overrides = {}) => ({
           userId: uid,
-          isReviewed: false,
-          reviewStatus: null,
-          createdAt: serverTimestamp(),
-          question: { text: pick },
-          answer:   { text: wrong ? "まちがい" : "？" },
-          correct:  { text:
-            pick === "3×7 は？" ? "21" :
-            pick === "英語で『りんご』は？" ? "apple" :
-            pick === "47都道府県の数は？" ? "47" :
-            pick === "水の化学式は？" ? "H2O" : "3.1" },
-          // フィルタに効くフィールド
+          question: pick,
+          correctAnswer:
+            pick === "3×7 は？"
+              ? "21"
+              : pick === "英語で『りんご』は？"
+              ? "apple"
+              : pick === "47都道府県の数は？"
+              ? "47"
+              : pick === "水の化学式は？"
+              ? "H2O"
+              : "3.1",
+          options:
+            pick === "3×7 は？"
+              ? ["18", "20", "21", "24"]
+              : pick === "英語で『りんご』は？"
+              ? ["orange", "apple", "pine", "grape"]
+              : pick === "47都道府県の数は？"
+              ? ["45", "46", "47", "48"]
+              : pick === "水の化学式は？"
+              ? ["HO", "H2O", "O2", "CO2"]
+              : ["3.0", "3.1", "3.2", "3.3"],
+          status: "open",
+          times: 1,
           subject: subject || "demo",
           unit: unit || "sample",
-          difficulty: ["easy","normal","hard"][Math.floor(Math.random()*3)],
-        };
-        await addDoc(collection(db, "mistakes"), docData);
+          difficulty: ["easy", "normal", "hard"][Math.floor(Math.random() * 3)],
+          createdAt: serverTimestamp(),
+          lastWrongAt: serverTimestamp(),
+          ...overrides,
+        });
+
+        await addDoc(collection(db, "mistakes"), make());
       }
-      // 集計を更新（LiveがOFFでもダッシュボードが更新されるように）
+      // 集計更新
       await loadStats(uid);
       alert(`${count} 件追加しました`);
     } catch (e) {
@@ -266,6 +313,7 @@ export default function ReviewMistakesPage() {
       alert("作成に失敗: " + e);
     }
   }
+
   // subject 変更時に unit をリセット（クロスフィルタの混乱を防止）
   useEffect(() => {
     setUnit("");
@@ -298,7 +346,7 @@ export default function ReviewMistakesPage() {
       </div>
 
       <div className="text-sm text-gray-600">
-        Got率: {stats.total ? Math.round((stats.got / stats.total)*100) : 0}%
+        Got率: {stats.total ? Math.round((stats.got / stats.total) * 100) : 0}%
       </div>
 
       {/* フィルタ群 */}
@@ -307,7 +355,9 @@ export default function ReviewMistakesPage() {
           <input
             type="checkbox"
             checked={showOnlyUnreviewed}
-            onChange={(e) => { setShowOnlyUnreviewed(e.target.checked); }}
+            onChange={(e) => {
+              setShowOnlyUnreviewed(e.target.checked);
+            }}
           />
           未復習のみ
         </label>
@@ -327,10 +377,12 @@ export default function ReviewMistakesPage() {
           <select
             className="border px-2 py-1 text-sm rounded"
             value={subject}
-            onChange={(e)=>setSubject(e.target.value)}
+            onChange={(e) => setSubject(e.target.value)}
           >
-            {subjectOptions.map((s, i)=>(
-              <option key={i} value={s}>{s || "すべて"}</option>
+            {subjectOptions.map((s, i) => (
+              <option key={i} value={s}>
+                {s || "すべて"}
+              </option>
             ))}
           </select>
         </div>
@@ -341,11 +393,13 @@ export default function ReviewMistakesPage() {
           <select
             className="border px-2 py-1 text-sm rounded"
             value={unit}
-            onChange={(e)=>setUnit(e.target.value)}
-            disabled={!subject && unitOptions.length===0}
+            onChange={(e) => setUnit(e.target.value)}
+            disabled={!subject && unitOptions.length === 0}
           >
-            {["", ...unitOptions.filter(u => u !== "")].map((u, i)=>(
-              <option key={i} value={u}>{u || "すべて"}</option>
+            {["", ...unitOptions.filter((u) => u !== "")].map((u, i) => (
+              <option key={i} value={u}>
+                {u || "すべて"}
+              </option>
             ))}
           </select>
         </div>
@@ -357,9 +411,14 @@ export default function ReviewMistakesPage() {
             value={pageSize}
             onChange={(e) => setPageSize(Number(e.target.value))}
           >
-            {[10,20,50].map(n => <option key={n} value={n}>{n}</option>)}
+            {[10, 20, 50].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
           </select>
         </div>
+
         {/* デモ投入（ログイン中の自分名義で追加） */}
         <div className="flex items-center gap-2">
           <button
@@ -391,7 +450,7 @@ export default function ReviewMistakesPage() {
           {/* ナビ */}
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              {index+1} / {items.length}
+              {index + 1} / {items.length}
               {cursor && (
                 <button
                   onClick={loadMore}
@@ -402,28 +461,47 @@ export default function ReviewMistakesPage() {
               )}
             </div>
             <div className="flex gap-2">
-              <button onClick={prev} disabled={index===0} className={`border px-3 py-1 text-sm rounded ${index===0 ? "opacity-50":"hover:bg-gray-50"}`}>← 前</button>
-              <button onClick={next} disabled={index===items.length-1} className={`border px-3 py-1 text-sm rounded ${index===items.length-1 ? "opacity-50":"hover:bg-gray-50"}`}>次 →</button>
+              <button
+                onClick={prev}
+                disabled={index === 0}
+                className={`border px-3 py-1 text-sm rounded ${
+                  index === 0 ? "opacity-50" : "hover:bg-gray-50"
+                }`}
+              >
+                ← 前
+              </button>
+              <button
+                onClick={next}
+                disabled={index === items.length - 1}
+                className={`border px-3 py-1 text-sm rounded ${
+                  index === items.length - 1 ? "opacity-50" : "hover:bg-gray-50"
+                }`}
+              >
+                次 →
+              </button>
             </div>
           </div>
 
           {/* カード */}
           <div className="border rounded-xl p-4 shadow-sm bg-white">
             <div className="text-xs text-gray-500 mb-2">
-              id: {current.id} ／ 作成: {fmt(current.createdAt)} ／ 状態: {current.isReviewed ? "済" : "未"}
+              id: {current.id} ／ 作成: {fmt(current.createdAt)} ／ 状態:{" "}
+              {isUnreviewed(current) ? "未" : "済"}
             </div>
             <div className="space-y-3">
               <div>
                 <div className="text-sm font-semibold mb-1">Question</div>
                 <div className="text-base whitespace-pre-wrap">
-                  {current.question?.text ?? current.q?.text ?? "-"}
+                  {/* 互換: question(string) or question.text */}
+                  {current.question ?? current.question?.text ?? current.q?.text ?? "-"}
                 </div>
               </div>
 
               <div>
                 <div className="text-sm font-semibold mb-1">Your Answer</div>
                 <div className="text-base whitespace-pre-wrap">
-                  {current.answer?.text ?? current.a?.text ?? "-"}
+                  {/* 互換: answer(string) or answer.text */}
+                  {current.answer ?? current.answer?.text ?? current.a?.text ?? "-"}
                 </div>
               </div>
 
@@ -438,7 +516,11 @@ export default function ReviewMistakesPage() {
                   </button>
                 ) : (
                   <div className="text-base whitespace-pre-wrap">
-                    {current.correct?.text ?? current.c?.text ?? "(no data)"}
+                    {/* 互換: correctAnswer(string) or correct.text */}
+                    {current.correctAnswer ??
+                      current.correct?.text ??
+                      current.c?.text ??
+                      "(no data)"}
                   </div>
                 )}
               </div>

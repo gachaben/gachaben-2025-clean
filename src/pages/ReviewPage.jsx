@@ -22,7 +22,7 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // ログイン状態を監視して uid を確実に取得
+  // ログイン状態監視
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUid(u?.uid || "");
@@ -52,7 +52,7 @@ export default function ReviewPage() {
     return null;
   };
 
-  // 読み込み
+  // mistakes 読み込み
   useEffect(() => {
     if (!uid) {
       setMistakes([]);
@@ -63,10 +63,9 @@ export default function ReviewPage() {
     setLoading(true);
     setError("");
 
-    // NOTE: このクエリは複合インデックスが必要な場合があります
     const q = query(
       collection(db, "mistakes"),
-      where("uid", "==", uid),
+      where("userId", "==", uid),
       orderBy("createdAt", "desc"),
       limit(100)
     );
@@ -87,48 +86,28 @@ export default function ReviewPage() {
     return () => unsub();
   }, [uid, db]);
 
-  if (loading) return <div style={{ padding: 16 }}>読み込み中...</div>;
-  if (error) return <div style={{ padding: 16 }}>エラー: {error}</div>;
+  if (loading) return <div className="p-4">読み込み中...</div>;
+  if (error) return <div className="p-4 text-red-500">エラー: {error}</div>;
 
+  // 空表示コンポーネント
   const Empty = () => (
-    <div
-      style={{
-        marginTop: 24,
-        border: "1px dashed #bbb",
-        padding: 24,
-        borderRadius: 12,
-        textAlign: "center",
-        background: "#fafafa",
-      }}
-    >
+    <div className="mt-6 border border-dashed border-gray-400 p-6 rounded-lg text-center bg-gray-50">
       {uid ? (
         <>
-          <div style={{ fontSize: 16, marginBottom: 8 }}>
-            間違えた問題はありません 🎉
-          </div>
-          <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 16 }}>
+          <div className="mb-2 text-lg">間違えた問題はありません 🎉</div>
+          <div className="text-sm opacity-80 mb-4">
             練習やチャレンジで新しい問題に挑戦してみよう
           </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+          <div className="flex gap-3 justify-center">
             <button
               onClick={() => navigate("/")}
-              style={{
-                padding: "8px 12px",
-                borderRadius: 8,
-                border: "1px solid #ddd",
-                background: "white",
-              }}
+              className="px-3 py-2 border rounded bg-white"
             >
               トップへ
             </button>
             <button
               onClick={() => navigate("/challenge")}
-              style={{
-                padding: "8px 12px",
-                borderRadius: 8,
-                border: "1px solid #0aa",
-                background: "#0ff2",
-              }}
+              className="px-3 py-2 border rounded bg-cyan-100"
             >
               チャレンジへ進む
             </button>
@@ -136,10 +115,8 @@ export default function ReviewPage() {
         </>
       ) : (
         <>
-          <div style={{ fontSize: 16, marginBottom: 8 }}>
-            ログインが必要です
-          </div>
-          <Link to="/login" className="underline text-blue-600">
+          <div className="mb-2 text-lg">ログインが必要です</div>
+          <Link to="/login" className="text-blue-600 underline">
             ログイン / 新規登録へ
           </Link>
         </>
@@ -148,57 +125,44 @@ export default function ReviewPage() {
   );
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1 className="text-xl font-bold mb-2">復習モード</h1>
+    <div className="p-4">
+      <h1 className="text-xl font-bold mb-3">復習モード</h1>
 
       {mistakes.length === 0 ? (
         <Empty />
       ) : (
-        <ul style={{ listStyle: "none", padding: 0, marginTop: 8 }}>
+        <ul className="space-y-3">
           {mistakes.map((m) => {
             const created = toDate(m.createdAt);
             return (
               <li
                 key={m.id}
-                style={{
-                  border: "1px solid #ddd",
-                  padding: 12,
-                  borderRadius: 8,
-                  marginBottom: 8,
-                  display: "grid",
-                  gap: 4,
-                }}
+                className="border p-3 rounded bg-white shadow-sm space-y-1"
               >
-                <div style={{ fontWeight: 600 }}>{m.text || "(no text)"}</div>
+                <div className="font-semibold">{m.text || "(no text)"}</div>
                 {"picked" in m && <div>あなたの選択: {String(m.picked)}</div>}
                 {"answer" in m && <div>正解: {String(m.answer)}</div>}
-                <div style={{ fontSize: 12, opacity: 0.7 }}>
+                <div className="text-xs opacity-70">
                   追加日時: {created ? fmt.format(created) : "-"}
                 </div>
-                <div>
-                  <button
-                    onClick={() =>
-                      navigate(`/review/play/${encodeURIComponent(m.id)}`)
-                    }
-                    style={{
-                      marginTop: 8,
-                      padding: "6px 10px",
-                      borderRadius: 6,
-                      border: "1px solid #09f",
-                      background: "#09f2",
-                    }}
-                  >
-                    この問題で復習する
-                  </button>
-                </div>
+                <button
+                  onClick={() =>
+                    navigate(`/review/play/${encodeURIComponent(m.id)}`)
+                  }
+                  className="mt-2 px-3 py-1 border rounded bg-blue-100"
+                >
+                  この問題で復習する
+                </button>
               </li>
             );
           })}
         </ul>
       )}
 
-      <div style={{ marginTop: 16 }}>
-        <Link to="/login">ログインへ / 変更へ</Link>
+      <div className="mt-6">
+        <Link to="/login" className="underline">
+          ログインへ / 変更へ
+        </Link>
       </div>
     </div>
   );

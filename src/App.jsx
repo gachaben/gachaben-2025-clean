@@ -4,11 +4,16 @@ import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
 
 // ページ
-import HomePage from "@/pages/HomePage.jsx";  // ← alias で OK
+import HomePage from "@/pages/HomePage.jsx";
 import Login from "@/pages/Login.jsx";
-import HistoryPage from "@/pages/HistoryPage.jsx";     // なければコメントアウト
-import ReviewPage from "@/pages/ReviewPage.jsx";       // なければコメントアウト
+import HistoryPage from "@/pages/HistoryPage.jsx";
+import ReviewPage from "@/pages/ReviewPage.jsx";
 import BattlePage from "@/pages/BattlePage.jsx";
+
+// ▼ 追加：復習系ページ
+import ReviewMistakesPage from "@/pages/ReviewMistakesPage.jsx";
+import ReviewSessionStart from "@/pages/ReviewSessionStart.jsx";
+import ReviewPlayPage from "@/pages/ReviewPlayPage.jsx";
 
 // ---- シンプルな認証ガード ----
 function useAuthState() {
@@ -37,6 +42,7 @@ function Nav() {
       <Link to="/login">Login</Link>
       <Link to="/history">History</Link>
       <Link to="/review">Review</Link>
+      <Link to="/review-mistakes">Review(Mistakes)</Link> {/* ← 追加 */}
       <Link to="/battle">Battle</Link>
     </nav>
   );
@@ -52,7 +58,33 @@ export default function App() {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/review" element={<ReviewPage />} />
 
-        {/* ここがポイント：/battle は常に定義し、表示は RequireAuth で制御 */}
+        {/* ▼ 追加：復習関連ルート（ログイン必須にしておく） */}
+        <Route
+          path="/review-mistakes"
+          element={
+            <RequireAuth>
+              <ReviewMistakesPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/review/session"
+          element={
+            <RequireAuth>
+              <ReviewSessionStart />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/review/play/:mid"
+          element={
+            <RequireAuth>
+              <ReviewPlayPage />
+            </RequireAuth>
+          }
+        />
+
+        {/* battle もログイン必須 */}
         <Route
           path="/battle"
           element={

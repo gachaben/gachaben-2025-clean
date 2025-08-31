@@ -1,17 +1,16 @@
 // src/pages/ReviewSessionStart.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  collection,
-  onSnapshot,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
-import { db, auth, ensureSignedIn } from "@/fbkit";
+import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 
 export default function ReviewSessionStart() {
   const navigate = useNavigate();
+  const auth = getFirebaseAuth();
+  const db = getFirestoreDb();
+
+  const [uid, setUid] = useState("");
   const [raw, setRaw] = useState([]);
   const [state, setState] = useState("loading");
   const [msg, setMsg] = useState("");
@@ -21,51 +20,49 @@ export default function ReviewSessionStart() {
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [limitN, setLimitN] = useState(10);
 
+  // 認証監視
   useEffect(() => {
-    let unsub = () => {};
-    (async () => {
-      try {
-        await ensureSignedIn();
-        const uid = auth.currentUser?.uid;
-        if (!uid) throw new Error("not signed in");
+    const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid || ""));
+    return () => unsub();
+  }, [auth]);
 
-        const qy = query(
-          collection(db, "mistakes"),
-          where("uid", "==", uid),
-          orderBy("createdAt", "desc")
-        );
-
-        unsub = onSnapshot(
-          qy,
-          (snap) => {
-            const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-            setRaw(arr);
-            setState("ready");
-          },
-          (err) => {
-            setMsg(err.message);
-            setState("error");
-          }
-        );
-      } catch (e) {
-        setMsg(e.message);
+  // データ購読
+  useEffect(() => {
+    if (!uid) {
+      setRaw([]);
+      setState("ready");
+      return;
+    }
+    setState("loading");
+    const qy = query(
+      collection(db, "mistakes"),
+      where("userId", "==", uid),            // uid → userId に統一
+      orderBy("createdAt", "desc")
+    );
+    const unsub = onSnapshot(
+      qy,
+      (snap) => {
+        setRaw(snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) })));
+        setState("ready");
+      },
+      (err) => {
+        setMsg(err?.message || "読み込みに失敗しました");
         setState("error");
       }
-    })();
+    );
     return () => unsub();
-  }, []);
+  }, [db, uid]);
 
-  const subjects = useMemo(() => {
-    const s = new Set(raw.map((x) => x.subject).filter(Boolean));
-    return Array.from(s);
-  }, [raw]);
+  const subjects = useMemo(
+    () => Array.from(new Set(raw.map((x) => x.subject).filter(Boolean))),
+    [raw]
+  );
 
   const units = useMemo(() => {
     const s = new Set(
-      raw
-        .filter((x) => !subject || x.subject === subject)
-        .map((x) => x.unit)
-        .filter(Boolean)
+      raw.filter((x) => !subject || x.subject === subject)
+         .map((x) => x.unit)
+         .filter(Boolean)
     );
     return Array.from(s);
   }, [raw, subject]);
@@ -74,31 +71,20 @@ export default function ReviewSessionStart() {
     let arr = [...raw];
     if (subject) arr = arr.filter((x) => x.subject === subject);
     if (unit) arr = arr.filter((x) => x.unit === unit);
-    if (onlyOpen) arr = arr.filter((x) => !x.done);
+    if (onlyOpen) {
+      // 未復習＝isReviewed=false（status があるなら open のみ）
+      arr = arr.filter((x) => !x.isReviewed && (x.status ? x.status === "open" : true));
+    }
     return arr;
   }, [raw, subject, unit, onlyOpen]);
 
   const startSession = () => {
-    if (items.length === 0) return alert("対象がありません。条件を調整してね、E);
-    const take = items.slice(0, Math.max(1, Number(limitN) || 1));
-    const queue = take.map((m) => ({
-      questionId: m.questionId,
-      subject: m.subject ?? null,
-      unit: m.unit ?? null,
-      text: m.text ?? "",
-      correct: m.correct ?? "",
-      options: m.options ?? null,
-      mistakeId: m.id,
-    }));
-    const first = queue[0];
-    navigate(`/review/play/${encodeURIComponent(first.questionId)}`, {
-      state: {
-        queue,
-        index: 0,
-        correctCount: 0,
-        startedAt: Date.now(),
-      },
-    });
+    if (items.length === 0) return alert("対象がありません。条件を調整してね。");
+    const n = Math.max(1, Math.min(Number(limitN) || 1, items.length));
+    const take = items.slice(0, n);
+    // ReviewPlayPage（state.ids を渡す流れに合わせる）
+    const ids = take.map((m) => m.id);
+    navigate(`/review/play/${ids[0]}`, { state: { ids } });
   };
 
   if (state === "loading") return <div className="p-4">読み込み中…</div>;
@@ -106,7 +92,7 @@ export default function ReviewSessionStart() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 space-y-3">
-      <h2 className="text-xl font-bold">連続復習スターチE/h2>
+      <h2 className="text-xl font-bold">連続復習スタート</h2>
 
       <div className="p-3 border rounded bg-white flex flex-wrap gap-2 items-center">
         <select
@@ -119,9 +105,7 @@ export default function ReviewSessionStart() {
         >
           <option value="">すべての科目</option>
           {subjects.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
+            <option key={s} value={s}>{s}</option>
           ))}
         </select>
 
@@ -131,11 +115,9 @@ export default function ReviewSessionStart() {
           className="px-3 py-2 border rounded"
           disabled={!subject}
         >
-          <option value="">すべての単�E</option>
+          <option value="">すべての単元</option>
           {units.map((u) => (
-            <option key={u} value={u}>
-              {u}
-            </option>
+            <option key={u} value={u}>{u}</option>
           ))}
         </select>
 
@@ -145,7 +127,7 @@ export default function ReviewSessionStart() {
             checked={onlyOpen}
             onChange={(e) => setOnlyOpen(e.target.checked)}
           />
-          未復習�Eみ
+          未復習のみ
         </label>
 
         <label className="flex items-center gap-2 text-sm">
@@ -160,16 +142,11 @@ export default function ReviewSessionStart() {
           />
         </label>
 
-        <div className="text-xs text-gray-500 ml-auto">
-          対象 {items.length} 件
-        </div>
+        <div className="text-xs text-gray-500 ml-auto">対象 {items.length} 件</div>
       </div>
 
-      <button
-        onClick={startSession}
-        className="px-4 py-2 rounded bg-emerald-600 text-white"
-      >
-        連続復習をはじめめE
+      <button onClick={startSession} className="px-4 py-2 rounded bg-emerald-600 text-white">
+        連続復習をはじめる
       </button>
     </div>
   );

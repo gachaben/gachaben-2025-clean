@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+// src/components/review/GroupView.jsx
+import React, { useEffect, useMemo, useState } from "react";
 
 /**
- * props 侁E
- * - tokens: [{ id:"t1", text:"カ", }, { id:"t2", text:"チE }, ...]  // 並べて答えを作る素杁E
- * - answer: ["カ","チE,"チE] もしく�E [["カ","チE,"チE], ["甲","武","圁E]] のような褁E��解OK
+ * props:
+ * - tokens: [{ id:"t1", text:"カ" }, ...]  // 並べて答えを作る素材
+ * - answer: ["カ","ブ","ト"] もしくは [["カ","ブ","ト"], ["甲","武","士"]] のような複数解OK
  * - onCorrect(): void
  * - onWrong(): void
- * - questionId: string | number  // 質問�E替検知用�E�リセチE��に使ぁE��E
+ * - questionId: string | number  // 質問の切替検知（リセット用）
  */
 export default function GroupView({
   tokens = [],
@@ -15,118 +16,108 @@ export default function GroupView({
   onWrong,
   questionId,
 }) {
-  // 選択保持は「IDの配�E」で管琁E��オブジェクトごと入れると再レンダーで参�Eがズレがち�E�E
-  const [activeIds, setActiveIds] = useState([]); // ["t1","t3",...]
+  // 安定したID配列で選択状態を管理
+  const [activeIds, setActiveIds] = useState([]); // ["t1", "t3", ...]
   const [submitting, setSubmitting] = useState(false); // 二重押し防止
 
-  // ✁E質問が刁E��替わったら選択リセチE��
+  // 質問が切り替わったら選択リセット
   useEffect(() => {
     setActiveIds([]);
     setSubmitting(false);
   }, [questionId]);
 
-  // id -> token の O(1) 参�E
+  // id -> token のマップ（O(1)参照）
   const tokenMap = useMemo(() => {
     const map = new Map();
     tokens.forEach((t) => map.set(String(t.id), t));
     return map;
   }, [tokens]);
 
-  // 画面表示用�E�「絁E��立て中」�E配�E�E�Eext�E�E
+  // 表示用（現在の並びの文字列配列）
   const activeTexts = useMemo(() => {
     return activeIds.map((id) => tokenMap.get(String(id))?.text ?? "");
   }, [activeIds, tokenMap]);
 
-  // ▼ よくあるバグ�E�E
-  // 1) setState で前回の state を読まずに上書ぁEↁE反映されなぁE消えめE
-  // 2) index めEkey/識別子に使ぁEↁE配�Eの並び替えでズレめE
-  // ⇁Eなので「functional setState + 安定ID」で実裁E
-
+  // クリックで選択/解除
   const toggleToken = (id) => {
     const safeId = String(id);
-    setActiveIds((prev) => {
-      // 既に選抁EↁE解除�E�頁E���E維持E��E
-      if (prev.includes(safeId)) {
-        return prev.filter((x) => x !== safeId);
-      }
-      // 未選抁EↁE末尾に追加�E�頁E��が答えになる！E
-      return [...prev, safeId];
-    });
+    setActiveIds((prev) =>
+      prev.includes(safeId) ? prev.filter((x) => x !== safeId) : [...prev, safeId]
+    );
   };
 
-  // 「確定」�Eタンの活性/非活性
+  // 「確定」ボタンの活性/非活性
   const canConfirm = activeIds.length > 0 && !submitting;
 
-  // 答えの比べ方�E�E
-  // - answer が一次允E��E"カ","チE,"チE]�E�ならそれと一致かを見る
-  // - 多解対応で二次允E��E["カ","チE,"チE],["甲","武","圁E]])もOKにする
+  // 正誤判定
   const isCorrect = () => {
     const now = activeTexts.join("");
-    const normalize = (x) => (Array.isArray(x) ? x.join("") : String(x));
+    const normalize = (x) => (Array.isArray(x) ? x.join("") : String(x ?? ""));
     if (Array.isArray(answer) && Array.isArray(answer[0])) {
-      // 二次允E��多解�E�E
+      // 複数許容解（2次元配列）
       return answer.some((arr) => normalize(arr) === now);
     }
-    // 一次允E
-    return normalize(answer) === now || normalize(answer) === activeTexts.join("");
+    // 単一解
+    return normalize(answer) === now;
   };
 
   const handleConfirm = async () => {
     if (!canConfirm) return;
-    setSubmitting(true); // 二重防止
-
+    setSubmitting(true);
     try {
-      if (isCorrect()) {
-        onCorrect?.();
-      } else {
-        onWrong?.();
-      }
+      isCorrect() ? onCorrect?.() : onWrong?.();
     } finally {
-      // 判定が終わったら次問題でリセチE��される前提、E
-      // 同一問題でめE��直しを許したぁE��合�Eここで activeIds=[] にする、E
+      // 同一問題でやり直しを許すならここで activeIds=[] してもOK
       setSubmitting(false);
     }
   };
 
   return (
     <div className="space-y-3">
-      {/* 絁E��立て中の表示�E�ここが消える＝state飛�Eを疑ぁE��所�E�E*/}
+      {/* 現在の並び */}
       <div className="p-2 rounded-md border">
-        <div className="text-sm opacity-70 mb-1">絁E��立て中</div>
+        <div className="text-sm opacity-70 mb-1">現在の並び</div>
         <div className="text-xl min-h-[2.5rem]">
-          {activeTexts.length ? activeTexts.join("") : <span className="opacity-50">�E�未選択！E/span>}
+          {activeTexts.length ? (
+            activeTexts.join("")
+          ) : (
+            <span className="opacity-50">（未選択）</span>
+          )}
         </div>
       </div>
 
-      {/* ト�Eクン一覧 */}
+      {/* トークン一覧（クリックで選択/解除） */}
       <div className="flex flex-wrap gap-2">
         {tokens.map((tok) => {
           const id = String(tok.id);
           const active = activeIds.includes(id);
           return (
             <button
-              key={id} // ↁEindex を絶対使わなぁE
+              key={id}
               type="button"
-              onClick={() => toggleToken(id)} // ↁEonClick だけ！EnMouseDown等�E不要E��E
-              className={`px-3 py-2 rounded-md border transition
-                ${active ? "ring-2 ring-offset-1" : ""}`}
+              onClick={() => toggleToken(id)}
+              className={`px-3 py-1 rounded-md border ${
+                active ? "bg-emerald-100" : "hover:bg-gray-50"
+              }`}
+              title={active ? "選択を外す" : "追加する"}
             >
-              {tok.text}
+              {String(tok.text ?? "")}
             </button>
           );
         })}
       </div>
 
-      {/* 確定�Eタン */}
+      {/* 確定ボタン */}
       <div>
         <button
           type="button"
           onClick={handleConfirm}
           disabled={!canConfirm}
-          className={`px-4 py-2 rounded-md border
-            ${canConfirm ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}`}
+          className={`px-4 py-2 rounded-md border ${
+            canConfirm ? "cursor-pointer" : "opacity-50 cursor-not-allowed"
+          }`}
         >
-          確宁E
+          確定
         </button>
       </div>
     </div>

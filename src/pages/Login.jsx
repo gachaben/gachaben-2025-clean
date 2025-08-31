@@ -25,73 +25,77 @@ export default function Login() {
     const emailNorm = email.trim().toLowerCase();
     const passRaw = password;
 
+    // 事前バリデーション
+    if (!emailNorm) {
+      setError("メールアドレスを入力してください");
+      return;
+    }
+    if (!passRaw || passRaw.length < 6) {
+      setError("パスワードは6文字以上にしてください");
+      return;
+    }
+
     try {
       let user;
 
-      // ① サインインを試す
+      // ① サインイン
       try {
-        const result = await signInWithEmailAndPassword(
-          auth,
-          emailNorm,
-          passRaw
-        );
+        const result = await signInWithEmailAndPassword(auth, emailNorm, passRaw);
         user = result.user;
       } catch (err) {
-        // ユーザーが存在しない場合 → 新規作成
-        if (err.code === "auth/user-not-found") {
-          const result = await createUserWithEmailAndPassword(
-            auth,
-            emailNorm,
-            passRaw
-          );
-          user = result.user;
+        console.error("AUTH ERROR:", err);
+        alert(`${err.code} / ${err.message}`);
+
+        // ② 未登録なら作成にフォールバック
+        if (err?.code === "auth/user-not-found") {
+          try {
+            const result = await createUserWithEmailAndPassword(auth, emailNorm, passRaw);
+            user = result.user;
+          } catch (ce) {
+            if (ce?.code === "auth/weak-password") {
+              setError("パスワードは6文字以上にしてください（weak-password）");
+            } else if (ce?.code === "auth/invalid-email") {
+              setError("メールアドレスの形式が正しくありません（invalid-email）");
+            } else if (ce?.code === "auth/email-already-in-use") {
+              setError("このメールは既に使われています（email-already-in-use）");
+            } else {
+              setError(`新規作成に失敗しました: ${ce?.code || ce?.message}`);
+            }
+            console.error("[Login create] error:", ce);
+            return;
+          }
+        } else if (err?.code === "auth/invalid-email") {
+          setError("メールアドレスの形式が正しくありません（invalid-email）");
+          return;
+        } else if (err?.code === "auth/wrong-password") {
+          setError("パスワードが違います（wrong-password）");
+          return;
         } else {
-          throw err;
+          setError(`サインイン失敗: ${err?.code || err?.message}`);
+          console.error("[Login signIn] error:", err);
+          return;
         }
       }
 
-      // ② users/{uid} を初期作成 or 補完
+      // ③ users/{uid} を初期作成 or 補完
       const ref = doc(db, "users", user.uid);
       let snap = await getDoc(ref);
-
       if (!snap.exists()) {
-        await setDoc(ref, {
-          email: emailNorm,
-          role: "child",
-          createdAt: serverTimestamp(),
-        });
+        await setDoc(ref, { email: emailNorm, role: "child", createdAt: serverTimestamp() });
         snap = await getDoc(ref);
-      } else {
-        const d = snap.data() || {};
-        if (!d.role) {
-          await setDoc(ref, { role: "child" }, { merge: true });
-          snap = await getDoc(ref);
-        }
+      } else if (!(snap.data() || {}).role) {
+        await setDoc(ref, { role: "child" }, { merge: true });
+        snap = await getDoc(ref);
       }
 
-      // ③ role を読んで遷移先を決める
+      // ④ role で遷移
       const data = snap.data() || {};
       const role = data?.role ?? "child";
-
-      if (role === "parent") {
-        navigate("/parent-home");
-      } else if (role === "admin") {
-        navigate("/admin-reward");
-      } else {
-        // child の場合
-        navigate(data?.parentId ? "/child-home" : "/link-family");
-      }
+      if (role === "parent") navigate("/parent-home");
+      else if (role === "admin") navigate("/admin-reward");
+      else navigate(data?.parentId ? "/child-home" : "/link-family");
     } catch (err) {
-      // エラーハンドリング
-      if (err?.code === "auth/wrong-password") {
-        setError("パスワードが違います");
-      } else if (err?.code === "auth/too-many-requests") {
-        setError("試行回数が多すぎます。しばらくしてからお試しください");
-      } else if (err?.code === "auth/invalid-email") {
-        setError("メールアドレスの形式が正しくありません");
-      } else {
-        setError("ログインに失敗しました: " + (err?.message ?? ""));
-      }
+      setError(`ログインに失敗しました: ${err?.code || err?.message}`);
       console.error("[Login] error:", err);
     }
   };
@@ -114,7 +118,7 @@ export default function Login() {
         />
         <input
           type="password"
-          placeholder="パスワード"
+          placeholder="パスワード（6文字以上）"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full mb-4 px-4 py-2 border rounded"

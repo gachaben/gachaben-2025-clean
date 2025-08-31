@@ -1,8 +1,6 @@
 // src/pages/ReviewPage.jsx
-import React, { useEffect, useState, useMemo } from "react";
-import { getFirebaseAuth } from "@/fbkit";
-import { useNavigate, Link } from "react-router-dom";
-import { getFirestoreDb } from "@/fbkit";
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   collection,
   query,
@@ -11,17 +9,28 @@ import {
   limit,
   onSnapshot,
 } from "firebase/firestore";
-
-const db = getFirestoreDb();
+import { onAuthStateChanged } from "firebase/auth";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 
 export default function ReviewPage() {
+  const navigate = useNavigate();
+  const auth = getFirebaseAuth();
+  const db = getFirestoreDb();
+
+  const [uid, setUid] = useState("");
   const [mistakes, setMistakes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
 
-  const uid = getAuth().currentUser?.uid || null;
+  // ログイン状態を監視して uid を確実に取得
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUid(u?.uid || "");
+    });
+    return () => unsub();
+  }, [auth]);
 
+  // 日付フォーマッタ
   const fmt = useMemo(() => {
     try {
       return new Intl.DateTimeFormat("ja-JP", {
@@ -36,18 +45,25 @@ export default function ReviewPage() {
     }
   }, []);
 
-  function toDate(val) {
+  const toDate = (val) => {
     if (val?.toDate) return val.toDate();
     if (typeof val === "number") return new Date(val);
     if (typeof val === "string") return new Date(val);
     return null;
-  }
+  };
 
+  // 読み込み
   useEffect(() => {
     if (!uid) {
+      setMistakes([]);
       setLoading(false);
       return;
     }
+
+    setLoading(true);
+    setError("");
+
+    // NOTE: このクエリは複合インデックスが必要な場合があります
     const q = query(
       collection(db, "mistakes"),
       where("uid", "==", uid),
@@ -67,8 +83,9 @@ export default function ReviewPage() {
         setLoading(false);
       }
     );
+
     return () => unsub();
-  }, [uid]);
+  }, [uid, db]);
 
   if (loading) return <div style={{ padding: 16 }}>読み込み中...</div>;
   if (error) return <div style={{ padding: 16 }}>エラー: {error}</div>;
@@ -84,24 +101,49 @@ export default function ReviewPage() {
         background: "#fafafa",
       }}
     >
-      <div style={{ fontSize: 16, marginBottom: 8 }}>間違えた問題はありません 🎉</div>
-      <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 16 }}>
-        練習やチャレンジで新しい問題に挑戦してみよう
-      </div>
-      <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-        <button
-          onClick={() => navigate("/")}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "white" }}
-        >
-          トップへ
-        </button>
-        <button
-          onClick={() => navigate("/challenge")}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #0aa", background: "#0ff2" }}
-        >
-          チャレンジへ進む
-        </button>
-      </div>
+      {uid ? (
+        <>
+          <div style={{ fontSize: 16, marginBottom: 8 }}>
+            間違えた問題はありません 🎉
+          </div>
+          <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 16 }}>
+            練習やチャレンジで新しい問題に挑戦してみよう
+          </div>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+            <button
+              onClick={() => navigate("/")}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #ddd",
+                background: "white",
+              }}
+            >
+              トップへ
+            </button>
+            <button
+              onClick={() => navigate("/challenge")}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #0aa",
+                background: "#0ff2",
+              }}
+            >
+              チャレンジへ進む
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: 16, marginBottom: 8 }}>
+            ログインが必要です
+          </div>
+          <Link to="/login" className="underline text-blue-600">
+            ログイン / 新規登録へ
+          </Link>
+        </>
+      )}
     </div>
   );
 
@@ -127,15 +169,17 @@ export default function ReviewPage() {
                   gap: 4,
                 }}
               >
-                <div style={{ fontWeight: 600 }}>{m.text}</div>
-                <div>あなたの選択: {m.picked}</div>
-                <div>正解: {m.answer}</div>
+                <div style={{ fontWeight: 600 }}>{m.text || "(no text)"}</div>
+                {"picked" in m && <div>あなたの選択: {String(m.picked)}</div>}
+                {"answer" in m && <div>正解: {String(m.answer)}</div>}
                 <div style={{ fontSize: 12, opacity: 0.7 }}>
                   追加日時: {created ? fmt.format(created) : "-"}
                 </div>
                 <div>
                   <button
-                    onClick={() => navigate(`/review/play/${encodeURIComponent(m.id)}`)}
+                    onClick={() =>
+                      navigate(`/review/play/${encodeURIComponent(m.id)}`)
+                    }
                     style={{
                       marginTop: 8,
                       padding: "6px 10px",
@@ -154,7 +198,7 @@ export default function ReviewPage() {
       )}
 
       <div style={{ marginTop: 16 }}>
-        <Link to="/login">ログインへ/変更へ</Link>
+        <Link to="/login">ログインへ / 変更へ</Link>
       </div>
     </div>
   );

@@ -1,19 +1,21 @@
 // components/LogoutButton.jsx
 import React from "react";
-import { getAuth, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
+import { getFirebaseAuth } from "@/fbkit"; // ← プロジェクトに合わせてパス調整
 
 const LogoutButton = () => {
   const handleLogout = async () => {
-    const auth = getAuth();
+    const auth = getFirebaseAuth();
     try {
       await signOut(auth);
-      alert("ログアウトしました�E�E);
+      alert("ログアウトしました");
     } catch (error) {
       console.error("ログアウトエラー:", error);
+      alert("ログアウトに失敗しました");
     }
   };
 
-  return <button onClick={handleLogout}>ログアウチE/button>;
+  return <button onClick={handleLogout}>ログアウト</button>;
 };
 
 export default LogoutButton;

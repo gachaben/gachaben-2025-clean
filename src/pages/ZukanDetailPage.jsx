@@ -1,70 +1,75 @@
+// src/pages/ZukanDetailPage.jsx
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc, collection, getDocs } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 import ItemCard from "../components/ItemCard";
 
-const ZukanDetailPage = () => {
-  const { seriesId } = useParams(); // 侁E "kontyu"
+export default function ZukanDetailPage() {
+  const { seriesId } = useParams(); // 例: "kontyu"
   const [allItems, setAllItems] = useState([]);
-  const [userItems, setUserItems] = useState([]);
-  const [pwMode, setPwMode] = useState(false); // ✁EPWモード�E替
+  const [userItemsMap, setUserItemsMap] = useState({});
+  const [pwMode, setPwMode] = useState(false); // PWモード切替
 
-  const auth = getAuth();
-  const db = getFirestore();
+  const auth = getFirebaseAuth();
+  const db = getFirestoreDb();
 
   useEffect(() => {
+    if (!seriesId) return;
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
+      if (!user) {
+        setUserItemsMap({});
+        return;
+      }
 
-      // ✁E所持アイチE��取征E
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      const userData = userDoc.data();
-      const owned = userData?.items || [];
-      setUserItems(owned);
+      // 所持アイテム（users/{uid}.items はオブジェクト想定）
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      const userData = userSnap.exists() ? userSnap.data() : {};
+      const ownedMap = userData?.items || {};
+      setUserItemsMap(ownedMap);
 
-      // ✁EアイチE��一覧取征E
-      const snapshot = await getDocs(collection(db, "items"));
-      const allData = snapshot.docs.map((doc) => doc.data());
-
-      // ✁EseriesIdでフィルター
-      const filteredItems = allData.filter((item) => item.seriesId === seriesId);
-      console.log("取得したアイチE���E�E, filteredItems);
-      setAllItems(filteredItems);
+      // 全アイテムを取得 → id を付与 → seriesId でフィルタ
+      const snap = await getDocs(collection(db, "items"));
+      const all = snap.docs.map((d) => ({ itemId: d.id, ...d.data() }));
+      const filtered = all.filter((it) => String(it.seriesId) === String(seriesId));
+      setAllItems(filtered);
     });
 
     return () => unsubscribe();
-  }, [seriesId]);
+  }, [auth, db, seriesId]);
 
   if (!seriesId) {
-    return <div>シリーズIDが指定されてぁE��せん、E/div>;
+    return <div style={{ padding: 16 }}>シリーズIDが指定されていません。</div>;
   }
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>kontyu シリーズ - {seriesId.toUpperCase()} ランクのアイチE��一覧</h2>
+    <div style={{ padding: 20 }}>
+      <h2 className="text-xl font-bold mb-4">{seriesId} シリーズのアイテム一覧</h2>
 
-      {/* ✁EPWモード�E替ボタン */}
+      {/* PWモード切替ボタン */}
       <button
         onClick={() => setPwMode((prev) => !prev)}
-        className="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded mt-4 mb-6"
+        className="bg-pink-600 hover:bg-pink-700 text-white font-bold py-2 px-4 rounded mt-1 mb-6"
       >
-        {pwMode ? "PWモード解除" : "PWを使ぁE}
+        {pwMode ? "PWモード解除" : "PWを使う"}
       </button>
 
-      <div style={{ display: "flex", flexWrap: "wrap" }}>
-        {allItems.map((item) => (
-          <ItemCard
-            key={item.itemId}
-            item={item}
-            owned={userItems.includes(item.itemId)}
-            highestZone={"神化"}
-            pwMode={pwMode} // ✁EItemCardに渡ぁE
-          />
-        ))}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+        {allItems.map((item) => {
+          const owned = !!userItemsMap[item.itemId]; // オブジェクトのキー存在で判定
+          return (
+            <ItemCard
+              key={item.itemId}
+              item={item}
+              owned={owned}
+              highestZone={"神化"}
+              pwMode={pwMode}
+            />
+          );
+        })}
       </div>
     </div>
   );
-};
-
-export default ZukanDetailPage;
+}

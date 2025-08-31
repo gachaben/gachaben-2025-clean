@@ -1,6 +1,6 @@
 // src/lib/saveBattleRecord.js
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getFirebaseAuth } from "@/fbkit";
 import { db } from "@/fbkit"; // ↁEdbだけをfbkitから
 
 /**

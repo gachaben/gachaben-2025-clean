@@ -1,11 +1,11 @@
 // src/lib/recordMistakes.js
-import { getAuth } from "firebase/auth";
+import { getFirebaseAuth } from "@/fbkit";
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/fbkit";
 
 
 export async function recordMistake(payload) {
-  const auth = getAuth();
+  const auth = getFirebaseAuth();
   const uid = auth.currentUser?.uid ?? "guest";
   const toStr = (v) => (v === undefined || v === null ? "" : String(v));
 
@@ -15,7 +15,7 @@ export async function recordMistake(payload) {
     question: toStr(payload.question),
     userAnswer: toStr(payload.userAnswer),
     correctAnswer: toStr(payload.correctAnswer),
-    type: payload.type ?? "mcq", // ↁE出題タイプを保存（既定�E mcq�E�E
+    type: payload.type ?? "mcq", // ↁE出題タイプを保存（既定�E mcq�E�E
     options: Array.isArray(payload.options) ? payload.options.map(toStr) : null,
     meta: payload.meta ?? null,
     status: "open",
@@ -24,7 +24,7 @@ export async function recordMistake(payload) {
     lastWrongAt: serverTimestamp(),
   };
 
-  // 既存�Eドキュメントがあれば更新
+  // 既存�Eドキュメントがあれば更新
   if (payload.questionId) {
     const qref = query(
       collection(db, "mistakes"),
@@ -38,7 +38,7 @@ export async function recordMistake(payload) {
         times: (snap.docs[0].data().times ?? 1) + 1,
         lastWrongAt: serverTimestamp(),
         status: "open",
-        type: base.type, // ↁE既存更新時も最新の type に揁E��めE
+        type: base.type, // ↁE既存更新時も最新の type に揁E��めE
         options: base.options ?? snap.docs[0].data().options ?? null,
         correctAnswer: base.correctAnswer,
         question: base.question,
@@ -47,7 +47,7 @@ export async function recordMistake(payload) {
     }
   }
 
-  // 新規作�E
+  // 新規作�E
   const ref = await addDoc(collection(db, "mistakes"), base);
   return ref.id;
 }

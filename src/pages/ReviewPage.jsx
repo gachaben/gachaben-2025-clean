@@ -1,6 +1,6 @@
 // src/pages/ReviewPage.jsx
 import React, { useEffect, useState, useMemo } from "react";
-import { getAuth } from "firebase/auth";
+import { getFirebaseAuth } from "@/fbkit";
 import { useNavigate, Link } from "react-router-dom";
 import { getFirestoreDb } from "@/fbkit";
 import {

@@ -1,16 +1,19 @@
+// src/pages/SpecialAnswerHistoryPage.jsx
 import { useEffect, useState } from "react";
-import { db } from "@/fbkit";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 
-const SpecialAnswerHistoryPage = () => {
+export default function SpecialAnswerHistoryPage() {
   const [logs, setLogs] = useState([]);
   const [questionsMap, setQuestionsMap] = useState({});
   const [loading, setLoading] = useState(true);
   const [showOnlyWrong, setShowOnlyWrong] = useState(false);
 
   useEffect(() => {
-    const auth = getAuth();
+    const auth = getFirebaseAuth();
+    const db = getFirestoreDb();
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         alert("ログインしてください");
@@ -19,84 +22,91 @@ const SpecialAnswerHistoryPage = () => {
       }
 
       try {
-        // 回答ログ取征E
+        // 回答ログ取得
         const logsQuery = query(
           collection(db, "specialAnswerLogs"),
           where("userId", "==", user.uid),
           orderBy("timestamp", "desc")
         );
         const logsSnap = await getDocs(logsQuery);
-        const logsData = logsSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const logsData = logsSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
         }));
         setLogs(logsData);
 
-        // 問題データ取征E
+        // 問題データ取得（全文検索で OK：件数が多くなれば最適化検討）
         const qSnap = await getDocs(collection(db, "specialQuestions"));
         const qMap = {};
-        qSnap.docs.forEach((doc) => {
-          qMap[doc.id] = doc.data();
+        qSnap.docs.forEach((d) => {
+          qMap[d.id] = d.data();
         });
         setQuestionsMap(qMap);
       } catch (error) {
-        console.error("チE�Eタ取得エラー�E�E, error);
-        alert("チE�Eタの取得に失敗しました");
+        console.error("データ取得エラー:", error);
+        alert("データの取得に失敗しました");
       } finally {
         setLoading(false);
       }
     });
 
-    return () => unsubscribe(); // クリーンアチE�E
+    return () => unsubscribe();
   }, []);
 
   if (loading) return <p>読み込み中...</p>;
 
-  const filteredLogs = showOnlyWrong
-    ? logs.filter((log) => log.isCorrect === false)
-    : logs;
+  const filteredLogs = showOnlyWrong ? logs.filter((log) => log.isCorrect === false) : logs;
 
   return (
-    <div>
+    <div style={{ padding: 16 }}>
       <h2>📘 回答履歴</h2>
-      <label>
+
+      <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
         <input
           type="checkbox"
           checked={showOnlyWrong}
           onChange={(e) => setShowOnlyWrong(e.target.checked)}
         />
-        ❁EまちがったもんだぁEだけを表示
+        <span>まちがったものだけを表示</span>
       </label>
 
       {filteredLogs.length === 0 ? (
-        <p>表示できる履歴がありません、E/p>
+        <p>表示できる履歴がありません。</p>
       ) : (
-        <ul>
+        <ul style={{ listStyle: "none", padding: 0 }}>
           {filteredLogs.map((log, i) => {
-            const question = questionsMap[log.questionId];
-            const isCorrect = log.isCorrect;
+            const q = questionsMap[log.questionId];
+            const isCorrect = !!log.isCorrect;
+
+            // 選択肢テキストの安全取得
+            let chosenText = "-";
+            if (q?.choices && Number.isInteger(log.selectedIndex) && q.choices[log.selectedIndex] != null) {
+              chosenText = q.choices[log.selectedIndex];
+            }
 
             return (
               <li
                 key={log.id}
                 style={{
                   border: "1px solid #ccc",
+                  borderRadius: 8,
                   margin: "10px 0",
                   padding: "10px",
-                  backgroundColor: isCorrect ? "#e0ffe0" : "#ffe0e0",
+                  backgroundColor: isCorrect ? "#e6ffed" : "#ffecec",
                 }}
               >
-                <p>
+                <p style={{ margin: "0 0 6px" }}>
                   <strong>Q{i + 1}.</strong>{" "}
-                  {question ? question.question : "�E�問題が削除されてぁE��す！E}
+                  {q ? q.question : "（この問題は削除された可能性があります）"}
                 </p>
-                <p>
-                  あなた�Eこたえ：{" "}
-                  <strong>{question ? question.choices[log.selectedIndex] : "�E�E}</strong>�E�E
-                  {isCorrect ? "⭕せぁE��ぁE : "❌まちがい"}�E�E
+
+                <p style={{ margin: "0 0 6px" }}>
+                  あなたの答え： <strong>{chosenText}</strong>{" "}
+                  {isCorrect ? "⭕ 正解" : "❌ 不正解"}
                 </p>
-                <p style={{ fontSize: "0.9em", color: "#555" }}>
-                  {log.timestamp?.toDate?.().toLocaleString() || "日付なぁE}
+
+                <p style={{ fontSize: "0.9em", color: "#555", margin: 0 }}>
+                  {log.timestamp?.toDate?.().toLocaleString() || "日付なし"}
                 </p>
               </li>
             );
@@ -105,6 +115,4 @@ const SpecialAnswerHistoryPage = () => {
       )}
     </div>
   );
-};
-
-export default SpecialAnswerHistoryPage;
+}

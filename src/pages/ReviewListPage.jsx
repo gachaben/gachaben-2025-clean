@@ -1,6 +1,7 @@
 // src/pages/ReviewListPage.jsx
 import React, { useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
+import { getFirebaseAuth } from "@/fbkit";
 import { db } from "@/fbkit";
 import {
   collection, getDocs, query, where, orderBy, limit
@@ -13,7 +14,7 @@ export default function ReviewListPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const auth = getAuth();
+    const auth = getFirebaseAuth();
     const unsub = onAuthStateChanged(auth, async (user) => {
       const uid = user?.uid ?? "guest";
       const qref = query(
@@ -51,7 +52,7 @@ export default function ReviewListPage() {
             onClick={() => navigate("/review/play", { state: { ids: items.map(i=>i.id) } })}
             style={{ marginTop: 12 }}
           >
-            こ�E一覧で復習を開姁E
+            こ�E一覧で復習を開姁E
           </button>
         </>
       )}

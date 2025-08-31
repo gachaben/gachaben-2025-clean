@@ -5,13 +5,10 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-
-// fbkit からはインスタンスを返す関数を使う
-import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
-const auth = getFirebaseAuth();
-const db = getFirestoreDb();
+// fbkit 経由でインスタンス取得
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -23,12 +20,15 @@ export default function Login() {
     e.preventDefault();
     setError("");
 
+    const auth = getFirebaseAuth();
+    const db = getFirestoreDb();
     const emailNorm = email.trim().toLowerCase();
     const passRaw = password;
 
     try {
       let user;
-      // 1) まずサインインを試す
+
+      // ① サインインを試す
       try {
         const result = await signInWithEmailAndPassword(
           auth,
@@ -50,7 +50,7 @@ export default function Login() {
         }
       }
 
-      // 2) users/{uid} を初期用意（初回作成・既存でも不足があれば補完）
+      // ② users/{uid} を初期作成 or 補完
       const ref = doc(db, "users", user.uid);
       let snap = await getDoc(ref);
 
@@ -69,24 +69,30 @@ export default function Login() {
         }
       }
 
-      // 3) 安全に role を取得して遷移
+      // ③ role を読んで遷移先を決める
       const data = snap.data() || {};
       const role = data?.role ?? "child";
 
-      if (role === "parent") navigate("/parent-home");
-      else if (role === "admin") navigate("/admin-reward");
-      else navigate(data?.parentId ? "/child-home" : "/link-family");
+      if (role === "parent") {
+        navigate("/parent-home");
+      } else if (role === "admin") {
+        navigate("/admin-reward");
+      } else {
+        // child の場合
+        navigate(data?.parentId ? "/child-home" : "/link-family");
+      }
     } catch (err) {
-      if (
-        err?.code === "auth/wrong-password" ||
-        err?.message === "INVALID_PASSWORD"
-      ) {
+      // エラーハンドリング
+      if (err?.code === "auth/wrong-password") {
         setError("パスワードが違います");
       } else if (err?.code === "auth/too-many-requests") {
         setError("試行回数が多すぎます。しばらくしてからお試しください");
+      } else if (err?.code === "auth/invalid-email") {
+        setError("メールアドレスの形式が正しくありません");
       } else {
-        setError("ログインに失敗しました: " + (err?.message ?? "")); 
+        setError("ログインに失敗しました: " + (err?.message ?? ""));
       }
+      console.error("[Login] error:", err);
     }
   };
 

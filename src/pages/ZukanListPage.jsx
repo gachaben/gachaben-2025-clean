@@ -1,12 +1,12 @@
 // src/pages/ZukanListPage.jsx
 import React, { useEffect, useState, useMemo } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { collection, getDoc, doc, getDocs, updateDoc } from "firebase/firestore";
-import { db } from "@/fbkit";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, getDoc, doc, getDocs, setDoc } from "firebase/firestore";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 import ItemCard from "../components/ItemCard";
 import { itemNames } from "../data/itemNames";
 
-// id から rank / seriesId / stage を推定（命名規則: 2508_A_005_kabuto_stage1�E�E
+// id から rank / seriesId / stage を推定（命名規則: 2508_A_005_kabuto_stage1）
 const parseId = (id) => {
   const m = String(id).match(/^(\d{4})_([SAB])_.*_stage(\d+)$/i);
   return {
@@ -18,13 +18,16 @@ const parseId = (id) => {
 
 export default function ZukanListPage() {
   const [userId, setUserId] = useState(null);
-  const [ownedIds, setOwnedIds] = useState([]);       // users/{uid}.items の配�E
-  const [fsItems, setFsItems] = useState([]);         // Firestore items 全件
+  const [ownedIds, setOwnedIds] = useState([]); // users/{uid}.items の配列
+  const [fsItems, setFsItems] = useState([]);   // Firestore items 全件
   const [selected, setSelected] = useState(null);
 
   // 1) ログインと Firestore 読み込み
   useEffect(() => {
-    const unsub = onAuthStateChanged(getAuth(), async (user) => {
+    const auth = getFirebaseAuth();
+    const db = getFirestoreDb();
+
+    const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) return;
       setUserId(user.uid);
 
@@ -33,61 +36,66 @@ export default function ZukanListPage() {
       const arr = Array.isArray(ud.data()?.items) ? ud.data().items : [];
       setOwnedIds(arr);
 
-      // items 全件�E�EW/BPT/CPT 等�EスチE�Eタス保持側�E�E
+      // items 全件（PW/BPT/CPT 等のステータス保持側）
       const snap = await getDocs(collection(db, "items"));
       setFsItems(snap.docs.map((d) => ({ ...d.data(), itemId: d.id })));
     });
+
     return () => unsub();
   }, []);
 
-  // 2) 図鑑用の全レコードを作る�E�EtemNames を起点に、所持E未所持と FS スチE�Eタスを合体！E
+  // 2) 図鑑用の全レコードを作る（itemNames を起点に、所持/未所持と FS ステータスを合体）
   const catalog = useMemo(() => {
     return Object.keys(itemNames).map((id) => {
       const label = itemNames[id];
       const meta = parseId(id);
-      // Firestore に同じ itemId があれ�E数値系を反映�E�なければ 0�E�E
+      // Firestore に同じ itemId があれば数値系を反映、なければ 0
       const fs = fsItems.find((x) => x.itemId === id) || {};
       return {
         itemId: id,
         name: label,
-        imageName: id,                 // 画像ファイル名＝id ベ�Eス�E�Epng は ItemCard 側で付与！E
+        imageName: id, // 画像ファイル名＝id（拡張子は ItemCard 側で付与）
         seriesId: meta.seriesId,
         stage: meta.stage,
         rank: meta.rank,
         pw: Number(fs.pw) || 0,
         cpt: Number(fs.cpt) || 0,
         bpt: Number(fs.bpt) || 0,
-        owned: ownedIds.includes(id),  // ↁEここでカラー/グレー刁E��に使ぁE
+        owned: ownedIds.includes(id), // ここでカラー/グレー切替に使用
       };
     });
   }, [ownedIds, fsItems]);
 
-  // 3) PW注入�E�例！E
+  // 3) PW注入（例）
   const handlePowerUp = async (amount) => {
     if (!selected) return;
+    const db = getFirestoreDb();
     const ref = doc(db, "items", selected.itemId);
     const newPw = (Number(selected.pw) || 0) + Number(amount);
-    await updateDoc(ref, { pw: newPw });
+
+    // 未作成ドキュメントでもOKにするため setDoc + merge
+    await setDoc(ref, { pw: newPw }, { merge: true });
+
     // 画面更新
     setFsItems((prev) =>
       prev.map((x) => (x.itemId === selected.itemId ? { ...x, pw: newPw } : x))
     );
-    setSelected(null);
+    setSelected((s) => (s ? { ...s, pw: newPw } : s));
   };
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">図鑁E/h1>
+      <h1 className="text-xl font-bold mb-4">図鑑</h1>
 
-      {/* 一覧�E�EtemCard をそのまま使ぁE��E*/}
+      {/* 一覧：ItemCard をそのまま利用 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {catalog.map((it) => (
-          <div key={it.itemId} onClick={() => setSelected(it)} className="cursor-pointer">
-            <ItemCard
-              item={it}
-              owned={it.owned}   // ↁEこれでカラー�E�グレー自動�E替
-              pwMode={false}
-            />
+          <div
+            key={it.itemId}
+            onClick={() => setSelected(it)}
+            className="cursor-pointer"
+          >
+            <ItemCard item={it} owned={it.owned} pwMode={false} />
           </div>
         ))}
       </div>
@@ -96,27 +104,49 @@ export default function ZukanListPage() {
       {selected && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-80 text-center relative shadow-xl">
-            <button className="absolute top-2 right-2 text-gray-500" onClick={() => setSelected(null)}>✁E/button>
+            <button
+              className="absolute top-2 right-2 text-gray-500"
+              onClick={() => setSelected(null)}
+              aria-label="閉じる"
+            >
+              ✕
+            </button>
 
             <h2 className="text-lg font-bold mb-2">{selected.name}</h2>
 
-            {/* 大きめプレビューにめEItemCard を�E利用してもいぁE��、画像だけ見せてもOK */}
+            {/* 大きめプレビュー：ItemCard を再利用 */}
             <div className="mx-auto scale-110 origin-center">
               <ItemCard item={selected} owned={selected.owned} pwMode={false} />
             </div>
 
             <div className="mt-3 text-sm">
               <div>PW: {selected.pw}</div>
-              <div>CPT: {selected.cpt} / BPT: {selected.bpt}</div>
+              <div>
+                CPT: {selected.cpt} / BPT: {selected.bpt}
+              </div>
             </div>
 
             <div className="mt-3 flex gap-2 justify-center">
-              <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-                      onClick={() => handlePowerUp(100)}>+100 注ぁE/button>
-              <button className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
-                      onClick={() => {/* バトルへ遷移など */}}>バトルする</button>
-              <button className="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded"
-                      onClick={() => setSelected(null)}>閉じめE/button>
+              <button
+                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                onClick={() => handlePowerUp(100)}
+              >
+                +100 注入
+              </button>
+              <button
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+                onClick={() => {
+                  /* バトルへ遷移など */
+                }}
+              >
+                バトルする
+              </button>
+              <button
+                className="bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded"
+                onClick={() => setSelected(null)}
+              >
+                閉じる
+              </button>
             </div>
           </div>
         </div>

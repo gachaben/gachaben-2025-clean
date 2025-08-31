@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-  getFirestore,
   collection,
   query,
   where,
@@ -10,14 +9,19 @@ import {
   doc,
   getDoc,
   updateDoc,
+  serverTimestamp,
 } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 import ItemCard from "../components/ItemCard";
 import GachaVideoModal from "../components/GachaVideoModal";
 
-const ZukanInsectDetailPage = () => {
+export default function ZukanInsectDetailPage() {
   const { seriesId, rank, name: encodedName } = useParams();
   const name = decodeURIComponent(encodedName || "");
+
+  const auth = getFirebaseAuth();
+  const db = getFirestoreDb();
+
   const [items, setItems] = useState([]);
   const [userItems, setUserItems] = useState({});
   const [oshiId, setOshiId] = useState(null);
@@ -25,15 +29,12 @@ const ZukanInsectDetailPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const auth = getAuth();
       const user = auth.currentUser;
       if (!user) return;
 
-      const db = getFirestore();
-
       // ユーザーデータ
-      const userDoc = await getDoc(doc(db, "users", user.uid));
-      const userData = userDoc.exists() ? userDoc.data() : {};
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      const userData = userSnap.exists() ? userSnap.data() : {};
       const owned = userData.items || {};
       setUserItems(owned);
       setOshiId(userData.oshiCharacterId || null);
@@ -57,14 +58,12 @@ const ZukanInsectDetailPage = () => {
     };
 
     fetchData();
-  }, [seriesId, rank, name]);
+  }, [auth, db, seriesId, rank, name]);
 
   const handleGacha = async () => {
-    const auth = getAuth();
     const user = auth.currentUser;
     if (!user) return;
 
-    const db = getFirestore();
     const userRef = doc(db, "users", user.uid);
 
     const premiumItem = items.find((item) => item.stage === 99);
@@ -79,20 +78,22 @@ const ZukanInsectDetailPage = () => {
       return;
     }
 
+    // 確率は仮（50%）
     const isWin = Math.random() < 0.5;
 
     if (isWin) {
       try {
         await updateDoc(userRef, {
+          // ネスト更新（items.<itemId>）
           [`items.${premiumItem.itemId}`]: {
-            acquiredAt: new Date(),
+            acquiredAt: serverTimestamp(),
           },
         });
 
         alert("🎉 当たり！プレミアゲット！");
         setUserItems((prev) => ({
           ...prev,
-          [premiumItem.itemId]: {},
+          [premiumItem.itemId]: { acquiredAt: new Date() }, // 表示用の暫定
         }));
       } catch (e) {
         console.error("プレミア付与に失敗:", e);
@@ -147,7 +148,8 @@ const ZukanInsectDetailPage = () => {
                     「やった！3体コンプリートだよ！」
                   </span>
                   <br />
-                  このチャンスを見送らないでね。<br />
+                  このチャンスを見送らないでね。
+                  <br />
                   動画を見たら50%の確率でプレミアがもらえるかも…🏆
                 </p>
                 <button
@@ -175,6 +177,4 @@ const ZukanInsectDetailPage = () => {
       )}
     </div>
   );
-};
-
-export default ZukanInsectDetailPage;
+}

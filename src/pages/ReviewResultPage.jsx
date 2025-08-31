@@ -5,7 +5,7 @@ import { db } from "@/fbkit";
 import {
   doc, getDoc, updateDoc, writeBatch, collection, addDoc, serverTimestamp
 } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getFirebaseAuth } from "@/fbkit";
 
 export default function ReviewPlayPage() {
   const { state } = useLocation();
@@ -42,8 +42,8 @@ export default function ReviewPlayPage() {
   }
 
   async function finish() {
-    // ① セチE��ョン保孁E
-    const auth = getAuth();
+    // ① セチE��ョン保孁E
+    const auth = getFirebaseAuth();
     const uid = auth.currentUser?.uid ?? "guest";
     await addDoc(collection(db, "reviews"), {
       userId: uid,
@@ -53,7 +53,7 @@ export default function ReviewPlayPage() {
       createdAt: serverTimestamp(),
     });
 
-    // ② OK だったものは閉じる！Etatus=reviewed�E�E
+    // ② OK だったものは閉じる！Etatus=reviewed�E�E
     const batch = writeBatch(db);
     result.filter(r => r.ok).forEach(r => {
       batch.update(doc(db, "mistakes", r.id), {
@@ -73,11 +73,11 @@ export default function ReviewPlayPage() {
       <div style={{ margin: "16px 0", fontSize: 18 }}>
         <div>Q: {current.question}</div>
         <div style={{ color: "#888", marginTop: 8 }}>
-          正解: {current.correctAnswer}�E��E刁E�E解筁E {current.userAnswer}�E�E
+          正解: {current.correctAnswer}�E��E刁E�E解筁E {current.userAnswer}�E�E
         </div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => answer(true)}>琁E��できた 👍</button>
+        <button onClick={() => answer(true)}>琁E��できた 👍</button>
         <button onClick={() => answer(false)}>まだ不宁E👀</button>
       </div>
     </div>

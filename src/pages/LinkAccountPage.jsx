@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { getAuth, onAuthStateChanged, EmailAuthProvider, linkWithCredential } from "firebase/auth";
+// src/pages/LinkAccountPage.jsx
+import React, { useEffect, useState } from "react";
+import { onAuthStateChanged, EmailAuthProvider, linkWithCredential } from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
+import { getFirebaseAuth } from "@/fbkit";
 
 export default function LinkAccountPage() {
   const [email, setEmail] = useState("");
@@ -12,28 +14,32 @@ export default function LinkAccountPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const auth = getAuth();
-    return onAuthStateChanged(auth, (u) => {
+    const auth = getFirebaseAuth();
+    const unsub = onAuthStateChanged(auth, (u) => {
       setUid(u?.uid || "");
       setIsAnon(!!u?.isAnonymous);
     });
+    return () => unsub();
   }, []);
 
   const handleLink = async (e) => {
     e.preventDefault();
+    if (busy) return;
+
     setMsg("");
-    const auth = getAuth();
+    const auth = getFirebaseAuth();
     const user = auth.currentUser;
+
     if (!user) {
-      setMsg("未ログインです。まず匿名ログインしてください、E);
+      setMsg("未ログインです。まず匿名ログインしてください。");
       return;
     }
     if (!user.isAnonymous) {
-      setMsg("すでに匿名ユーザーではありません�E�リンク不要E��、E);
+      setMsg("すでに匿名ユーザーではありません。リンクは不要です。");
       return;
     }
     if (!email || !pw) {
-      setMsg("メールとパスワードを入力してください、E);
+      setMsg("メールとパスワードを入力してください。");
       return;
     }
 
@@ -41,22 +47,21 @@ export default function LinkAccountPage() {
       setBusy(true);
       const cred = EmailAuthProvider.credential(email, pw);
       const res = await linkWithCredential(user, cred);
-      setMsg(`リンク完亁E��EUIDは継綁E ${res.user.uid}`);
-      // そ�Eまま戻るなら！E
+      setMsg(`リンク完了！ UIDは継続: ${res.user.uid}`);
+      // 必要なら遷移
       // navigate("/review");
     } catch (e) {
-      // 代表皁E��エラーだけ�EかりめE��ぁE
       const code = e?.code || "";
       if (code === "auth/email-already-in-use") {
-        setMsg("こ�Eメールは既存アカウントで使われてぁE��す。データ移行（�Eージ�E�が忁E��です、E);
+        setMsg("このメールは既存アカウントで使われています。データ移行（マージ）が必要です。");
       } else if (code === "auth/invalid-email") {
-        setMsg("メールアドレスの形式が正しくありません、E);
+        setMsg("メールアドレスの形式が正しくありません。");
       } else if (code === "auth/weak-password") {
-        setMsg("パスワードが弱すぎます！E斁E��以上に�E�、E);
+        setMsg("パスワードが弱すぎます。6文字以上にしてください。");
       } else if (code === "auth/requires-recent-login") {
-        setMsg("安�Eのため再ログインが忁E��です。いったんサインインし直してください、E);
+        setMsg("安全のため再ログインが必要です。いったんサインインし直してください。");
       } else {
-        setMsg(`リンク失敁E ${code || e.message}`);
+        setMsg(`リンク失敗: ${code || e.message}`);
       }
       console.error("[link] error:", e);
     } finally {
@@ -69,8 +74,8 @@ export default function LinkAccountPage() {
       <h1 className="text-xl font-bold mb-2">匿名アカウントをメールにリンク</h1>
 
       <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 12 }}>
-        現在のUID: <code>{uid || " E}</code>{" "}
-        {uid ? (isAnon ? "(匿吁E" : "(匿名ではなぁE") : ""}
+        現在のUID: <code>{uid || "（未ログイン）"}</code>{" "}
+        {uid ? (isAnon ? "(匿名)" : "(匿名ではない)") : ""}
       </div>
 
       <form onSubmit={handleLink} style={{ display: "grid", gap: 8 }}>
@@ -84,7 +89,7 @@ export default function LinkAccountPage() {
         />
         <input
           type="password"
-          placeholder="パスワード！E斁E��以上！E
+          placeholder="パスワード（6文字以上）"
           value={pw}
           onChange={(e) => setPw(e.target.value)}
           style={{ padding: 8, border: "1px solid #ccc", borderRadius: 6 }}
@@ -101,7 +106,7 @@ export default function LinkAccountPage() {
             cursor: busy ? "not-allowed" : "pointer",
           }}
         >
-          {busy ? "リンク中…" : "匿名�Eメールにリンクする"}
+          {busy ? "リンク中…" : "匿名→メールにリンクする"}
         </button>
       </form>
 
@@ -112,7 +117,7 @@ export default function LinkAccountPage() {
       )}
 
       <div style={{ marginTop: 16 }}>
-        <Link to="/review">ↁE復習一覧へ戻めE/Link>
+        <Link to="/review">↩ 復習一覧へ戻る</Link>
       </div>
     </div>
   );

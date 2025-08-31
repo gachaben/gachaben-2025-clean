@@ -25,5 +25,3 @@ export {
   getFirebaseAuth,
   getFirebaseStorage,
 } from "./app";
-
-export * from "./config"; // firebaseConfig, isLocalhost などを使う場合のみ

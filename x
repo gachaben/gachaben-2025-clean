@@ -8,7 +8,7 @@
 [32m+[m[32m// src/pages/ReviewPlayPage.jsx[m
 [32m+[m[32mimport React, { useEffect, useMemo, useState } from "react";[m
 [32m+[m[32mimport { useNavigate, useParams } from "react-router-dom";[m
- import { getAuth } from "firebase/auth";[m
+ import { getFirebaseAuth } from "@/fbkit";[m
 [31m-import { db } from "@/fbkit";[m
 [31m-import {[m
 [31m-  collection, doc, getDoc,[m

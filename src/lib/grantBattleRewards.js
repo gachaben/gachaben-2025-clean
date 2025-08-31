@@ -3,10 +3,10 @@ import { db } from "@/fbkit";
 import {
   doc, runTransaction, increment, getDoc, serverTimestamp,
 } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { getFirebaseAuth } from "@/fbkit";
 
 export async function grantBattleRewards(battleId) {
-  const auth = getAuth();
+  const auth = getFirebaseAuth();
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error("Not signed in");
 
@@ -31,7 +31,7 @@ export async function grantBattleRewards(battleId) {
     const bonus = battle.winner === "you" ? 10 : 0;
     const bptEarned = base + bonus;
 
-    // users/{uid}.bpt をインクリメント（無ければ0から�E�E
+    // users/{uid}.bpt をインクリメント（無ければ0から�E�E
     tx.set(
       userRef,
       {

@@ -1,5 +1,5 @@
+// src/pages/RetryWrongQuestionsPage.jsx
 import { useEffect, useState } from "react";
-import { db } from "@/fbkit";
 import {
   collection,
   getDocs,
@@ -11,14 +11,16 @@ import {
   doc,
   getDoc,
 } from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 
-const RetryWrongQuestionsPage = () => {
+export default function RetryWrongQuestionsPage() {
   const [wrongQuestions, setWrongQuestions] = useState([]);
   const [selectedIndexes, setSelectedIndexes] = useState({});
-  const auth = getAuth();
+  const auth = getFirebaseAuth();
+  const db = getFirestoreDb();
 
-  // 間違った問題を取征E
+  // 間違った問題を取得
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
@@ -27,7 +29,7 @@ const RetryWrongQuestionsPage = () => {
       }
 
       try {
-        // 間違ぁE��グを取征E
+        // 間違いログを取得（userId & isCorrect=false をタイムスタンプ降順）
         const logsQuery = query(
           collection(db, "specialAnswerLogs"),
           where("userId", "==", user.uid),
@@ -35,9 +37,9 @@ const RetryWrongQuestionsPage = () => {
           orderBy("timestamp", "desc")
         );
         const logsSnap = await getDocs(logsQuery);
-        const wrongLogs = logsSnap.docs.map((doc) => doc.data());
+        const wrongLogs = logsSnap.docs.map((d) => d.data());
 
-        // questionIdをユニ�Eクにして再取征E
+        // questionId をユニーク化して再取得
         const questionIds = [...new Set(wrongLogs.map((log) => log.questionId))];
 
         const questions = [];
@@ -51,11 +53,12 @@ const RetryWrongQuestionsPage = () => {
         setWrongQuestions(questions);
       } catch (error) {
         console.error("読み込みエラー:", error);
+        alert("データの読み込みに失敗しました");
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [auth, db]);
 
   const handleSelect = (questionId, choiceIndex) => {
     setSelectedIndexes((prev) => ({
@@ -66,6 +69,11 @@ const RetryWrongQuestionsPage = () => {
 
   const handleSubmit = async (question) => {
     const user = auth.currentUser;
+    if (!user) {
+      alert("ログインしてください");
+      return;
+    }
+
     const selected = selectedIndexes[question.id];
     if (selected === undefined) {
       alert("こたえをえらんでください");
@@ -82,18 +90,19 @@ const RetryWrongQuestionsPage = () => {
         isCorrect,
         timestamp: serverTimestamp(),
       });
-      alert("✁E回答を保存しました�E�E);
+      alert("回答を保存しました");
     } catch (error) {
       console.error("保存エラー:", error);
-      alert("❁E回答�E保存に失敗しました");
+      alert("回答の保存に失敗しました");
     }
   };
 
   return (
     <div>
-      <h2>🔁 まちがったもんだぁE�� もうぁE��ど チャレンジ�E�E/h2>
+      <h2>🔁 まちがった問題に もういちど チャレンジ！</h2>
+
       {wrongQuestions.length === 0 ? (
-        <p>まちがったもんだぁE�E ありません、E/p>
+        <p>まちがった問題は ありません。</p>
       ) : (
         wrongQuestions.map((q, index) => (
           <div
@@ -107,24 +116,35 @@ const RetryWrongQuestionsPage = () => {
             <p>
               <strong>Q{index + 1}.</strong> {q.question}
             </p>
-            {q.choices.map((choice, i) => (
+
+            {q.choices?.map((choice, i) => (
               <button
                 key={i}
                 style={{
                   marginRight: "5px",
                   marginBottom: "5px",
-                  backgroundColor:
-                    selectedIndexes[q.id] === i ? "#f99" : "#eee",
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                  border: "1px solid #bbb",
+                  backgroundColor: selectedIndexes[q.id] === i ? "#f99" : "#eee",
                 }}
                 onClick={() => handleSelect(q.id, i)}
               >
                 {choice}
               </button>
             ))}
+
             <br />
+
             <button
               onClick={() => handleSubmit(q)}
-              style={{ marginTop: "5px" }}
+              style={{
+                marginTop: "8px",
+                padding: "8px 12px",
+                borderRadius: 8,
+                border: "1px solid #09f",
+                background: "#09f2",
+              }}
             >
               回答を送信
             </button>
@@ -133,6 +153,4 @@ const RetryWrongQuestionsPage = () => {
       )}
     </div>
   );
-};
-
-export default RetryWrongQuestionsPage;
+}

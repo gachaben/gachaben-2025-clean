@@ -1,45 +1,46 @@
-import { useEffect, useState } from "react";
-import { db } from "@/fbkit"; // ↁEあなた�Efirebase設定に合わせてパス調整
-import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+// src/pages/SpecialQuestionsPage.jsx
+import React, { useEffect, useState } from "react";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 
-const SpecialQuestionsPage = () => {
+export default function SpecialQuestionsPage() {
   const [questions, setQuestions] = useState([]);
   const [selectedIndexes, setSelectedIndexes] = useState({});
-  const auth = getAuth();
 
-  // Firestoreから特訓問題を取征E
+  // fbkit からインスタンス取得（直 getAuth/getFirestore は使わない）
+  const auth = getFirebaseAuth();
+  const db = getFirestoreDb();
+
+  // Firestore から特訓問題を取得
   useEffect(() => {
-    const fetchQuestions = async () => {
-      const snapshot = await getDocs(collection(db, "specialQuestions"));
-      const fetched = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    (async () => {
+      const snap = await getDocs(collection(db, "specialQuestions"));
+      const fetched = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setQuestions(fetched);
-    };
-    fetchQuestions();
-  }, []);
+    })();
+  }, [db]);
 
-  // 選択肢をクリチE��したとき�E処琁E��問題ごとに管琁E��E
+  // 選択肢クリック
   const handleSelect = (questionId, choiceIndex) => {
-    setSelectedIndexes((prev) => ({
-      ...prev,
-      [questionId]: choiceIndex,
-    }));
+    setSelectedIndexes((prev) => ({ ...prev, [questionId]: choiceIndex }));
   };
 
-  // 回答ログをFirestoreに保孁E
+  // 回答ログを Firestore に保存
   const handleSubmit = async (question) => {
     const user = auth.currentUser;
     if (!user) {
-      alert("ログインが忁E��でぁE);
+      alert("ログインが必要です。先にログインしてください。");
       return;
     }
 
     const selected = selectedIndexes[question.id];
     if (selected === undefined) {
-      alert("選択してください");
+      alert("選択肢を選んでください。");
       return;
     }
 
@@ -53,42 +54,56 @@ const SpecialQuestionsPage = () => {
         isCorrect,
         timestamp: serverTimestamp(),
       });
-      alert("✁E回答を保存しました�E�E);
-    } catch (error) {
-      console.error("回答�E保存に失敗しました", error);
-      alert("❁E回答�E保存に失敗しました");
+      alert("✅ 回答を保存しました。");
+    } catch (err) {
+      console.error("回答の保存に失敗:", err);
+      alert("❌ 回答の保存に失敗しました。");
     }
   };
 
   return (
-    <div>
-      <h2>🐾 特訓問題一覧</h2>
-      {questions.map((q, index) => (
-        <div key={q.id} style={{ border: "1px solid #ccc", padding: "10px", margin: "10px" }}>
-          <p>
-            <strong>Q{index + 1}.</strong> {q.question}
-          </p>
-          {q.choices.map((choice, i) => (
-            <button
-              key={i}
-              style={{
-                marginRight: "5px",
-                marginBottom: "5px",
-                backgroundColor: selectedIndexes[q.id] === i ? "#f99" : "#eee",
-              }}
-              onClick={() => handleSelect(q.id, i)}
-            >
-              {choice}
-            </button>
-          ))}
-          <br />
-          <button onClick={() => handleSubmit(q)} style={{ marginTop: "5px" }}>
-            回答を送信
-          </button>
-        </div>
-      ))}
+    <div className="p-6">
+      <h2 className="text-xl font-bold mb-4">🐾 特訓問題一覧</h2>
+
+      {questions.length === 0 ? (
+        <p>問題がありません。</p>
+      ) : (
+        questions.map((q, idx) => (
+          <div
+            key={q.id}
+            className="border rounded p-4 mb-4 bg-white"
+            style={{ maxWidth: 720 }}
+          >
+            <p className="mb-2">
+              <strong>Q{idx + 1}.</strong> {q.question ?? "（問題文なし）"}
+            </p>
+
+            {(q.choices ?? []).map((choice, i) => {
+              const active = selectedIndexes[q.id] === i;
+              return (
+                <button
+                  key={i}
+                  className={`px-3 py-1 mr-2 mb-2 rounded ${
+                    active ? "bg-red-300" : "bg-gray-200"
+                  }`}
+                  onClick={() => handleSelect(q.id, i)}
+                >
+                  {choice}
+                </button>
+              );
+            })}
+
+            <div>
+              <button
+                className="mt-3 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                onClick={() => handleSubmit(q)}
+              >
+                回答を送信
+              </button>
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
-};
-
-export default SpecialQuestionsPage;
+}

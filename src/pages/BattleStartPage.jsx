@@ -1,9 +1,9 @@
 // src/pages/BattleStartPage.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { getAuth } from "firebase/auth";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/fbkit";
+import { onAuthStateChanged } from "firebase/auth";
 import { consumeOneTicket, fullRecoverTickets } from "../lib/tickets";
 import { fullRecoverHearts } from "../lib/hearts";
 
@@ -14,7 +14,7 @@ function makeKey() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-// 型ゆらぎに強ぁEms 変換
+// 型ゆらぎに強い ms 変換
 function tsToMs(v) {
   if (!v) return 0;
   if (typeof v === "number") return v;
@@ -39,22 +39,33 @@ function formatMMSS(ms) {
 
 export default function BattleStartPage() {
   const navigate = useNavigate();
-  const uid = getAuth().currentUser?.uid;
+  const auth = getFirebaseAuth();
+  const db = getFirestoreDb();
 
+  const [uid, setUid] = useState(auth.currentUser?.uid ?? null);
   const [user, setUser] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [nowMs, setNowMs] = useState(Date.now()); // ↁE毎秒更新してカウントダウン
+  const [nowMs, setNowMs] = useState(Date.now()); // 毎秒更新してカウントダウン
+
+  // 認証状態を購読
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
+    return () => unsub();
+  }, [auth]);
 
   // User 購読
   useEffect(() => {
-    if (!uid) return;
+    if (!uid) {
+      setUser(null);
+      return;
+    }
     const un = onSnapshot(doc(db, "users", uid), (snap) => {
       setUser(snap.exists() ? { id: snap.id, ...snap.data() } : null);
     });
-    return () => un && un();
-  }, [uid]);
+    return () => un();
+  }, [db, uid]);
 
-  // 1秒タイマ�E
+  // 1秒タイマー
   useEffect(() => {
     const t = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(t);
@@ -72,14 +83,17 @@ export default function BattleStartPage() {
   // 券 cooldown
   const lastAdTicketsMs = tsToMs(user?.lastAdTicketsAt);
   const cdTicketsTotal = COOLDOWN_MIN_TICKET * 60_000;
-  const cdTicketsRemain = Math.max(0, cdTicketsTotal - (nowMs - lastAdTicketsMs));
+  const cdTicketsRemain = Math.max(
+    0,
+    cdTicketsTotal - (nowMs - lastAdTicketsMs)
+  );
   const canAdRecoverTickets = tickets < 3 && cdTicketsRemain === 0;
 
-  // バトル開始（券めE枚消費�E�E
+  // バトル開始（券を1枚消費）
   const startBattle = async () => {
-    if (!uid) return alert("ログインを確認してください");
+    if (!uid) return alert("ログインを確認してください。");
     if (tickets <= 0) {
-      alert("バトル券が足りません。回復してから再挑戦してね�E�E);
+      alert("バトル券が足りません。回復してから再挑戦してね。");
       return;
     }
     try {
@@ -89,94 +103,138 @@ export default function BattleStartPage() {
     } catch (e) {
       console.error("startBattle error:", e);
       if (e?.code === "NO_TICKET") {
-        alert("バトル券ぁEです。回復してから再挑戦してね�E�E);
+        alert("バトル券がありません。回復してから再挑戦してね。");
       } else {
-        alert("バトル開始に失敗しました。時間をおいて再度お試しください、E);
+        alert("バトル開始に失敗しました。時間をおいて再度お試しください。");
       }
     } finally {
       setBusy(false);
     }
   };
 
-  // 庁E��回復�E�❤�E�券�E�E
+  // 広告回復（❤ / 券）
   const doAdRecoverHearts = async () => {
-    if (!uid) return;
-    if (!canAdRecoverHearts) return;
+    if (!uid || !canAdRecoverHearts) return;
     try {
       await fullRecoverHearts(uid, { reason: "ad" });
-      alert("庁E��視�Eボ�Eナス�E�❤が�E回復しました�E�E);
+      alert("広告視聴ボーナスで ❤ が回復しました。");
     } catch (e) {
       console.error("ad recover hearts error:", e);
-      alert("回復に失敗しました。時間をおいて再度お試しください、E);
+      alert("回復に失敗しました。時間をおいて再度お試しください。");
     }
   };
   const doAdRecoverTickets = async () => {
-    if (!uid) return;
-    if (!canAdRecoverTickets) return;
+    if (!uid || !canAdRecoverTickets) return;
     try {
       await fullRecoverTickets(uid, { reason: "ad" });
-      alert("庁E��視�Eボ�Eナス�E�バトル券が�E回復しました�E�E);
+      alert("広告視聴ボーナスで バトル券 が回復しました。");
     } catch (e) {
       console.error("ad recover tickets error:", e);
-      alert("回復に失敗しました。時間をおいて再度お試しください、E);
+      alert("回復に失敗しました。時間をおいて再度お試しください。");
     }
   };
 
   return (
     <div style={{ padding: 16 }}>
-      <h2>バトル開姁E/h2>
+      <h2>バトル開始</h2>
 
-      {/* バトル開始ブロチE�� */}
-      <div style={{ margin: "12px 0", padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
+      {/* バトル開始ブロック */}
+      <div
+        style={{
+          margin: "12px 0",
+          padding: 12,
+          border: "1px solid #ddd",
+          borderRadius: 8,
+        }}
+      >
         <div style={{ fontWeight: 600, marginBottom: 6 }}>
-          バトル券�E�{tickets} / 3
+          バトル券：{tickets} / 3
         </div>
         <button
-          className={`px-4 py-2 rounded border ${tickets <= 0 || busy ? "opacity-60 cursor-not-allowed" : ""}`}
+          className={`px-4 py-2 rounded border ${
+            tickets <= 0 || busy ? "opacity-60 cursor-not-allowed" : ""
+          }`}
           disabled={tickets <= 0 || busy}
           onClick={startBattle}
         >
-          {busy ? "開始中..." : "バトル開姁E}
+          {busy ? "開始中..." : "バトル開始"}
         </button>
         {tickets <= 0 && (
           <div style={{ marginTop: 8, fontSize: 12 }}>
-            バトル券が足りません。下�E「庁E��で回復」か、ELink to="/review">/review</Link> から回復できます、E
+            バトル券が足りません。下の「広告で回復」か、
+            <Link to="/review">/review</Link> から回復できます。
           </div>
         )}
       </div>
 
       {/* ❤パネル */}
-      <div style={{ padding: 12, border: "1px dashed #bbb", borderRadius: 8, margin: "12px 0", background: "#fafafa" }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>❤スタミナ�E�{hearts} / 5</div>
+      <div
+        style={{
+          padding: 12,
+          border: "1px dashed #bbb",
+          borderRadius: 8,
+          margin: "12px 0",
+          background: "#fafafa",
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>
+          ❤スタミナ：{hearts} / 5
+        </div>
         <button
-          className={`px-3 py-2 rounded border ${!canAdRecoverHearts ? "opacity-60 cursor-not-allowed" : ""}`}
+          className={`px-3 py-2 rounded border ${
+            !canAdRecoverHearts ? "opacity-60 cursor-not-allowed" : ""
+          }`}
           disabled={!canAdRecoverHearts}
           onClick={doAdRecoverHearts}
         >
-          {canAdRecoverHearts ? "庁E��で❤全回復�E�今すぐ！E : `庁E��で❤全回復�E�E{COOLDOWN_MIN_HEART}刁E��ールダウン�E�`}
+          {canAdRecoverHearts
+            ? "広告で ❤ 全回復（今すぐ！）"
+            : `広告で ❤ 全回復（${COOLDOWN_MIN_HEART}分クールダウン）`}
         </button>
         <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-          {hearts >= 5 ? "❤は満タンです、E : cdHeartsRemain > 0 ? `再使用まで ${formatMMSS(cdHeartsRemain)}` : "今すぐ使用できます、E}
+          {hearts >= 5
+            ? "❤は満タンです。"
+            : cdHeartsRemain > 0
+            ? `再使用まで ${formatMMSS(cdHeartsRemain)}`
+            : "今すぐ使用できます。"}
         </div>
       </div>
 
       {/* バトル券パネル */}
-      <div style={{ padding: 12, border: "1px dashed #bbb", borderRadius: 8, margin: "12px 0", background: "#fafafa" }}>
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>バトル券�E�{tickets} / 3</div>
+      <div
+        style={{
+          padding: 12,
+          border: "1px dashed #bbb",
+          borderRadius: 8,
+          margin: "12px 0",
+          background: "#fafafa",
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>
+          バトル券：{tickets} / 3
+        </div>
         <button
-          className={`px-3 py-2 rounded border ${!canAdRecoverTickets ? "opacity-60 cursor-not-allowed" : ""}`}
+          className={`px-3 py-2 rounded border ${
+            !canAdRecoverTickets ? "opacity-60 cursor-not-allowed" : ""
+          }`}
           disabled={!canAdRecoverTickets}
           onClick={doAdRecoverTickets}
         >
-          {canAdRecoverTickets ? "庁E��でバトル券 全回復�E�今すぐ！E : `庁E��でバトル券 全回復�E�E{COOLDOWN_MIN_TICKET}刁E��ールダウン�E�`}
+          {canAdRecoverTickets
+            ? "広告で バトル券 全回復（今すぐ！）"
+            : `広告で バトル券 全回復（${COOLDOWN_MIN_TICKET}分クールダウン）`}
         </button>
         <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-          {tickets >= 3 ? "バトル券は満タンです、E : cdTicketsRemain > 0 ? `再使用まで ${formatMMSS(cdTicketsRemain)}` : "今すぐ使用できます、E}
+          {tickets >= 3
+            ? "バトル券は満タンです。"
+            : cdTicketsRemain > 0
+            ? `再使用まで ${formatMMSS(cdTicketsRemain)}`
+            : "今すぐ使用できます。"}
         </div>
       </div>
 
       <div style={{ marginTop: 12 }}>
-        <Link to="/">ホ�Eムへ</Link>
+        <Link to="/">ホームへ</Link>
       </div>
     </div>
   );

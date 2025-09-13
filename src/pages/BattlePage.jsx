@@ -1,7 +1,10 @@
 // src/pages/BattlePage.jsx
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import {
+  collection, addDoc, serverTimestamp,
+  doc, getDoc, setDoc,
+} from "firebase/firestore";
 import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 import { onAuthStateChanged } from "firebase/auth";
 import { jpDateKey } from "@/utils/battleUtils";
@@ -9,7 +12,7 @@ import { jpDateKey } from "@/utils/battleUtils";
 const auth = getFirebaseAuth();
 const db = getFirestoreDb();
 
-// ---- 背景 ----
+// ---- 背景（今は未使用だが残しておく） ----
 const BASE = (import.meta.env && import.meta.env.BASE_URL) ? import.meta.env.BASE_URL : "/";
 const BG = {
   event:  `${BASE}images/bg/janken/event_fire.png`,
@@ -26,13 +29,6 @@ const getSeasonKey = (d = new Date()) => {
   return "winter";
 };
 
-// ---- タイミング ----
-const T = { afterPon: 600, cpuThink: 900, judgePause: 800 };
-
-// ---- バイブ ----
-const VIB = { short: 80, win: [180,80,180], good: [200] };
-const buzz = (pat) => { try { if ("vibrate" in navigator) navigator.vibrate(pat); } catch {} };
-
 // ---- ジャンケン ----
 const HANDS = ["gu", "choki", "pa"];
 const HAND_LABEL = { gu: "グー", choki: "チョキ", pa: "パー" };
@@ -48,72 +44,111 @@ function Section({ title, children }) {
     </div>
   );
 }
-const sleep = (ms) => new Promise(r=>setTimeout(r,ms));
 
-function PlayerPanel({ side="enemy", name, hand, question, extra, cpuAnswer }) {
-  const isEnemy = side==="enemy";
-  return (
-    <div className={`rounded-xl border p-3 md:p-4 ${isEnemy?"bg-gray-50":"bg-blue-50"}`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-bold">{name}</div>
-        <div className="text-xs text-gray-500">{hand?`手: ${HAND_LABEL[hand]}`:"手: - "}</div>
-      </div>
-      <div className="flex items-center justify-center min-h-[88px] md:min-h-[112px]">
-        {hand ? <HandIcon hand={hand}/> : <div className="text-gray-400">待機中…</div>}
-      </div>
-      {question && <div className="mt-2 text-sm">問題: {question}</div>}
-      {typeof cpuAnswer!=="undefined" && (
-        <div className="mt-2 text-sm">回答結果: {cpuAnswer ? "正解⭕" : "不正解❌"}</div>
-      )}
-      {extra}
-    </div>
-  );
+// ---- Mistake保存（uid必須） ----
+async function recordMistake(q, userAnswer) {
+  const uid = auth.currentUser?.uid;
+  if (!uid) { console.warn("[mistake] skip: no currentUser"); return; }
+
+  await addDoc(collection(db, "mistakes"), {
+    uid,
+    qid: q.id ?? null,
+    subject: q.subject ?? "general",
+    grade: q.grade ?? null,
+    seriesId: q.seriesId ?? null,
+    prompt: q.prompt ?? q.question ?? "",
+    choices: Array.isArray(q.choices) ? q.choices : [],
+    answerIndex: typeof q.answerIndex === "number" ? q.answerIndex : null,
+    correctAnswer:
+      q.correctAnswer ??
+      (typeof q.answerIndex === "number" && q.choices ? q.choices[q.answerIndex] : null),
+    userAnswer: userAnswer ?? null,
+    wasCorrect: false,
+    source: "battle",
+    createdAt: serverTimestamp(),
+  });
 }
 
 // ---- メイン ----
 export default function BattlePage() {
   const nav = useNavigate();
-  const [uid,setUid] = useState(null);
-  const [tickets,setTickets] = useState(0);
-  const [checking,setChecking] = useState(true);
-  const [rounds,setRounds] = useState([]);
-  const [winner,setWinner] = useState(null);
-  const [result,setResult] = useState(null);
-  const [selMyHand,setSelMyHand] = useState(null);
-  const [cpuHand,setCpuHand] = useState(null);
-  const [qobj,setQobj] = useState(null);
-  const [revealHands,setRevealHands] = useState(false);
 
-  // 認証
+  // 認証・券
+  const [checking,setChecking] = useState(true);
+  const [tickets,setTickets] = useState(0);
+
+  // じゃんけん状態
+  const [started,setStarted] = useState(false);
+  const [myHand,setMyHand] = useState(null);
+  const [cpuHand,setCpuHand] = useState(null);
+  const [reveal,setReveal] = useState(false);
+  const [judge,setJudge] = useState(null); // "userWin" | "opponentWin" | "draw" | null
+
+  // 出題状態
+  const [qobj,setQobj] = useState(null);
+  const [myAnswer,setMyAnswer] = useState(null);
+
+  // 認証 & users 初期化
   useEffect(()=>{
     const unsub = onAuthStateChanged(auth, async (u)=>{
       if (!u) { nav("/login"); return; }
-      setUid(u.uid);
-      try {
-        const ref = doc(db,"users",u.uid);
-        const snap = await getDoc(ref);
-        let data = snap.exists()?snap.data():null;
-        if (!data) {
-          data = { battleTickets:3, __dateKey:jpDateKey() };
-          await setDoc(ref,data,{merge:true});
-        }
-        setTickets(data.battleTickets ?? 3);
-      } finally {
-        setChecking(false);
+      const ref = doc(db, "users", u.uid);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, { battleTickets: 3, __dateKey: jpDateKey(), email: u.email ?? null }, { merge: true });
+        setTickets(3);
+      } else {
+        setTickets(snap.data()?.battleTickets ?? 3);
       }
+      setChecking(false);
     });
     return ()=>unsub();
-  },[nav]);
+  }, [nav]);
 
-  if (checking) {
-    return <div className="p-4">確認中…</div>;
+  // ① バトル開始
+  function handleStart() {
+    setStarted(true);
+    setReveal(false);
+    setJudge(null);
+    setMyHand(null);
+    setCpuHand(null);
+
+    // デバッグ用の1問（ここに本番の出題取得ロジックを繋げればOK）
+    setQobj({
+      id: "dbg-1",
+      subject: "math",
+      prompt: "2 + 3 = ?",
+      choices: ["4","5","6","7"],
+      answerIndex: 1, // 正解は "5"
+    });
+    setMyAnswer(null);
   }
 
-  // 表示用
-  const enemyCpuAnswer = typeof cpuHand==="boolean" ? cpuHand : undefined;
-  const hideHandsDuringQuestion = !!(qobj && (result==="userWin" || result==="opponentWin"));
-  const showHandEnemy = (!hideHandsDuringQuestion) && (revealHands ? cpuHand : null);
-  const showHandMe    = (!hideHandsDuringQuestion) && (revealHands ? selMyHand : null);
+  // ② ぽん！
+  function handlePon() {
+    if (!myHand) return;
+    const c = HANDS[Math.floor(Math.random()*3)];
+    setCpuHand(c);
+    setReveal(true);
+    const win =
+      (myHand==="gu" && c==="choki") ||
+      (myHand==="choki" && c==="pa") ||
+      (myHand==="pa" && c==="gu");
+    const draw = myHand===c;
+    setJudge(draw ? "draw" : win ? "userWin" : "opponentWin");
+  }
+
+  // ③ 答え合わせ（不正解なら mistakes 保存）
+  async function checkMyAnswer() {
+    if (!qobj || myAnswer==null) return;
+    const correct = Number(myAnswer) === qobj.answerIndex;
+    if (!correct) {
+      try { await recordMistake(qobj, Number(myAnswer)); } catch(e) { console.error("recordMistake failed:", e); }
+    }
+    alert(correct ? "正解！" : "不正解→mistakesへ保存しました");
+  }
+
+  if (checking) return <div className="p-4">確認中…</div>;
 
   return (
     <div className="p-4 space-y-4">
@@ -123,15 +158,76 @@ export default function BattlePage() {
       </div>
 
       <Section title="バトル券">
-        <div>残り: {tickets}</div>
-        <button onClick={()=>setTickets(3)} className="border px-3 py-1 rounded">回復</button>
+        <div className="flex items-center gap-3">
+          <div>残り: {tickets}</div>
+          <button onClick={()=>setTickets(3)} className="border px-3 py-1 rounded">回復</button>
+          <button onClick={handleStart} className="ml-auto px-3 py-1 rounded bg-black text-white">
+            バトルする
+          </button>
+        </div>
       </Section>
 
       <Section title="対戦">
-        <div className="grid grid-cols-1 gap-4">
-          <PlayerPanel side="enemy" name="相手" hand={showHandEnemy}/>
-          <PlayerPanel side="me" name="あなた" hand={showHandMe}/>
-        </div>
+        {!started ? (
+          <div className="text-gray-500">「バトルする」を押して開始</div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4">
+              {/* 相手 */}
+              <div className="rounded-xl border p-3 bg-gray-50">
+                <div className="font-bold mb-2">相手</div>
+                <div className="min-h-[96px] flex items-center justify-center">
+                  {reveal && cpuHand ? <HandIcon hand={cpuHand}/> : <div className="text-gray-400">待機中…</div>}
+                </div>
+              </div>
+
+              {/* 自分 */}
+              <div className="rounded-xl border p-3 bg-blue-50">
+                <div className="font-bold mb-2">あなた</div>
+                <div className="flex gap-3 items-center">
+                  {HANDS.map(h=>(
+                    <button key={h}
+                      onClick={()=>setMyHand(h)}
+                      className={`rounded border p-1 ${myHand===h ? "ring-2 ring-blue-500" : ""}`}>
+                      <HandIcon hand={h} className="w-12 h-12"/>
+                    </button>
+                  ))}
+                  <button onClick={handlePon}
+                    className="ml-auto px-3 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+                    disabled={!myHand}>
+                    ぽん！
+                  </button>
+                </div>
+                {!!judge && <div className="mt-2 text-sm">
+                  判定: {judge==="draw" ? "あいこ" : judge==="userWin" ? "あなたの勝ち" : "相手の勝ち"}
+                </div>}
+              </div>
+            </div>
+
+            {/* 出題（簡易1問） */}
+            {qobj && (
+              <div className="mt-4 rounded-xl border p-3">
+                <div className="font-semibold mb-2">問題: {qobj.prompt}</div>
+                <div className="flex flex-wrap gap-2">
+                  {qobj.choices.map((c,idx)=>(
+                    <button key={idx}
+                      onClick={()=>setMyAnswer(idx)}
+                      className={`px-3 py-1 rounded border ${myAnswer===idx?"bg-blue-100 border-blue-400":"bg-white"}`}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={checkMyAnswer}
+                  className="mt-3 px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
+                  disabled={myAnswer==null}
+                >
+                  答え合わせ
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </Section>
     </div>
   );

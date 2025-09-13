@@ -36,7 +36,7 @@ export default function ReviewSessionStart() {
     setState("loading");
     const qy = query(
       collection(db, "mistakes"),
-      where("userId", "==", uid),            // uid → userId に統一
+      where("uid", "==", uid),            // uid → userId に統一
       orderBy("createdAt", "desc")
     );
     const unsub = onSnapshot(

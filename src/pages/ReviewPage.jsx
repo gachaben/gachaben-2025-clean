@@ -65,7 +65,7 @@ export default function ReviewPage() {
 
     const q = query(
       collection(db, "mistakes"),
-      where("userId", "==", uid),
+      where("uid", "==", uid),
       orderBy("createdAt", "desc"),
       limit(100)
     );

@@ -19,7 +19,7 @@ export default function ReviewListPage() {
       const uid = user?.uid ?? "guest";
       const qref = query(
         collection(db, "mistakes"),
-        where("userId", "==", uid),
+        where("uid", "==", uid),
         where("status", "==", "open"),
         orderBy("lastWrongAt", "desc"),
         limit(50)

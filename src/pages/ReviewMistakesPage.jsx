@@ -101,7 +101,7 @@ export default function ReviewMistakesPage() {
   // 科目/単元の候補をロード（自分のmistakes全体からユニーク抽出）
   async function loadFacets(uid) {
     try {
-      const qAll = query(collection(db, "mistakes"), where("userId", "==", uid));
+      const qAll = query(collection(db, "mistakes"), where("uid", "==", uid));
       const snap = await getDocs(qAll);
       const subs = new Set();
       const units = new Set();
@@ -119,7 +119,7 @@ export default function ReviewMistakesPage() {
 
   async function loadStats(uid) {
     try {
-      const qAll = query(collection(db, "mistakes"), where("userId", "==", uid));
+      const qAll = query(collection(db, "mistakes"), where("uid", "==", uid));
       const snap = await getDocs(qAll);
       let total = 0, unreviewed = 0, got = 0, retry = 0;
       snap.forEach((d) => {

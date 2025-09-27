@@ -44,6 +44,7 @@ function Nav() {
       <Link to="/review">Review</Link>
       <Link to="/review-mistakes">Review(Mistakes)</Link> {/* ← 追加 */}
       <Link to="/battle">Battle</Link>
+      <Link to="/problems-test">ProblemsTest</Link> {/* ← 確認用に追加 */}
     </nav>
   );
 }
@@ -58,33 +59,7 @@ export default function App() {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/review" element={<ReviewPage />} />
 
-        {/* ▼ 追加：復習関連ルート（ログイン必須にしておく） */}
-        <Route
-          path="/review-mistakes"
-          element={
-            <RequireAuth>
-              <ReviewMistakesPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/review/session"
-          element={
-            <RequireAuth>
-              <ReviewSessionStart />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/review/play/:mid"
-          element={
-            <RequireAuth>
-              <ReviewPlayPage />
-            </RequireAuth>
-          }
-        />
-
-        {/* battle もログイン必須 */}
+        {/* ここがポイント：/battle は常に定義し、表示は RequireAuth で制御 */}
         <Route
           path="/battle"
           element={
@@ -93,6 +68,9 @@ export default function App() {
             </RequireAuth>
           }
         />
+
+        {/* Firestore問題テストページ */}
+        <Route path="/problems-test" element={<ProblemsTestPage />} />
 
         {/* 未定義パスはトップへ */}
         <Route path="*" element={<Navigate to="/" replace />} />

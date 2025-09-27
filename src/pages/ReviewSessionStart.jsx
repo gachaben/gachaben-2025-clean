@@ -22,34 +22,36 @@ export default function ReviewSessionStart() {
 
   // 認証監視
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid || ""));
-    return () => unsub();
-  }, [auth]);
+    let unsub = () => {};
+    (async () => {
+      try {
+        await ensureSignedIn();
+        const uid = auth.currentUser?.uid;
+        if (!uid) throw new Error("not signed in");
 
-  // データ購読
-  useEffect(() => {
-    if (!uid) {
-      setRaw([]);
-      setState("ready");
-      return;
-    }
-    setState("loading");
-    const qy = query(
-      collection(db, "mistakes"),
-      where("uid", "==", uid),            // uid → userId に統一
-      orderBy("createdAt", "desc")
-    );
-    const unsub = onSnapshot(
-      qy,
-      (snap) => {
-        setRaw(snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) })));
-        setState("ready");
-      },
-      (err) => {
-        setMsg(err?.message || "読み込みに失敗しました");
+        const qy = query(
+          collection(db, "mistakes"),
+          where("uid", "==", uid),
+          orderBy("createdAt", "desc")
+        );
+
+        unsub = onSnapshot(
+          qy,
+          (snap) => {
+            const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+            setRaw(arr);
+            setState("ready");
+          },
+          (err) => {
+            setMsg(err.message);
+            setState("error");
+          }
+        );
+      } catch (e) {
+        setMsg(e.message);
         setState("error");
       }
-    );
+    })();
     return () => unsub();
   }, [db, uid]);
 
@@ -60,9 +62,10 @@ export default function ReviewSessionStart() {
 
   const units = useMemo(() => {
     const s = new Set(
-      raw.filter((x) => !subject || x.subject === subject)
-         .map((x) => x.unit)
-         .filter(Boolean)
+      raw
+        .filter((x) => !subject || x.subject === subject)
+        .map((x) => x.unit)
+        .filter(Boolean)
     );
     return Array.from(s);
   }, [raw, subject]);
@@ -72,7 +75,6 @@ export default function ReviewSessionStart() {
     if (subject) arr = arr.filter((x) => x.subject === subject);
     if (unit) arr = arr.filter((x) => x.unit === unit);
     if (onlyOpen) {
-      // 未復習＝isReviewed=false（status があるなら open のみ）
       arr = arr.filter((x) => !x.isReviewed && (x.status ? x.status === "open" : true));
     }
     return arr;
@@ -82,7 +84,6 @@ export default function ReviewSessionStart() {
     if (items.length === 0) return alert("対象がありません。条件を調整してね。");
     const n = Math.max(1, Math.min(Number(limitN) || 1, items.length));
     const take = items.slice(0, n);
-    // ReviewPlayPage（state.ids を渡す流れに合わせる）
     const ids = take.map((m) => m.id);
     navigate(`/review/play/${ids[0]}`, { state: { ids } });
   };
@@ -105,7 +106,9 @@ export default function ReviewSessionStart() {
         >
           <option value="">すべての科目</option>
           {subjects.map((s) => (
-            <option key={s} value={s}>{s}</option>
+            <option key={s} value={s}>
+              {s}
+            </option>
           ))}
         </select>
 
@@ -117,7 +120,9 @@ export default function ReviewSessionStart() {
         >
           <option value="">すべての単元</option>
           {units.map((u) => (
-            <option key={u} value={u}>{u}</option>
+            <option key={u} value={u}>
+              {u}
+            </option>
           ))}
         </select>
 

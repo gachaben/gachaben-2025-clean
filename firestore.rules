@@ -2,6 +2,32 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // 自分のユーザードキュメントだけ
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // mistakes: 自分のものは read(list含む)/write OK
+    match /mistakes/{id} {
+      allow get, list: if request.auth != null
+        && (resource.data.userId == request.auth.uid || resource.data.uid == request.auth.uid);
+      allow create, update, delete: if request.auth != null
+        && (request.resource.data.userId == request.auth.uid || request.resource.data.uid == request.auth.uid);
+    }
+
+    // battles: 自分が userId のものは create/read OK
+    match /battles/{id} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow get, list: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // problems: 開発用に全ユーザーが読み書き可能
+    match /problems/{id} {
+      allow read, write: if true;
+    }
+
+    // その他は閉じる
     match /{document=**} {
       allow read, write: if true;
     }

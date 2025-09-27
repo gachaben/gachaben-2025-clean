@@ -16,7 +16,13 @@ export default function ReviewListPage() {
   useEffect(() => {
     const auth = getFirebaseAuth();
     const unsub = onAuthStateChanged(auth, async (user) => {
-      const uid = user?.uid ?? "guest";
+      if (!user) {
+        setItems([]);
+        setReady(true);
+        return;
+      }
+
+      const uid = user.uid;
       const qref = query(
         collection(db, "mistakes"),
         where("uid", "==", uid),
@@ -43,16 +49,20 @@ export default function ReviewListPage() {
           <ul style={{ lineHeight: 1.8 }}>
             {items.map(m => (
               <li key={m.id}>
-                <span style={{ color: "#555" }}>[{m.times ?? 1}回ミス]</span>{" "}
+                <span style={{ color: "#555" }}>
+                  [{m.times ?? 1}回ミス]
+                </span>{" "}
                 {m.question}
               </li>
             ))}
           </ul>
           <button
-            onClick={() => navigate("/review/play", { state: { ids: items.map(i=>i.id) } })}
+            onClick={() =>
+              navigate("/review/play", { state: { ids: items.map(i => i.id) } })
+            }
             style={{ marginTop: 12 }}
           >
-            こ�E一覧で復習を開姁E
+            この一覧で復習を開始
           </button>
         </>
       )}

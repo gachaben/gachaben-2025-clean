@@ -5,10 +5,100 @@ import { doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import SequenceView from "@/components/review/SequenceView";
 import GroupView from "@/components/review/GroupView";
-import McqView from "@/components/review/McqView";
-import KeypadView from "@/components/review/KeypadView";
-import { consumeOneHeart } from "@/lib/hearts";
+import { consumeOneHeart } from "../lib/hearts";
 
+/* =========================
+   子コンポ�Eネント（外に出す！E
+   ========================= */
+function MCQView({ text, options = [], answer, setDebugYou, isCorrectAnswer, judge }) {
+  const [picked, setPicked] = useState(null);
+
+  const labelOf = (op) => String(op?.label ?? op?.value ?? op);
+
+  const handlePick = (idx) => {
+    const lbl = labelOf(options[idx]);
+    setPicked(idx);
+    setDebugYou(lbl);
+  };
+
+  const confirm = () => {
+    if (picked == null) return;
+    const you = labelOf(options[picked]);
+    setDebugYou(you);
+    const ok = isCorrectAnswer(you, answer);
+    judge(ok);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-lg font-semibold mb-2">{text}</div>
+
+      <div className="flex flex-col gap-2" role="radiogroup" aria-label="choices">
+        {options.map((op, idx) => {
+          const label = labelOf(op);
+          const active = picked === idx;
+          return (
+            <button
+              key={idx}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => handlePick(idx)}
+              className={`px-3 py-2 rounded-md border text-left ${active ? "ring-2 ring-offset-1" : ""}`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={confirm}
+        disabled={picked == null}
+        aria-disabled={picked == null}
+        className={`px-4 py-2 rounded-md border mt-2 ${picked == null ? "opacity-50 cursor-not-allowed" : ""}`}
+      >
+        確宁E
+      </button>
+    </div>
+  );
+}
+
+function TextView({ text, answer, setDebugYou, isCorrectAnswer, judge }) {
+  const [val, setVal] = useState("");
+  const confirm = () => {
+    const ok = isCorrectAnswer(val, answer);
+    judge(ok);
+  };
+  return (
+    <div className="space-y-3">
+      <div className="text-lg font-semibold mb-2">{text}</div>
+      <input
+        type="text"
+        value={val}
+        onChange={(e) => {
+          setVal(e.target.value);
+          setDebugYou(e.target.value);
+        }}
+        className="px-3 py-2 rounded-md border w-full"
+        placeholder="ここに入劁E
+      />
+      <button
+        type="button"
+        onClick={confirm}
+        disabled={!val}
+        className={`px-4 py-2 rounded-md border ${!val ? "opacity-50 cursor-not-allowed" : ""}`}
+      >
+        確宁E
+      </button>
+    </div>
+  );
+}
+
+/* =========================
+   親コンポ�EネンチE
+   ========================= */
 export default function ReviewPlayPage() {
   const { mid } = useParams();             // /review/play/:mid
   const { state } = useLocation();         // state?.ids（将来queue対応する用）
@@ -33,14 +123,12 @@ export default function ReviewPlayPage() {
     let alive = true;
     (async () => {
       try {
-        if (!mid) throw new Error("IDが不正です");
-        setLoading(true);
+        if (!mid) throw new Error("IDが不正でぁE);
         const ref = doc(db, "mistakes", mid);
         const snap = await getDoc(ref);
-        if (!snap.exists()) throw new Error("データが見つかりません");
-        const data = { id: snap.id, ...(snap.data() || {}) };
-        // 所有者チェック（フィールドは userId に統一推奨）
-        if (uid && data.userId && data.userId !== uid) throw new Error("アクセス権がありません");
+        if (!snap.exists()) throw new Error("チE�Eタが見つかりません");
+        const data = { id: snap.id, ...snap.data() };
+        if (uid && data.uid && data.uid !== uid) throw new Error("アクセス権がありません");
         if (!alive) return;
         setMistake(data);
         setLoading(false);
@@ -52,26 +140,50 @@ export default function ReviewPlayPage() {
       }
     })();
     return () => { alive = false; };
-  }, [db, mid, uid]);
+  }, [mid, uid]);
 
-  // ❤消費→判定の共通処理
+  const normalize = (val) => {
+    if (val == null) return "";
+    if (Array.isArray(val)) return val.map((x) => String(x)).join("");
+    return String(val);
+  };
+  const isCorrectAnswer = (user, answer) => {
+    const u = normalize(user);
+    if (Array.isArray(answer) && Array.isArray(answer[0])) {
+      return answer.some((a) => normalize(a) === u);
+    }
+    return normalize(answer) === u;
+  };
+
+  const groupTokens = useMemo(() => {
+    const tokens = Array.isArray(q.tokens) ? q.tokens : [];
+    if (tokens.length) {
+      return tokens.map((t, i) => ({ id: String(t?.id ?? i), text: String(t?.text ?? t) }));
+    }
+    const ansRaw = q?.answer;
+    if (ansRaw == null) return [];
+    const ans = Array.isArray(ansRaw) ? ansRaw : String(ansRaw || "");
+    const chars = Array.isArray(ans) ? ans : String(ans).split("");
+    const shuffled = [...chars].sort(() => Math.random() - 0.5);
+    return shuffled.map((ch, i) => ({ id: String(i), text: String(ch) }));
+  }, [q]);
+
+  // ナビゲーション�E�正誤時�E画面遷移�E�E
+  const goCorrect = () => navigate("/review", { replace: true });
+  const goWrong = () => alert("ざんねん！もぁE��度トライしてみよう");
+
+  // ❤を消費してから正誤処琁E��実衁E
   const judge = async (ok) => {
     try {
-      if (!uid) throw { code: "NO_AUTH" };
-      await consumeOneHeart(uid, `review-${mid}-${Date.now()}`);
-      if (ok) {
-        // 1問MVP：終わったら一覧へ
-        navigate("/review", { replace: true });
-      } else {
-        alert("ざんねん！もう一度トライしてみよう");
-      }
+      await consumeOneHeart(uid, `review-${q.id}-${Date.now()}`);
+      ok ? goCorrect() : goWrong();
     } catch (e) {
       const code = e?.code || e?.message;
       if (code === "NO_HEART") {
-        alert("❤が足りません。回復してから再挑戦してね。");
-        navigate("/review");
+        alert("❤が足りません。庁E��で回復してから再挑戦してね�E�E);
+        navigate("/review"); // とりあえず一覧へ戻す（回復導線�E後で実裁E��E
       } else if (code === "NO_AUTH") {
-        alert("ログイン状態を確認してください。");
+        alert("ログイン状態を確認してください、E);
       } else {
         console.error("[ReviewPlay] judge error:", e);
         alert("エラーが起きました。時間をおいて再度お試しください。");
@@ -79,9 +191,9 @@ export default function ReviewPlayPage() {
     }
   };
 
-  if (loading) return <div className="p-4">読み込み中...</div>;
-  if (error) return <div className="p-4">エラー: {error}</div>;
-  if (!mistake) return <div className="p-4">データがありません</div>;
+  if (loading) return <div style={{ padding: 16 }}>読み込み中...</div>;
+  if (error) return <div style={{ padding: 16 }}>エラー: {error}</div>;
+  if (!mistake) return <div style={{ padding: 16 }}>チE�Eタがありません</div>;
 
   // ---- データの表示用整形（フィールド揺れを吸収） ----
   const q = mistake || {};
@@ -144,8 +256,8 @@ export default function ReviewPlayPage() {
           questionId={q.id}
           tokens={groupTokens}
           answer={q.answer}
-          onCorrect={() => judge(true)}
-          onWrong={() => judge(false)}
+          onCorrect={() => { setDebugYou("(group) 正解パターン"); judge(true); }}
+          onWrong={() => { setDebugYou("(group) 現在�E�E + debugYou); judge(false); }}
         />
       )}
 
@@ -165,16 +277,12 @@ export default function ReviewPlayPage() {
         />
       )}
 
-      {/* 未対応タイプ → 暫定 Keypad で判定 */}
+      {/* 未対応タイチEↁE簡易テキスト�E力で判宁E*/}
       {!["sequence", "group", "mcq", "text", "keypad"].includes(type) && (
-        <div className="opacity-70 text-sm">
-          （タイプ <code>{q.type}</code> は未対応のため、数値入力で暫定対応）
-          <div className="mt-2">
-            <KeypadView
-              question={questionForView}
-              onCorrect={() => judge(true)}
-              onWrong={() => judge(false)}
-            />
+        <div>
+          <div className="text-lg font-semibold mb-2">{q.text}</div>
+          <div className="opacity-70 mb-3">
+            タイチE<code>{q.type}</code> は未対応です（暫定テキスト�E力で判定！E
           </div>
         </div>
       )}

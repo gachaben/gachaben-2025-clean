@@ -5,7 +5,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "vite",
-    "dev:emu": "concurrently \"firebase emulators:start --project demo-gachaben\" \"npm run dev\""
+    "dev:emu": "concurrently \"firebase emulators:start --project demo-gachaben\" \"npm run dev\"",
+    "seed:problems": "node scripts/seedProblems.js"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",
@@ -15,6 +16,7 @@
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.0",
+    "dotenv": "^17.2.2",
     "fast-glob": "^3.3.3",
     "firebase-tools": "^14.14.0",
     "kill-port": "^2.0.1",

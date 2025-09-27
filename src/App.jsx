@@ -9,6 +9,7 @@ import Login from "@/pages/Login.jsx";
 import HistoryPage from "@/pages/HistoryPage.jsx";     // なければコメントアウト
 import ReviewPage from "@/pages/ReviewPage.jsx";       // なければコメントアウト
 import BattlePage from "@/pages/BattlePage.jsx";
+import ProblemsTestPage from "@/pages/ProblemsTestPage.jsx"; // ← 追加（Firestoreテスト用）
 
 // ---- シンプルな認証ガード ----
 function useAuthState() {
@@ -38,6 +39,7 @@ function Nav() {
       <Link to="/history">History</Link>
       <Link to="/review">Review</Link>
       <Link to="/battle">Battle</Link>
+      <Link to="/problems-test">ProblemsTest</Link> {/* ← 確認用に追加 */}
     </nav>
   );
 }
@@ -52,7 +54,7 @@ export default function App() {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/review" element={<ReviewPage />} />
 
-        {/* ここがポイント：/battle は常に定義し、表示は RequireAuth で制御 */}
+        {/* /battle は常に定義し、RequireAuth で保護 */}
         <Route
           path="/battle"
           element={
@@ -61,6 +63,9 @@ export default function App() {
             </RequireAuth>
           }
         />
+
+        {/* Firestore問題テストページ */}
+        <Route path="/problems-test" element={<ProblemsTestPage />} />
 
         {/* 未定義パスはトップへ */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -21,6 +21,11 @@ service cloud.firestore {
       allow get, list: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
+    // problems: 開発用に全ユーザーが読み書き可能
+    match /problems/{id} {
+      allow read, write: if true;
+    }
+
     // その他は閉じる
     match /{document=**} {
       allow read, write: if false;

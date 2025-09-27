@@ -8,7 +8,7 @@ import { fullRecoverHearts } from "../lib/hearts";
 
 const COOLDOWN_MIN = 10;
 
-// ぁE��んな垁EDate/Timestamp/number/undefined)を安�Eに ms に変換
+// Date/Timestamp/number/undefined を安全に ms に変換
 function tsToMs(v) {
   if (!v) return 0;
   if (typeof v === "number") return v;
@@ -36,7 +36,7 @@ export default function ReviewQuickStart() {
   const uid = getAuth().currentUser?.uid;
 
   const [user, setUser] = useState(null);
-  const [nowMs, setNowMs] = useState(Date.now()); // ↁE秒カウントダウン用
+  const [nowMs, setNowMs] = useState(Date.now()); // 秒カウントダウン用
 
   // User doc 購読
   useEffect(() => {
@@ -47,7 +47,7 @@ export default function ReviewQuickStart() {
     return () => un && un();
   }, [uid]);
 
-  // 1秒ごとに「現在時刻」を更新�E�軽ぁE��す！E
+  // 1秒ごとに「現在時刻」を更新
   useEffect(() => {
     const t = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(t);
@@ -62,21 +62,21 @@ export default function ReviewQuickStart() {
 
   const doAdRecover = async () => {
     if (!uid) return alert("ログインを確認してください");
-    if (hearts >= 5) return alert("❤は満タンです！E);
-    if (!canAdRecover) return; // ガーチE
+    if (hearts >= 5) return alert("❤は満タンです！");
+    if (!canAdRecover) return; // ガード
     try {
-      // 本来は庁E��SDKの視�E完亁E��ベント後に実衁E
+      // 本来は広告SDKの視聴完了イベント後に実行
       await fullRecoverHearts(uid, { reason: "ad" });
-      alert("庁E��視�Eボ�Eナス�E�❤が�E回復しました�E�E);
+      alert("広告視聴ボーナスで❤が全回復しました！");
     } catch (e) {
       console.error("ad recover error:", e);
-      alert("回復に失敗しました。時間をおいて再度お試しください、E);
+      alert("回復に失敗しました。時間をおいて再度お試しください。");
     }
   };
 
   return (
     <div style={{ padding: 16 }}>
-      <h2>復習モード！EuickStart�E�E/h2>
+      <h2>復習モード QuickStart</h2>
 
       <div
         style={{
@@ -87,16 +87,16 @@ export default function ReviewQuickStart() {
         }}
       >
         <div style={{ marginBottom: 8 }}>
-          まだ復習する問題�Eありません<span role="img" aria-label="sparkles">✨</span>
+          まだ復習する問題はありません<span role="img" aria-label="sparkles">✨</span>
           <br />
-          <small>�E�まず�E「サンプル投�E」で動作確認してみよう�E�E/small>
+          <small>まず「サンプル投入」で動作確認してみよう</small>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             className="border px-3 py-2 rounded"
             onClick={() => navigate("/review/seed")}
           >
-            サンプル投�E
+            サンプル投入
           </button>
           <Link className="border px-3 py-2 rounded" to="/review/list">
             一覧へ
@@ -104,7 +104,7 @@ export default function ReviewQuickStart() {
         </div>
       </div>
 
-      {/* 庁E��で❤全回復セクション */}
+      {/* 広告で❤全回復セクション */}
       <div
         style={{
           padding: 12,
@@ -115,7 +115,7 @@ export default function ReviewQuickStart() {
         }}
       >
         <div style={{ fontWeight: 600, marginBottom: 6 }}>
-          ❤スタミナ�E�{hearts} / 5
+          ❤スタミナ: {hearts} / 5
         </div>
         <button
           className={`px-3 py-2 rounded border ${
@@ -125,19 +125,19 @@ export default function ReviewQuickStart() {
           onClick={doAdRecover}
         >
           {canAdRecover
-            ? "庁E��で❤全回復�E�今すぐ使用可能�E�E
-            : `庁E��で❤全回復�E�E{COOLDOWN_MIN}刁E��ールダウン�E�`}
+            ? "広告視聴で❤全回復（今すぐ使用可能）"
+            : `広告視聴で❤全回復（${COOLDOWN_MIN}分クールダウン）`}
         </button>
         <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
           {hearts >= 5
-            ? "❤は満タンです、E
+            ? "❤は満タンです"
             : cdRemainMs > 0
             ? `再使用まで ${formatMMSS(cdRemainMs)}`
-            : "今すぐ使用できます、E}
+            : "今すぐ使用できます"}
         </div>
       </div>
 
-      {/* ちめE��チE��チE���E�数値把握用�E�E*/}
+      {/* デバッグ用 */}
       <div
         style={{
           marginTop: 12,

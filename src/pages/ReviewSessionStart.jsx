@@ -31,7 +31,7 @@ export default function ReviewSessionStart() {
 
         const qy = query(
           collection(db, "mistakes"),
-          where("uid", "==", uid),
+          where("userId", "==", uid),  // ← 修正
           orderBy("createdAt", "desc")
         );
 
@@ -131,7 +131,7 @@ export default function ReviewSessionStart() {
           className="px-3 py-2 border rounded"
           disabled={!subject}
         >
-          <option value="">すべての単�E</option>
+          <option value="">すべての単�E</option>
           {units.map((u) => (
             <option key={u} value={u}>
               {u}
@@ -145,7 +145,7 @@ export default function ReviewSessionStart() {
             checked={onlyOpen}
             onChange={(e) => setOnlyOpen(e.target.checked)}
           />
-          未復習�Eみ
+          未復習�Eみ
         </label>
 
         <label className="flex items-center gap-2 text-sm">

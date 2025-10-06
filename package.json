@@ -11,7 +11,7 @@
     "seed:mistakes": "node scripts/seedMistakes.js",
 
     "newnote": "node scripts/newNote.js && git add notes && git commit -m \"📝 作業メモ自動生成 %date%\" && git log --oneline -n 3 && git tag",
-    "finish": "git add . && git commit -m \"✅ 作業完了 %date%\" && git tag end-%date% && git log --oneline -n 3 && git tag"
+    "finish": "git add . && git commit -m \"✅ 作業完了 $(Get-Date -Format yyyy-MM-dd)\" && git tag end-$(Get-Date -Format yyyy-MM-dd) && git log --oneline -n 3 && git tag"
   },
 
   "devDependencies": {

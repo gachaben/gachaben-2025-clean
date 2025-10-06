@@ -8,7 +8,7 @@
     "dev:emu": "concurrently \"firebase emulators:start --project demo-gachaben\" \"npm run dev\"",
     "seed:problems": "node scripts/seedProblems.js",
     "newnote": "node scripts/newNote.js && git add notes && git commit -m \"📝 作業メモ自動生成 $(date +'%Y-%m-%d')\"",
-    "finish": "git add . && git commit -m \"✅ 作業完了 $(date +'%Y-%m-%d')\" && git tag end-$(date +'%Y-%m-%d')"
+    "finish": "git add . && git commit -m \"✅ 作業完了 %date%\" && git tag end-%date%"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",

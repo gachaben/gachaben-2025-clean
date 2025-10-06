@@ -1,12 +1,28 @@
 // src/pages/ReviewSessionStart.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+<<<<<<< HEAD
 import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
+=======
+import { getFirestoreDb, getFirebaseAuth } from "@/fbkit";
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  limit,
+} from "firebase/firestore";
+>>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
 
 export default function ReviewSessionStart() {
+  const [mistakes, setMistakes] = useState([]);
+  const [count, setCount] = useState(5);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+<<<<<<< HEAD
   const auth = getFirebaseAuth();
   const db = getFirestoreDb();
 
@@ -19,9 +35,12 @@ export default function ReviewSessionStart() {
   const [unit, setUnit] = useState("");
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [limitN, setLimitN] = useState(10);
+=======
+>>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
 
   // 認証監視
   useEffect(() => {
+<<<<<<< HEAD
     let unsub = () => {};
     (async () => {
       try {
@@ -86,12 +105,49 @@ export default function ReviewSessionStart() {
     const take = items.slice(0, n);
     const ids = take.map((m) => m.id);
     navigate(`/review/play/${ids[0]}`, { state: { ids } });
+=======
+    const fetchMistakes = async () => {
+      const db = getFirestoreDb();
+      const auth = getFirebaseAuth();
+      const user = auth.currentUser;
+      if (!user) {
+        setMistakes([]);
+        setLoading(false);
+        return;
+      }
+
+      const q = query(
+        collection(db, "mistakes"),
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      const snap = await getDocs(q);
+      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setMistakes(rows);
+      setLoading(false);
+    };
+    fetchMistakes();
+  }, []);
+
+  const startSession = () => {
+    if (mistakes.length === 0) return alert("復習する問題がありません");
+
+    // ランダムに選択
+    const shuffled = [...mistakes].sort(() => Math.random() - 0.5);
+    const selected = shuffled.slice(0, count);
+
+    // localStorage にセッション保存
+    localStorage.setItem("reviewSession", JSON.stringify(selected.map((m) => m.id)));
+
+    // 1問目へ遷移
+    navigate(`/review/play/${selected[0].id}`);
+>>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
   };
 
-  if (state === "loading") return <div className="p-4">読み込み中…</div>;
-  if (state === "error") return <div className="p-4 text-red-600">Error: {msg}</div>;
+  if (loading) return <div className="p-4">読み込み中…</div>;
 
   return (
+<<<<<<< HEAD
     <div className="max-w-3xl mx-auto p-4 space-y-3">
       <h2 className="text-xl font-bold">連続復習スタート</h2>
 
@@ -152,6 +208,31 @@ export default function ReviewSessionStart() {
 
       <button onClick={startSession} className="px-4 py-2 rounded bg-emerald-600 text-white">
         連続復習をはじめる
+=======
+    <div className="max-w-lg mx-auto p-6 space-y-6">
+      <h1 className="text-xl font-bold">連続復習セッション開始</h1>
+
+      <div className="space-y-3">
+        <label className="block">
+          出題数を選択:
+          <select
+            value={count}
+            onChange={(e) => setCount(Number(e.target.value))}
+            className="ml-2 border rounded px-2 py-1"
+          >
+            <option value={3}>3問</option>
+            <option value={5}>5問</option>
+            <option value={10}>10問</option>
+          </select>
+        </label>
+      </div>
+
+      <button
+        onClick={startSession}
+        className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+      >
+        セッション開始
+>>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
       </button>
     </div>
   );

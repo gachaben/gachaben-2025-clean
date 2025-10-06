@@ -1,19 +1,14 @@
 // src/pages/ReviewMistakesPage.jsx
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   collection,
-  doc,
   getDocs,
-  addDoc,
-  limit,
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
-  startAfter,
   where,
-  updateDoc,
+  limit,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
@@ -25,12 +20,7 @@ function fmt(ts) {
   if (!ts) return "-";
   try {
     const d = ts.toDate ? ts.toDate() : new Date(ts);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mi = String(d.getMinutes()).padStart(2, "0");
-    return `${y}-${m}-${day} ${hh}:${mi}`;
+    return d.toLocaleString("ja-JP");
   } catch {
     return "-";
   }
@@ -57,8 +47,9 @@ function normalizeReviewState(m) {
 }
 
 export default function ReviewMistakesPage() {
-  const nav = useNavigate();
+  const navigate = useNavigate();
   const [uid, setUid] = useState(null);
+<<<<<<< HEAD
 
   // 集計
   const [stats, setStats] = useState({ total: 0, unreviewed: 0, got: 0, retry: 0 });
@@ -75,29 +66,43 @@ export default function ReviewMistakesPage() {
   const [unitOptions, setUnitOptions] = useState([]);
 
   // 取得データ
+=======
+  const [items, setItems] = useState([]);
+>>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
   const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState(null);
-  const [items, setItems] = useState([]); // 一覧（ページ）
-  const [cursor, setCursor] = useState(null);
 
-  // カードUI状態
-  const [index, setIndex] = useState(0);
-  const [reveal, setReveal] = useState(false);
-
-  // 認証待ち
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       if (!u) {
-        nav("/login");
+        setUid(null);
+        setItems([]);
+        setLoading(false);
         return;
       }
       setUid(u.uid);
+<<<<<<< HEAD
       loadStats(u.uid);
       loadFacets(u.uid); // 科目/単元の候補をロード
+=======
+
+      // Mistakes購読
+      const q = query(
+        collection(db, "mistakes"),
+        where("userId", "==", u.uid),
+        orderBy("createdAt", "desc"),
+        limit(50)
+      );
+      const un = onSnapshot(q, (snap) => {
+        setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      });
+      return un;
+>>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
     });
     return () => unsub();
-  }, [nav]);
+  }, []);
 
+<<<<<<< HEAD
   // 科目/単元の候補をロード（自分のmistakes全体からユニーク抽出）
   async function loadFacets(uid) {
     try {
@@ -318,19 +323,19 @@ export default function ReviewMistakesPage() {
   useEffect(() => {
     setUnit("");
   }, [subject]);
+=======
+  if (loading) return <div className="p-4">読み込み中…</div>;
+>>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">Mistakes Review</h1>
-      </div>
+    <div className="max-w-3xl mx-auto p-4 space-y-4">
+      <h1 className="text-xl font-bold">Mistakes一覧</h1>
 
-      {/* 集計表示 */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="border rounded p-3 bg-white shadow-sm">
-          <div className="text-xs text-gray-500">総数</div>
-          <div className="text-lg font-bold">{stats.total}</div>
+      {items.length === 0 && (
+        <div className="p-4 border rounded bg-gray-50 text-gray-600">
+          復習すべき問題はありません 🎉
         </div>
+<<<<<<< HEAD
         <div className="border rounded p-3 bg-white shadow-sm">
           <div className="text-xs text-gray-500">未復習</div>
           <div className="text-lg font-bold text-red-600">{stats.unreviewed}</div>
@@ -546,6 +551,28 @@ export default function ReviewMistakesPage() {
           </div>
         </>
       )}
+=======
+      )}
+
+      {items.map((m) => (
+        <div
+          key={m.id}
+          className="p-4 border rounded bg-white shadow-sm space-y-2"
+        >
+          <div className="text-sm text-gray-500">
+            作成: {fmt(m.createdAt)} ／ 状態:{" "}
+            {m.reviewStatus || "未復習"}
+          </div>
+          <div className="font-semibold">{m.text || m.question}</div>
+          <button
+            onClick={() => navigate(`/review/play/${m.id}`)}
+            className="mt-2 px-3 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700"
+          >
+            この問題で復習する
+          </button>
+        </div>
+      ))}
+>>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
     </div>
   );
 }

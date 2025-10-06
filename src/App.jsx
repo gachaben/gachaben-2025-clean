@@ -4,6 +4,7 @@ import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
 
 // ページ
+<<<<<<< HEAD
 import HomePage from "@/pages/HomePage.jsx";
 import Login from "@/pages/Login.jsx";
 import HistoryPage from "@/pages/HistoryPage.jsx";
@@ -14,6 +15,16 @@ import BattlePage from "@/pages/BattlePage.jsx";
 import ReviewMistakesPage from "@/pages/ReviewMistakesPage.jsx";
 import ReviewSessionStart from "@/pages/ReviewSessionStart.jsx";
 import ReviewPlayPage from "@/pages/ReviewPlayPage.jsx";
+=======
+import HomePage from "@/pages/HomePage.jsx";   // ← alias で OK
+import Login from "@/pages/Login.jsx";
+import HistoryPage from "@/pages/HistoryPage.jsx";     // なければコメントアウト
+import ReviewPage from "@/pages/ReviewPage.jsx";       // Mistakes 一覧ページ
+import ReviewPlayPage from "@/pages/ReviewPlayPage.jsx"; // ★ 復習プレイ用ページ
+import BattlePage from "@/pages/BattlePage.jsx";
+import ProblemsTestPage from "@/pages/ProblemsTestPage.jsx"; // Firestore テスト用
+import DebugPage from "@/pages/DebugPage.jsx";
+>>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
 
 // ---- シンプルな認証ガード ----
 function useAuthState() {
@@ -44,7 +55,8 @@ function Nav() {
       <Link to="/review">Review</Link>
       <Link to="/review-mistakes">Review(Mistakes)</Link> {/* ← 追加 */}
       <Link to="/battle">Battle</Link>
-      <Link to="/problems-test">ProblemsTest</Link> {/* ← 確認用に追加 */}
+      <Link to="/problems-test">ProblemsTest</Link>
+      <Link to="/debug">Debug</Link>
     </nav>
   );
 }
@@ -58,6 +70,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/review" element={<ReviewPage />} />
+        <Route path="/review/play/:id" element={<ReviewPlayPage />} /> {/* ★追加 */}
 
         {/* ここがポイント：/battle は常に定義し、表示は RequireAuth で制御 */}
         <Route
@@ -69,8 +82,8 @@ export default function App() {
           }
         />
 
-        {/* Firestore問題テストページ */}
         <Route path="/problems-test" element={<ProblemsTestPage />} />
+        <Route path="/debug" element={<DebugPage />} />
 
         {/* 未定義パスはトップへ */}
         <Route path="*" element={<Navigate to="/" replace />} />

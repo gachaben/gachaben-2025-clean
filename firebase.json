@@ -1,28 +1,12 @@
 {
   "emulators": {
-    "ui": {
-      "enabled": true,
-      "host": "127.0.0.1",
-      "port": 4000
+    "firestore": {
+      "port": 8089,
+      "storage": "emulator_data/firestore"
     },
     "auth": {
-      "host": "127.0.0.1",
-      "port": 9099
-    },
-    "firestore": {
-      "host": "127.0.0.1",
-      "port": 8089
-    },
-    "storage": {
-      "host": "127.0.0.1",
-      "port": 9199
+      "port": 9099,
+      "storage": "emulator_data/auth"
     }
-  },
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
-  "storage": {
-    "rules": "storage.rules"
   }
 }

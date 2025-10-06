@@ -1,66 +1,77 @@
 // scripts/seedMistakes.js
-import fs from "fs";
-import path from "path";
 import dotenv from "dotenv";
-import { fileURLToPath } from "url";
-
-// ---- .env.local を優先して読み込む ----
-const cwd = process.cwd();
-const envLocalPath = path.resolve(cwd, ".env.local");
-const envPath = fs.existsSync(envLocalPath) ? envLocalPath : path.resolve(cwd, ".env");
-dotenv.config({ path: envPath });
+dotenv.config();
 
 import { initializeApp } from "firebase/app";
 import {
   getFirestore,
-  collection,
-  doc,
-  setDoc,
-  serverTimestamp,
   connectFirestoreEmulator,
+  collection,
+  addDoc,
+  deleteDoc,
+  getDocs,
 } from "firebase/firestore";
 
-// ---- 環境変数 ----
-const USE_EMU = String(process.env.VITE_USE_EMU).toLowerCase() === "true";
-const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || "demo-gachaben";
-const FIRESTORE_PORT = Number(process.env.VITE_FIRESTORE_PORT || 8089);
+const USE_EMU = process.env.VITE_USE_EMU === "true";
+const FIRESTORE_PORT = process.env.VITE_FIRESTORE_PORT || 8089;
 
-// ---- デバッグ表示（必ず出るように）----
-console.log("[ENV] file:", envPath);
-console.log("[ENV] USE_EMU =", USE_EMU, "PROJECT_ID =", PROJECT_ID, "PORT =", FIRESTORE_PORT);
-
-// ---- Firebase 初期化（projectId は必須）----
 const firebaseConfig = {
-  apiKey: "fake-api-key", // emulator 用なのでダミーでOK
-  projectId: PROJECT_ID,
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID,
 };
+
+// 初期化
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
-// ---- Emulator 接続（保険で env も立てる）----
 if (USE_EMU) {
-  // 保険：SDK が env を見てくれるケース向け
-  process.env.FIRESTORE_EMULATOR_HOST = `127.0.0.1:${FIRESTORE_PORT}`;
-  connectFirestoreEmulator(db, "127.0.0.1", FIRESTORE_PORT);
-  console.log(`[FBKIT] Firestore -> emulator (${FIRESTORE_PORT})`);
-} else {
-  console.log("[FBKIT] Firestore -> 本番（危険）");
+  connectFirestoreEmulator(db, "127.0.0.1", Number(FIRESTORE_PORT));
+  console.log(`[EMULATOR] Firestore connected → ${FIRESTORE_PORT}`);
 }
 
-// ---- 最小テスト用 MCQ データ ----
-async function seed() {
-  const ref = doc(collection(db, "mistakes"));
-  await setDoc(ref, {
-    type: "mcq",
-    body: "1 + 1 は？",
-    options: ["1", "2", "3"],
-    answer: "2",
-    createdAt: serverTimestamp(),
-  });
-  console.log("✅ mistakes に MCQ 1件追加:", ref.id);
+// ------------------------------
+// Mistakes サンプルデータ投入
+// ------------------------------
+async function seedMistakes() {
+  console.log("🔥 Mistakes seeding start...");
+
+  // 既存mistakes削除（エミュ用）
+  const snap = await getDocs(collection(db, "mistakes"));
+  for (const d of snap.docs) {
+    await deleteDoc(d.ref);
+  }
+  console.log(`🧹 Cleared old mistakes (${snap.size})`);
+
+  // サンプルデータ（10件）
+  const samples = [
+    { question: "3×4=", answer: "13", correct: "12" },
+    { question: "8÷2=", answer: "3", correct: "4" },
+    { question: "5×7=", answer: "30", correct: "35" },
+    { question: "6＋8=", answer: "12", correct: "14" },
+    { question: "9−3=", answer: "5", correct: "6" },
+    { question: "4×9=", answer: "35", correct: "36" },
+    { question: "7×6=", answer: "30", correct: "42" },
+    { question: "2×8=", answer: "14", correct: "16" },
+    { question: "10−7=", answer: "1", correct: "3" },
+    { question: "12÷3=", answer: "2", correct: "4" },
+  ];
+
+  for (const s of samples) {
+    await addDoc(collection(db, "mistakes"), {
+      uid: "guest",
+      problemId: `p_${s.question.replace(/[^0-9x÷＋−]/g, "")}`,
+      question: s.question,
+      answer: s.answer,
+      correct: s.correct,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  console.log(`✅ Inserted ${samples.length} sample mistakes.`);
+  console.log("🎉 Mistakes seed complete.");
 }
 
-seed().then(() => process.exit()).catch((e) => {
-  console.error("❌ 失敗:", e);
-  process.exit(1);
-});
+seedMistakes().then(() => process.exit(0));

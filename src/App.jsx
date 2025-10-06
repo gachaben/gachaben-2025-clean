@@ -87,6 +87,15 @@ export default function App() {
 
         {/* 未定義パスはトップへ */}
         <Route path="*" element={<Navigate to="/" replace />} />
+
+        <Route path="/review" element={<ReviewHomePage />} />
+        <Route path="/review/quick" element={<ReviewQuickStart />} />
+        <Route path="/review/mistakes" element={<ReviewMistakesPage />} />
+        <Route path="/review/list" element={<ReviewListPage />} /> 
+        <Route path="/review/play/:id" element={<ReviewPlayPage />} />
+        <Route path="/review/session" element={<ReviewSessionStart />} />
+
+
       </Routes>
     </>
   );

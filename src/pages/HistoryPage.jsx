@@ -14,7 +14,7 @@ import {
   endAt,
 } from "firebase/firestore";
 import { Link } from "react-router-dom";
-import { getFirestoreDb } from "@/firebase";
+import { getFirestoreDb } from "@/fbkit";
 const db = getFirestoreDb();
 
 /** Firestore Timestamp → "YYYY-MM-DD HH:mm" */

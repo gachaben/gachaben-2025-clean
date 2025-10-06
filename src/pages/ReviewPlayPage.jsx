@@ -1,66 +1,44 @@
 // src/pages/ReviewPlayPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { getAuth } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { db } from "@/fbkit";
-import { doc, getDoc } from "firebase/firestore";
-import SequenceView from "@/components/review/SequenceView";
-import GroupView from "@/components/review/GroupView";
-import { consumeOneHeart } from "../lib/hearts";
-import { updateMistakeStatus } from "@/lib/mistakes";
-import { addMistake } from "@/lib/mistakes";   // ← 追加
+import {
+  doc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 
-/* =========================
-   子コンポーネント
-   ========================= */
-function MCQView({ text, options = [], answer, setDebugYou, isCorrectAnswer, judge }) {
+/* -------------------- MCQ 選択問題 -------------------- */
+function MCQView({ text, options = [], answer, judge }) {
   const [picked, setPicked] = useState(null);
-
-  const labelOf = (op) => String(op?.label ?? op?.value ?? op);
-
-  const handlePick = (idx) => {
-    const lbl = labelOf(options[idx]);
-    setPicked(idx);
-    setDebugYou(lbl);
-  };
 
   const confirm = () => {
     if (picked == null) return;
-    const you = labelOf(options[picked]);
-    setDebugYou(you);
-    const ok = isCorrectAnswer(you, answer);
-    judge(ok, you); // ← 入力値も渡す
+    const ok = options[picked] === answer;
+    judge(ok, options[picked]);
   };
 
   return (
     <div className="space-y-3">
       <div className="text-lg font-semibold mb-2">{text}</div>
-
-      <div className="flex flex-col gap-2" role="radiogroup" aria-label="choices">
-        {options.map((op, idx) => {
-          const label = labelOf(op);
-          const active = picked === idx;
-          return (
-            <button
-              key={idx}
-              type="button"
-              role="radio"
-              aria-checked={active}
-              onClick={() => handlePick(idx)}
-              className={`px-3 py-2 rounded-md border text-left ${active ? "ring-2 ring-offset-1" : ""}`}
-            >
-              {label}
-            </button>
-          );
-        })}
+      <div className="flex flex-col gap-2">
+        {options.map((c, i) => (
+          <button
+            key={i}
+            onClick={() => setPicked(i)}
+            className={`px-3 py-2 rounded border ${
+              picked === i ? "bg-blue-100" : "bg-white"
+            }`}
+          >
+            {c}
+          </button>
+        ))}
       </div>
-
       <button
-        type="button"
         onClick={confirm}
         disabled={picked == null}
-        aria-disabled={picked == null}
-        className={`px-4 py-2 rounded-md border mt-2 ${picked == null ? "opacity-50 cursor-not-allowed" : ""}`}
+        className="px-4 py-2 rounded bg-emerald-600 text-white mt-2 disabled:opacity-50"
       >
         確認
       </button>
@@ -68,30 +46,30 @@ function MCQView({ text, options = [], answer, setDebugYou, isCorrectAnswer, jud
   );
 }
 
-function TextView({ text, answer, setDebugYou, isCorrectAnswer, judge }) {
+/* -------------------- Text 入力問題 -------------------- */
+function TextView({ text, answer, judge }) {
   const [val, setVal] = useState("");
+
   const confirm = () => {
-    const ok = isCorrectAnswer(val, answer);
-    judge(ok, val); // ← 入力値も渡す
+    if (!val) return;
+    const ok = String(val).trim() === String(answer).trim();
+    judge(ok, val);
   };
+
   return (
     <div className="space-y-3">
       <div className="text-lg font-semibold mb-2">{text}</div>
       <input
         type="text"
         value={val}
-        onChange={(e) => {
-          setVal(e.target.value);
-          setDebugYou(e.target.value);
-        }}
-        className="px-3 py-2 rounded-md border w-full"
+        onChange={(e) => setVal(e.target.value)}
+        className="px-3 py-2 rounded border w-full"
         placeholder="ここに入力"
       />
       <button
-        type="button"
         onClick={confirm}
         disabled={!val}
-        className={`px-4 py-2 rounded-md border ${!val ? "opacity-50 cursor-not-allowed" : ""}`}
+        className="px-4 py-2 rounded bg-emerald-600 text-white mt-2 disabled:opacity-50"
       >
         確認
       </button>
@@ -99,199 +77,224 @@ function TextView({ text, answer, setDebugYou, isCorrectAnswer, judge }) {
   );
 }
 
-/* =========================
-   親コンポーネント
-   ========================= */
-export default function ReviewPlayPage() {
-  const { mid } = useParams();
-  const navigate = useNavigate();
-  const uid = getAuth().currentUser?.uid;
+/* -------------------- Sequence 並べ替え問題 -------------------- */
+function SequenceView({ text, tokens = [], answer, judge }) {
+  const [seq, setSeq] = useState([]);
 
+  useEffect(() => {
+    const shuffled = [...tokens].sort(() => Math.random() - 0.5);
+    setSeq(shuffled);
+  }, [tokens]);
+
+  const confirm = () => {
+    const ans = tokens.join("");
+    const you = seq.join("");
+    const ok = ans === you;
+    judge(ok, you);
+  };
+
+  const swap = (i, j) => {
+    const arr = [...seq];
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    setSeq(arr);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-lg font-semibold mb-2">{text}</div>
+      <div className="flex gap-2 flex-wrap">
+        {seq.map((t, i) => (
+          <button
+            key={i}
+            onClick={() => {
+              if (i > 0) swap(i, i - 1);
+              else if (i < seq.length - 1) swap(i, i + 1);
+            }}
+            className="px-3 py-2 border rounded bg-white"
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={confirm}
+        className="px-4 py-2 rounded bg-emerald-600 text-white mt-2"
+      >
+        確認
+      </button>
+    </div>
+  );
+}
+
+/* -------------------- Group 分類問題 -------------------- */
+function GroupView({ text, tokens = [], groups = [], answer, judge }) {
+  const [selected, setSelected] = useState({});
+
+  const handlePick = (token, group) => {
+    setSelected((prev) => ({ ...prev, [token]: group }));
+  };
+
+  const confirm = () => {
+    const ok = tokens.every(
+      (t) => selected[t] && answer[t] && selected[t] === answer[t]
+    );
+    judge(ok, JSON.stringify(selected));
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="text-lg font-semibold mb-2">{text}</div>
+      {tokens.map((t) => (
+        <div key={t} className="flex gap-2 items-center">
+          <span className="w-20">{t}</span>
+          <select
+            className="border rounded px-2 py-1"
+            onChange={(e) => handlePick(t, e.target.value)}
+          >
+            <option value="">選択</option>
+            {groups.map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </div>
+      ))}
+      <button
+        onClick={confirm}
+        className="px-4 py-2 rounded bg-emerald-600 text-white mt-2"
+      >
+        確認
+      </button>
+    </div>
+  );
+}
+
+/* -------------------- 親コンポーネント -------------------- */
+export default function ReviewPlayPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [mistake, setMistake] = useState(null);
   const [error, setError] = useState("");
-  const [debugYou, setDebugYou] = useState("");
-
-  const q = mistake ?? {};
+  const [result, setResult] = useState(null);
 
   useEffect(() => {
-    let alive = true;
     (async () => {
       try {
-        if (!mid) throw new Error("IDが不正です");
-        const ref = doc(db, "mistakes", mid);
+        const ref = doc(db, "mistakes", id);
         const snap = await getDoc(ref);
-        if (!snap.exists()) throw new Error("データが見つかりません");
-        const data = { id: snap.id, ...snap.data() };
-        if (uid && data.userId && data.userId !== uid) throw new Error("アクセス権がありません");
-        if (!alive) return;
-        setMistake(data);
-        setLoading(false);
+        if (!snap.exists()) throw new Error("問題が見つかりません");
+        setMistake({ id: snap.id, ...snap.data() });
       } catch (e) {
-        console.error("[ReviewPlay] load error:", e);
-        if (!alive) return;
-        setError(e?.message || "読み込みに失敗しました");
+        setError(e.message);
+      } finally {
         setLoading(false);
       }
     })();
-    return () => { alive = false; };
-  }, [mid, uid]);
+  }, [id]);
 
-  const normalize = (val) => {
-    if (val == null) return "";
-    if (Array.isArray(val)) return val.map((x) => String(x)).join("");
-    return String(val);
-  };
-  const isCorrectAnswer = (user, answer) => {
-    const u = normalize(user);
-    if (Array.isArray(answer) && Array.isArray(answer[0])) {
-      return answer.some((a) => normalize(a) === u);
-    }
-    return normalize(answer) === u;
-  };
-
-  const groupTokens = useMemo(() => {
-    const tokens = Array.isArray(q.tokens) ? q.tokens : [];
-    if (tokens.length) {
-      return tokens.map((t, i) => ({ id: String(t?.id ?? i), text: String(t?.text ?? t) }));
-    }
-    const ansRaw = q?.answer;
-    if (ansRaw == null) return [];
-    const ans = Array.isArray(ansRaw) ? ansRaw : String(ansRaw || "");
-    const chars = Array.isArray(ans) ? ans : String(ans).split("");
-    const shuffled = [...chars].sort(() => Math.random() - 0.5);
-    return shuffled.map((ch, i) => ({ id: String(i), text: String(ch) }));
-  }, [q]);
-
-// 正誤時の遷移
-const goCorrect = () => navigate("/review", { replace: true });
-const goWrong = () => {
-   alert("ざんねん！もう一度トライしてみよう");
- };
-  /**
-   * ❤を消費 → mistakes.status を更新 → 遷移 or アラート
-   * @param {boolean} ok
-   * @param {string} you - 直前の入力値（任意）
-   */
-  const judge = async (ok, you = "") => {
+  const judge = async (ok, you) => {
     try {
-      // 1) スタミナ消費
-      await consumeOneHeart(uid, `review-${q.id}-${Date.now()}`);
-
-      // 2) 復習ステータス更新（got / retry）
-      if (q?.id) {
-        await updateMistakeStatus(q.id, ok ? "got" : "retry", {
-          lastReviewYou: String(you ?? ""),
-        });
-      }
-
-      // 3) UI
-      ok ? goCorrect() : goWrong();
+      if (!mistake?.id) return;
+      await updateDoc(doc(db, "mistakes", mistake.id), {
+        reviewStatus: ok ? "got" : "retry",
+        reviewedAt: serverTimestamp(),
+        lastAnswer: you,
+      });
+      setResult(ok ? "正解！🎉 復習完了" : "不正解 ❌ また挑戦してね");
     } catch (e) {
-      const code = e?.code || e?.message;
-      if (code === "NO_HEART") {
-        alert("❤が足りません。広告で回復してから再挑戦してね");
-        navigate("/review");
-      } else if (code === "NO_AUTH") {
-        alert("ログイン状態を確認してください");
-      } else {
-        console.error("[ReviewPlay] judge error:", e);
-        alert("エラーが起きました。時間をおいて再度お試しください。");
-      }
+      console.error("update error", e);
+      alert("更新に失敗しました");
     }
   };
 
-  if (loading) return <div style={{ padding: 16 }}>読み込み中...</div>;
-  if (error) return <div style={{ padding: 16 }}>エラー: {error}</div>;
-  if (!mistake) return <div style={{ padding: 16 }}>データがありません</div>;
+  // セッション対応: 次の問題へ
+  const nextFromSession = () => {
+    const session = JSON.parse(localStorage.getItem("reviewSession") || "[]");
+    if (!session.length) {
+      navigate("/review/mistakes");
+      return;
+    }
+    const idx = session.indexOf(mistake.id);
+    if (idx >= 0 && idx + 1 < session.length) {
+      navigate(`/review/play/${session[idx + 1]}`);
+    } else {
+      localStorage.removeItem("reviewSession");
+      navigate("/review/mistakes");
+    }
+  };
 
-  const type = String(q.type || "").toLowerCase();
+  if (loading) return <div className="p-4">読み込み中...</div>;
+  if (error) return <div className="p-4 text-red-600">エラー: {error}</div>;
+  if (!mistake) return <div className="p-4">問題データがありません</div>;
+
+  const type = String(mistake.type || "mcq");
 
   return (
-    <div style={{ padding: 16 }}>
-      <div className="text-xs opacity-60 mb-2">ID: {q.id} / type: {q.type}</div>
+    <div className="p-4 space-y-6">
+      <div className="text-xs text-gray-500">
+        ID: {mistake.id} / type: {type}
+      </div>
+
+      {type === "mcq" && (
+        <MCQView
+          text={mistake.text}
+          options={mistake.options || mistake.choices || []}
+          answer={mistake.answer}
+          judge={judge}
+        />
+      )}
+
+      {type === "text" && (
+        <TextView text={mistake.text} answer={mistake.answer} judge={judge} />
+      )}
 
       {type === "sequence" && (
         <SequenceView
-          questionId={q.id}
-          items={q.items || q.tokens || []}
-          answer={q.answer}
-          onCorrect={() => judge(true)}
-          onWrong={() => judge(false)}
+          text={mistake.text}
+          tokens={mistake.tokens || []}
+          answer={mistake.answer}
+          judge={judge}
         />
       )}
 
       {type === "group" && (
         <GroupView
-          questionId={q.id}
-          tokens={groupTokens}
-          answer={q.answer}
-          onCorrect={() => { setDebugYou("(group) 正解パターン"); judge(true); }}
-          onWrong={() => { setDebugYou("(group) 現在入力: " + debugYou); judge(false); }}
-        />
-      )}
-
-      {type === "mcq" && (
-        <MCQView
-          text={q.text}
-          options={q.options || q.choices || []}
-          answer={q.answer}
-          setDebugYou={setDebugYou}
-          isCorrectAnswer={isCorrectAnswer}
+          text={mistake.text}
+          tokens={mistake.tokens || []}
+          groups={mistake.groups || []}
+          answer={mistake.answer || {}}
           judge={judge}
         />
       )}
 
-      {(type === "text" || type === "keypad") && (
-        <TextView
-          text={q.text}
-          answer={q.answer}
-          setDebugYou={setDebugYou}
-          isCorrectAnswer={isCorrectAnswer}
-          judge={judge}
-        />
-      )}
-
-      {/* 未対応タイプは簡易テキスト入力で判定 */}
-      {!["sequence", "group", "mcq", "text", "keypad"].includes(type) && (
+      {!["mcq", "text", "sequence", "group"].includes(type) && (
         <div>
-          <div className="text-lg font-semibold mb-2">{q.text}</div>
-          <div className="opacity-70 mb-3">
-            タイプ <code>{q.type}</code> は未対応です（暫定テキスト入力で判定）
-          </div>
-          <TextView
-            text={q.text}
-            answer={q.answer}
-            setDebugYou={setDebugYou}
-            isCorrectAnswer={isCorrectAnswer}
-            judge={judge}
-          />
+          <p className="text-lg font-semibold mb-2">{mistake.text}</p>
+          <p className="text-sm text-gray-500">未対応タイプ: {type}</p>
         </div>
       )}
 
-      <div className="mt-6">
-        <button
-          type="button"
-          onClick={() => navigate("/review")}
-          className="px-3 py-2 rounded-md border"
-        >
-          戻る
-        </button>
-      </div>
-
-      {/* DEBUG HUD */}
-      <div style={{ marginTop: 24, padding: 12, border: "1px dashed #bbb", borderRadius: 8, background: "#fafafa" }}>
-        <div style={{ fontWeight: 600, marginBottom: 4 }}>Debug</div>
-        <div style={{ fontSize: 12, lineHeight: 1.6 }}>
-          <div>type: <code>{String(q.type)}</code></div>
-          <div>answer: <code>{Array.isArray(q.answer) ? JSON.stringify(q.answer) : String(q.answer ?? "")}</code></div>
-          {Array.isArray(q.options) && (<div>options: <code>{JSON.stringify(q.options)}</code></div>)}
-          {Array.isArray(groupTokens) && groupTokens.length > 0 && (
-            <div>tokens: <code>{JSON.stringify(groupTokens.map((t) => t.text))}</code></div>
-          )}
-          <div>you: <code>{String(debugYou)}</code></div>
+      {result && (
+        <div className="font-bold">
+          {result}
+          <div className="mt-4 space-x-2">
+            <button
+              onClick={nextFromSession}
+              className="px-3 py-2 rounded bg-purple-600 text-white"
+            >
+              次の問題へ
+            </button>
+            <button
+              onClick={() => navigate("/review/mistakes")}
+              className="px-3 py-2 rounded border"
+            >
+              Mistakes一覧へ戻る
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -1,161 +1,117 @@
-// src/pages/ReviewPage.jsx
-import React, { useEffect, useState, useMemo } from "react";
+// src/pages/ReviewPlayPage.jsx
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { db } from "@/fbkit";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { useNavigate, Link } from "react-router-dom";
-import { getFirestoreDb } from "@/fbkit";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-} from "firebase/firestore";
 
-const db = getFirestoreDb();
+// 簡易ビュー：MCQ
+function MCQView({ text, options = [], answer, judge }) {
+  const [picked, setPicked] = useState(null);
 
-export default function ReviewPage() {
-  const [mistakes, setMistakes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
-
-  const uid = getAuth().currentUser?.uid || null;
-
-  const fmt = useMemo(() => {
-    try {
-      return new Intl.DateTimeFormat("ja-JP", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return { format: (d) => d?.toString?.() ?? "" };
-    }
-  }, []);
-
-  function toDate(val) {
-    if (val?.toDate) return val.toDate();
-    if (typeof val === "number") return new Date(val);
-    if (typeof val === "string") return new Date(val);
-    return null;
-  }
-
-  useEffect(() => {
-    if (!uid) {
-      setLoading(false);
-      return;
-    }
-    const q = query(
-      collection(db, "mistakes"),
-      where("userId", "==", uid),  // ← 修正
-      orderBy("createdAt", "desc"),
-      limit(100)
-    );
-
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setMistakes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-        setLoading(false);
-      },
-      (e) => {
-        console.error("[review] onSnapshot error:", e);
-        setError(e?.message || "読み込みに失敗しました");
-        setLoading(false);
-      }
-    );
-    return () => unsub();
-  }, [uid]);
-
-  if (loading) return <div style={{ padding: 16 }}>読み込み中...</div>;
-  if (error) return <div style={{ padding: 16 }}>エラー: {error}</div>;
-
-  const Empty = () => (
-    <div
-      style={{
-        marginTop: 24,
-        border: "1px dashed #bbb",
-        padding: 24,
-        borderRadius: 12,
-        textAlign: "center",
-        background: "#fafafa",
-      }}
-    >
-      <div style={{ fontSize: 16, marginBottom: 8 }}>間違えた問題はありません 🎉</div>
-      <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 16 }}>
-        練習やチャレンジで新しい問題に挑戦してみよう
-      </div>
-      <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-        <button
-          onClick={() => navigate("/")}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "white" }}
-        >
-          トップへ
-        </button>
-        <button
-          onClick={() => navigate("/challenge")}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #0aa", background: "#0ff2" }}
-        >
-          チャレンジへ進む
-        </button>
-      </div>
-    </div>
-  );
+  const confirm = () => {
+    if (picked == null) return;
+    const ok = options[picked] === answer;
+    judge(ok, options[picked]);
+  };
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1 className="text-xl font-bold mb-2">復習モード</h1>
+    <div className="space-y-3">
+      <div className="text-lg font-semibold mb-2">{text}</div>
+      <div className="flex flex-col gap-2">
+        {options.map((c, i) => (
+          <button
+            key={i}
+            onClick={() => setPicked(i)}
+            className={`px-3 py-2 rounded border ${
+              picked === i ? "bg-blue-100" : "bg-white"
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+      <button
+        onClick={confirm}
+        disabled={picked == null}
+        className="px-4 py-2 rounded bg-emerald-600 text-white mt-2 disabled:opacity-50"
+      >
+        確認
+      </button>
+    </div>
+  );
+}
 
-      {mistakes.length === 0 ? (
-        <Empty />
+export default function ReviewPlayPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [mistake, setMistake] = useState(null);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const ref = doc(db, "mistakes", id);
+        const snap = await getDoc(ref);
+        if (!snap.exists()) throw new Error("問題が見つかりません");
+        setMistake({ id: snap.id, ...snap.data() });
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [id]);
+
+  const judge = async (ok, you) => {
+    try {
+      if (!mistake?.id) return;
+      await updateDoc(doc(db, "mistakes", mistake.id), {
+        reviewStatus: ok ? "got" : "retry",
+        reviewedAt: serverTimestamp(),
+        lastAnswer: you,
+      });
+      setResult(ok ? "正解！🎉 復習完了" : "不正解 ❌ また挑戦してね");
+    } catch (e) {
+      console.error("update error", e);
+      alert("更新に失敗しました");
+    }
+  };
+
+  if (loading) return <div className="p-4">読み込み中...</div>;
+  if (error) return <div className="p-4 text-red-600">エラー: {error}</div>;
+  if (!mistake) return <div className="p-4">問題データがありません</div>;
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="text-xs text-gray-500">ID: {mistake.id}</div>
+
+      {mistake.type === "mcq" ? (
+        <MCQView
+          text={mistake.text}
+          options={mistake.options || mistake.choices || []}
+          answer={mistake.answer}
+          judge={judge}
+        />
       ) : (
-        <ul style={{ listStyle: "none", padding: 0, marginTop: 8 }}>
-          {mistakes.map((m) => {
-            const created = toDate(m.createdAt);
-            return (
-              <li
-                key={m.id}
-                style={{
-                  border: "1px solid #ddd",
-                  padding: 12,
-                  borderRadius: 8,
-                  marginBottom: 8,
-                  display: "grid",
-                  gap: 4,
-                }}
-              >
-                <div style={{ fontWeight: 600 }}>{m.text}</div>
-                <div>あなたの選択: {m.picked}</div>
-                <div>正解: {m.answer}</div>
-                <div style={{ fontSize: 12, opacity: 0.7 }}>
-                  追加日時: {created ? fmt.format(created) : "-"}
-                </div>
-                <div>
-                  <button
-                    onClick={() => navigate(`/review/play/${encodeURIComponent(m.id)}`)}
-                    style={{
-                      marginTop: 8,
-                      padding: "6px 10px",
-                      borderRadius: 6,
-                      border: "1px solid #09f",
-                      background: "#09f2",
-                    }}
-                  >
-                    この問題で復習する
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <div>
+          <p className="text-lg font-semibold mb-2">{mistake.text}</p>
+          <p className="text-sm text-gray-500">
+            ※ type {mistake.type} は未対応です
+          </p>
+        </div>
       )}
 
-      <div style={{ marginTop: 16 }}>
-        <Link to="/login">ログインへ/変更へ</Link>
-      </div>
+      {result && <div className="font-bold">{result}</div>}
+
+      <button
+        onClick={() => navigate("/review/mistakes")}
+        className="px-3 py-2 rounded border mt-4"
+      >
+        Mistakes一覧へ戻る
+      </button>
     </div>
   );
 }

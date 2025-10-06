@@ -1,73 +1,47 @@
-// scripts/seedProblems.js
-import "dotenv/config";
-import crypto from "node:crypto";
-import { initializeApp } from "firebase/app";
+import dotenv from "dotenv";
+dotenv.config();
+
 import {
-  getFirestore, connectFirestoreEmulator,
-  doc, setDoc
+  getFirestore,
+  connectFirestoreEmulator,
+  collection,
+  doc,
+  setDoc, // ← これが必須！
 } from "firebase/firestore";
+import { initializeApp } from "firebase/app";
 
-// ---- 環境値（なければデフォルト） ----
-const USE_EMU = (process.env.VITE_USE_EMU ?? "true") === "true";
-const FS_PORT = Number(process.env.VITE_FIRESTORE_PORT ?? 8089); // あなたの環境に合わせて
-const PROJECT_ID = process.env.VITE_FIREBASE_PROJECT_ID || "gachaben-2025";
+const USE_EMU = process.env.VITE_USE_EMU === "true";
+const FIRESTORE_PORT = Number(process.env.VITE_FIRESTORE_PORT || 8089);
 
-// ---- Firebase 初期化（Emulator前提の軽量設定でOK）----
-const app = initializeApp({ projectId: PROJECT_ID });
-const db = getFirestore(app);
-if (USE_EMU) {
-  connectFirestoreEmulator(db, "localhost", FS_PORT);
-  console.log(`[SEED] Firestore emulator -> localhost:${FS_PORT}, projectId=${PROJECT_ID}`);
-}
+const firebaseConfig = {
+  apiKey: process.env.VITE_FIREBASE_API_KEY,
+  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.VITE_FIREBASE_APP_ID,
+};
 
-// ---- ID を安定生成（同じ問題なら同じID = 上書き = 重複しない）----
-function problemId(p) {
-  const key = `${p.category}|${p.subject}|${p.grade}|${p.unit}|${p.body.question}`;
-  const hash = crypto.createHash("md5").update(key).digest("hex").slice(0, 10);
-  return `p_${p.category}_${p.subject}_${p.grade}_${hash}`;
-}
+console.log("USE_EMU =", USE_EMU, "PROJECT_ID =", firebaseConfig.projectId, "PORT =", FIRESTORE_PORT);
 
-// ---- ここに投入したい問題を並べる（例：教科書1問＋チャレンジ1問）----
-const problems = [
-  {
+(async () => {
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  if (USE_EMU) {
+    connectFirestoreEmulator(db, "localhost", FIRESTORE_PORT);
+    console.log(`[FBKIT] Firestore -> emulator (${FIRESTORE_PORT})`);
+  }
+
+  const ref = doc(collection(db, "problems"));
+  await setDoc(ref, {
     grade: 3,
     subject: "math",
     unit: "かけ算",
-    type: "mcq",
     level: 1,
-    category: "textbook",
-    body: {
-      question: "3×4は？",
-      choices: ["6", "7", "12", "14"],
-      answer: 2
-    }
-  },
-  {
-    grade: 3,
-    subject: "challenge",
-    unit: "計算",
-    type: "mcq",
-    level: 1,
-    category: "challenge",
-    body: {
-      question: "15+7は？",
-      choices: ["20", "21", "22", "23"],
-      answer: 2
-    }
-  }
-];
+    category: "textbook", // ← 追加
+    body: { q: "3×4=", a: "12" },
+  });
 
-// ---- 実行本体（同じIDで set = idempotent）----
-async function main() {
-  for (const p of problems) {
-    const id = problemId(p);
-    await setDoc(doc(db, "problems", id), p, { merge: false });
-    console.log(`[SEED] upsert: ${id} (${p.body.question})`);
-  }
-  console.log("[SEED] done.");
-}
-
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+  console.log("✅ problems に1件追加:", ref.id);
+})();

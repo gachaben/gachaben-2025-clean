@@ -1,19 +1,18 @@
-// src/lib/mistakes.js
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import { getFirestoreDb } from "@/fbkit";
 
 /**
- * 間違えた問題を mistakes コレクションに保存
- * @param {string} uid - ユーザーID
- * @param {object} problem - 問題データ
+ * 間違えた問題を mistakes に upsert（同じ問題は times++）
  */
 export async function addMistake(uid, problem) {
   if (!uid) throw new Error("NO_AUTH");
-
   const db = getFirestoreDb();
-  // ユニークID: ユーザーID + 問題ID
+
   const id = `${uid}_${problem.id}`;
   const ref = doc(db, "mistakes", id);
+
+  const prev = await getDoc(ref);
+  const old = prev.exists() ? prev.data() : null;
 
   const payload = {
     userId: uid,
@@ -25,11 +24,11 @@ export async function addMistake(uid, problem) {
     grade: problem.grade,
     level: problem.level,
     category: problem.category,
-    status: "open",                // ← 統一
-    times: 1,                      // 初回は1
+    status: "open",
+    times: old ? (old.times || 1) + 1 : 1,
     lastWrongAt: serverTimestamp(),
   };
 
-  // merge:true にすることで、既に存在すれば上書き
   await setDoc(ref, payload, { merge: true });
+  if (import.meta.env.DEV) console.log("🔥 mistake stored:", id, payload);
 }

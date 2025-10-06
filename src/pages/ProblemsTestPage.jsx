@@ -1,117 +1,119 @@
 // src/pages/ProblemsTestPage.jsx
 import React, { useEffect, useState } from "react";
-import { getFirestoreDb } from "@/fbkit";
-const db = getFirestoreDb();
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth"; // ← 追加
-import { addMistake } from "@/lib/mistakes"; // ← 追加
+import { collection, getDocs, query, where, addDoc } from "firebase/firestore";
+import { getFirestoreDb, getFirebaseAuth } from "@/fbkit";
 
-export default function ProblemsTestPage() {
+function ProblemsTestPage() {
   const [problems, setProblems] = useState([]);
-  const [current, setCurrent] = useState(null);
+  const [selected, setSelected] = useState(null);
   const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [uid, setUid] = useState(null); // ← stateで管理
 
-  // 🔑 ログイン状態を監視
+  // Firestoreから問題を取得
   useEffect(() => {
-    const auth = getAuth();
-    const unsub = onAuthStateChanged(auth, (user) => {
-      setUid(user?.uid ?? null);
-      console.log("onAuthStateChanged uid:", user?.uid ?? null);
-    });
-    return () => unsub();
-  }, []);
-
-  // Firestore から問題を読み込む
-  useEffect(() => {
-    (async () => {
+    const fetchData = async () => {
       try {
-        const q = query(
-          collection(db, "problems"),
-          where("category", "==", "textbook")
-        );
+        const db = getFirestoreDb();
+        const q = query(collection(db, "problems"), where("category", "==", "textbook"));
         const snap = await getDocs(q);
-        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setProblems(list);
-        setCurrent(list[0] || null);
+        const rows = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setProblems(rows);
+        console.log("✅ Firestoreから問題取得:", rows);
       } catch (e) {
-        console.error("failed to load problems:", e);
-      } finally {
-        setLoading(false);
+        console.error("❌ Firestore取得エラー:", e);
       }
-    })();
+    };
+    fetchData();
   }, []);
 
-  if (loading) return <div>読み込み中...</div>;
-  if (!current) return <div>問題が見つかりません</div>;
+  // 回答処理
+  const handleAnswer = async (userAnswer, problem) => {
+    setSelected(userAnswer);
+    const correct = problem.body.a;
 
-  const checkAnswer = async (choice, idx) => {
-    console.log("uid:", uid);
-    console.log("current:", current);
-
-    const correctIdx = current.body?.answer;
-    const isCorrect = idx === correctIdx;
-
-    if (isCorrect) {
-      setResult("correct");
-      alert("正解！");
+    if (userAnswer === correct) {
+      setResult("正解！🎉");
     } else {
-      setResult("wrong");
-      alert("不正解…");
+      setResult(`不正解 ❌（正解は ${correct}）`);
+      try {
+        const db = getFirestoreDb();
+        const auth = getFirebaseAuth();
+        const user = auth.currentUser;
 
-      // 🔽 不正解だったら mistakes に登録
-      if (uid) {
-        try {
-          await addMistake(uid, current);
-          console.log("mistake saved:", current.id);
-        } catch (e) {
-          console.error("failed to save mistake:", e);
-        }
-      } else {
-        console.warn("uid が null のため mistakes 保存をスキップしました");
+        await addDoc(collection(db, "mistakes"), {
+          uid: user?.uid || "guest",
+          problemId: problem.id,
+          question: problem.body.q,
+          answer: userAnswer,
+          correct,
+          createdAt: new Date().toISOString(),
+        });
+        console.log("🔥 mistake saved!");
+      } catch (e) {
+        console.error("⚠️ mistake保存エラー:", e);
       }
     }
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Firestoreから取得した問題（category=textbook）</h2>
+    <div className="p-6">
+      <h2 className="text-xl font-bold mb-4">
+        Firestoreから取得した問題 (category=textbook)
+      </h2>
 
-      <div style={{ margin: "16px 0" }}>
-        <div>Q: {current.body?.question ?? "（問題文なし）"}</div>
-        <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-          {current.body?.choices?.map((c, idx) => (
-            <button
-              key={idx}
-              onClick={() => checkAnswer(c, idx)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                border: "1px solid #ccc",
-                background:
-                  result && idx === current.body.answer
-                    ? "#c8f7c5"
-                    : result === "wrong" && idx !== current.body.answer
-                    ? "#fdd"
-                    : "#fff",
-              }}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
+      {Array.isArray(problems) && problems.length > 0 ? (
+        problems.map((p) => (
+          <div key={p.id} className="mb-8 border-b pb-4">
+            <p className="text-lg font-semibold mb-4">Q: {p.body.q}</p>
+            <div className="flex flex-wrap gap-4">
+              {[p.body.a, Number(p.body.a) + 1, Number(p.body.a) - 1]
+                .sort(() => Math.random() - 0.5)
+                .map((choice, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleAnswer(choice.toString(), p)}
+                    disabled={selected !== null}
+                    className={`px-6 py-3 rounded-xl text-lg font-bold border-2 transition duration-200
+                      ${
+                        selected === choice.toString()
+                          ? choice.toString() === p.body.a
+                            ? "bg-green-500 text-white border-green-600"
+                            : "bg-red-500 text-white border-red-600"
+                          : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
+                      }
+                      ${selected !== null && selected !== choice.toString() ? "opacity-50" : ""}
+                    `}
+                  >
+                    {choice}
+                  </button>
+                ))}
+            </div>
+          </div>
+        ))
+      ) : (
+        <p className="text-gray-500">問題がありません。</p>
+      )}
+
+      {result && (
+        <p className="mt-6 text-lg font-bold text-center">
+          {result}
+        </p>
+      )}
+
+      <div className="mt-6 text-center">
+        <button
+          onClick={() => {
+            setSelected(null);
+            setResult(null);
+            window.location.reload();
+          }}
+          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+        >
+          再読込
+        </button>
       </div>
-
-      {result === "correct" && <p style={{ color: "green" }}>⭕ 正解！</p>}
-      {result === "wrong" && <p style={{ color: "red" }}>❌ 不正解…</p>}
-
-      <button
-        onClick={() => window.location.reload()}
-        style={{ marginTop: 16 }}
-      >
-        再読込
-      </button>
     </div>
   );
 }
+
+// ✅ ← ここが重要！（定義のあとで export）
+export default ProblemsTestPage;

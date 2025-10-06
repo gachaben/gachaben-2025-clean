@@ -1,13 +1,21 @@
 // src/fbkit/config.ts
-export const firebaseConfig = {
-  apiKey: "demo",
-  projectId: "demo-gachaben",
-  appId: "demo",
-};
+const USE_EMU = (import.meta.env.VITE_USE_EMU ?? "false") === "true";
 
-export const USE_EMU = import.meta.env.VITE_USE_EMU === "true";
-export const AUTH_PORT = Number(import.meta.env.VITE_AUTH_PORT ?? 9099);
-export const FIRESTORE_PORT = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8088);
+export const firebaseConfig = USE_EMU
+  ? {
+      apiKey: "fake-api-key",   // ← ここ大事
+      projectId: "demo-gachaben",
+      appId: "demo-app",
+    }
+  : {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    };
 
-// ブラウザ実行時のみエミュ接続！ESR/HMR 多重対策�E一助�E�E
-export const isLocalhost = USE_EMU && typeof window !== "undefined";
+export const isBrowser = typeof window !== "undefined";
+export const isLocalhost = isBrowser && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+export { USE_EMU };

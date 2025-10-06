@@ -3,14 +3,7 @@ import React, { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { getFirebaseAuth } from "@/fbkit";
 import { db } from "@/fbkit";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  orderBy,
-  limit,
-} from "firebase/firestore";
+import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 export default function ReviewListPage() {
@@ -29,9 +22,8 @@ export default function ReviewListPage() {
       try {
         const qref = query(
           collection(db, "mistakes"),
-          where("userId", "==", user.uid),
-          where("status", "==", "open"),
-          orderBy("lastWrongAt", "desc"),
+          where("uid", "==", user.uid),
+          orderBy("createdAt", "desc"),
           limit(50)
         );
         const snap = await getDocs(qref);
@@ -52,10 +44,7 @@ export default function ReviewListPage() {
   return (
     <div style={{ padding: 16 }}>
       <h2>復習リスト</h2>
-
-      {items.length === 0 && (
-        <p style={{ color: "#999" }}>復習すべき問題はありません</p>
-      )}
+      {items.length === 0 && <p style={{ color: "#999" }}>復習すべき問題はありません</p>}
 
       <ul style={{ marginTop: 16 }}>
         {items.map((m) => (
@@ -64,7 +53,7 @@ export default function ReviewListPage() {
               <strong>{m.question}</strong>
             </div>
             <div style={{ fontSize: 12, color: "#666" }}>
-              {m.subject} / {m.category} / {m.grade}年
+              {m.subject || "未分類"} / {m.grade || "?"}年
             </div>
             <button
               style={{

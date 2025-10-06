@@ -1,97 +1,156 @@
-✅ Firestore スキーマ v1（最終保存版）
+# 📘 Firestore スキーマ v2（2025-10対応）
 
-このファイルは「データの背骨」です。
-アプリが Firestore にどんなデータを持つかを全てここで定義します。
-クライアントコードや seed スクリプトを変更する前に、必ずここを確認・更新すること。
+> ✅ **目的：** v1.2仕様（学習・チャレンジ・バトルの三本柱＋カードシステム）に完全対応  
+> 💡 `users`, `cards`, `problems`, `battles` を中心に設計  
+> 🔐 ドキュメント変更時は **docs/spec-v1.2.md** と同期更新すること
 
-1. users/{uid}
+---
+
+## 🧍‍♂️ users/{uid}
+
+```js
 {
-  hearts: number,                // 0..5
-  heartsLastTickAt: Timestamp,   // ❤ 回復基点
-  battleTickets: number,         // 0..3
-  battleTicketsResetAt: Timestamp, // 翌0時リセット用
+  name: string,                    // 表示名
+  grade: number,                   // 学年（1〜6, etc）
+  hearts: number,                  // 0〜5（スタミナ）
+  heartsLastTickAt: Timestamp,     // ❤回復基準時刻
+  battleTickets: number,           // 0〜3（バトル券）
+  battleTicketsResetAt: Timestamp, // 翌0時の基準
 
-  // 学習履歴
-  solvedProblems: {
-    [problemId]: {
-      lastSolvedAt: Timestamp,
-      level: 1 | 2 | 3
-    }
+  login: {
+    lastLoginDate: string,         // YYYY-MM-DD
+    streakDays: number,            // 連続ログイン日数
+    lastRewardGiven: string|null   // 最終報酬日
   },
 
-  // デイリーミッション進行
   daily: {
-    date: 'YYYY-MM-DD',
-    textbookCleared: boolean,
-    playedMin: number,
-    calcDone: boolean,
-    kanjiDone: boolean,
-    readingDone: boolean
+    date: string,                  // YYYY-MM-DD
+    playedMinutes: number,         // 1日あたり学習時間
+    clearedMissions: string[],     // ["calc", "kanji", "reading"]
   },
 
-  // ガチャ券・報酬系
   gacha: {
     normal: number,
     premium: number
   },
 
-  // ランキング・戦績
+  ownedCardIds: string[],          // cards コレクション参照
+
   ranks: {
     weeklyPoint: number,
     totalPoint: number
-  }
-}
+  },
 
-2. problems/{problemId}
+  createdAt: Timestamp,
+  updatedAt: Timestamp
+}
+🃏 cards/{cardId}
+js
+コードをコピーする
 {
-  grade: number,                               // 学年
-  subject: 'jp' | 'math' | 'sci' | 'soc' | 'eng',
-  unit: string,                                // 単元名（例：「かけ算」）
-  category: 'textbook' | 'challenge' | 'event',// 出題区分
-  type: 'mcq' | 'keypad' | 'sequence' | 'text', // 問題形式
-  level: 1 | 2 | 3,                            // 難易度
+  name: string,
+  key: string,
+  description: string,
+  attackEffect: {
+    type: string,
+    value: number
+  },
+  defenseEffect: {
+    type: string,
+    value: number
+  },
+  rarity: "B" | "A" | "S" | "PREMIUM",
+  usesRequired: number,
+  createdAt: Timestamp
+}
+🧠 problems/{problemId}
+js
+コードをコピーする
+{
+  grade: number,
+  subject: "jp"|"math"|"sci"|"soc"|"eng",
+  unit: string,
+  type: "mcq"|"text"|"sequence"|"keypad",
+  level: 1|2|3,
   body: {
-    q: string,   // 問題文
-    a: string,   // 正答
-    choices?: string[] // 選択肢（必要に応じて）
-  }
+    q: string,
+    choices: string[],
+    a: string
+  },
+  createdAt: Timestamp
 }
-
-3. mistakes/{autoId}
+❌ mistakes/{autoId}
+js
+コードをコピーする
 {
-  uid: string,            // 回答者UID（未ログインなら "guest"）
+  uid: string,
   problemId: string,
+  subject: string,
+  unit: string,
   question: string,
   answer: string,
   correct: string,
-  createdAt: Timestamp
+  source: "textbook"|"challenge"|"battle",
+  createdAt: Timestamp,
+  reviewed: boolean
 }
-
-4. events/{autoId}（将来分析用）
+⚔️ battles/{autoId}
+js
+コードをコピーする
 {
   uid: string,
-  type: 'ad_reward' | 'battle_win' | 'gacha_draw' | 'mission_clear',
+  opponentId: string,
+  result: "win"|"lose"|"draw",
+  rounds: number,
+  usedCards: string[],
+  earnedPoints: number,
+  createdAt: Timestamp,
+  rewarded: boolean
+}
+🎁 events/{autoId}
+js
+コードをコピーする
+{
+  uid: string,
+  type: "ad_reward"|"gacha_draw"|"login_bonus"|"mission_clear"|"battle_win",
   meta: object,
   at: Timestamp
 }
+🌈 wallpaper/{id}
+js
+コードをコピーする
+{
+  theme: "insect"|"bread"|"animal"|string,
+  color: "default"|"blue"|"red"|"gold",
+  unlockMinutes: number,
+  imageUrl: string,
+  createdAt: Timestamp
+}
+🧩 関係図（概要）
+pgsql
+コードをコピーする
+users
+ ├── hearts / tickets / gacha
+ ├── login.streakDays → ログイン報酬（S or PREMIUM）
+ ├── ownedCardIds → cards/{cardId}
+ └── solvedProblems → problems/{problemId}
 
-5. 今後予定のコレクション
-コレクション名	目的	実装タイミング
-ranksWeekly	週次ランキング集計キャッシュ	Cloud Functions 実装時
-battles	バトルログ記録	後期フェーズ
-missions	デイリー／ウィークリーミッション管理	後期フェーズ
-✅ 補足メモ
+cards
+ ├── 攻撃・防御効果を両持ち
+ └── usesRequired により発動制限
 
-problems・mistakes は既に実装済み。
+problems
+ └── level・subject・unit で出題制御
 
-users はハート管理・デイリー・ランキングまでカバー済み。
+mistakes
+ └── 復習モード対象
 
-events や battles を追加する際は、必ずこのファイルを更新してからコードを変更すること。
+battles
+ └── result + usedCards + earnedPoints
+✅ 運用ルール
 
-📘 スキーマ更新ルール
+仕様変更時はまず schema-v2.md を更新してからコード修正。
 
-schema-v1.md を更新
+spec-v1.2.md にも整合性を取る。
 
-spec-v1.1.md の「12. Firestoreスキーマ」章も更新
-
-コミット名：📝 docs/schema-v1.md 更新
+新カード・壁紙を追加する際は seed スクリプト経由で投入。

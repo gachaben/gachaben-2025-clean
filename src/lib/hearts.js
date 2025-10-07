@@ -1,83 +1,90 @@
-import { runTransaction, serverTimestamp } from "firebase/firestore";
-<<<<<<< HEAD
-import { getFirestoreDb } from "@/fbkit";   // ← 追加
-import { userDocRef } from "./userState";
-
-const db = getFirestoreDb();               // ← 追加
-
-// ❤を1つ消費
-=======
+// src/lib/hearts.js
+import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { getFirestoreDb } from "@/fbkit";
-import { userDocRef } from "./userState";
 
-/**
- * ❤ 1つ消費
- * idempotencyKey（二重送信防止キー）を持つ安全な消費処理
- */
->>>>>>> bfa2680 (✅ 作業完了 $(Get-Date -Format yyyy-MM-dd))
-export async function consumeOneHeart(uid, idempotencyKey) {
-  if (!uid) throw new Error("NO_AUTH");
+export const MAX_HEARTS = 5;
+
+/** 広告視聴などで ❤ を満タンにする */
+export async function fullRecoverHearts(uid, { reason = "ad" } = {}) {
+  if (!uid) throw new Error("uid is required");
   const db = getFirestoreDb();
-  const ref = userDocRef(uid);
+  const ref = doc(db, "users", uid);
 
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    if (!snap.exists()) throw new Error("USER_MISSING");
-
-    const u = snap.data() || {};
-<<<<<<< HEAD
-    if (u.lastConsumeKey === idempotencyKey) return; // 二重防止
-=======
-
-    // 二重送信チェック
-    if (u.lastConsumeKey === idempotencyKey) return;
->>>>>>> bfa2680 (✅ 作業完了 $(Get-Date -Format yyyy-MM-dd))
-
-    const hearts = u.hearts ?? 0;
-    if (hearts <= 0) {
-      const err = new Error("NO_HEART");
-      err.code = "NO_HEART";
-      throw err;
+    if (!snap.exists()) {
+      tx.set(
+        ref,
+        {
+          hearts: MAX_HEARTS,
+          lastAdHeartsAt: serverTimestamp(),
+          lastAdHeartsReason: reason,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      return;
     }
 
     tx.update(ref, {
-      hearts: hearts - 1,
-      heartsLastTickAt: serverTimestamp(),
-      lastConsumeKey: idempotencyKey,
+      hearts: MAX_HEARTS,
+      lastAdHeartsAt: serverTimestamp(),
+      lastAdHeartsReason: reason,
+      updatedAt: serverTimestamp(),
     });
   });
-
-  console.log(`❤️ consumeOneHeart: -1 (uid=${uid})`);
 }
 
-<<<<<<< HEAD
-// ❤を満タンに回復
-export async function fullRecoverHearts(uid, { reason } = {}) {
-=======
-/**
- * ❤ 全回復
- * 広告・時間回復・デバッグなどから呼び出す。
- */
-export async function fullRecoverHearts(uid, { reason = "manual" } = {}) {
->>>>>>> bfa2680 (✅ 作業完了 $(Get-Date -Format yyyy-MM-dd))
-  if (!uid) throw new Error("NO_AUTH");
+/** n個消費（0未満にならない） */
+export async function spendHearts(uid, n = 1) {
+  if (!uid) throw new Error("uid is required");
   const db = getFirestoreDb();
-  const ref = userDocRef(uid);
+  const ref = doc(db, "users", uid);
 
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    if (!snap.exists()) return;
-
-    const update = {
-      hearts: 5,
-      heartsLastTickAt: serverTimestamp(),
-    };
-    if (reason === "ad") {
-      update.lastAdHeartsAt = serverTimestamp();
-    }
-
-    tx.update(ref, update);
+    const cur = (snap.data()?.hearts ?? 0) | 0;
+    const next = Math.max(0, cur - Math.max(0, n|0));
+    tx.set(
+      ref,
+      { hearts: next, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
   });
+}
 
-  console.log(`💖 fullRecoverHearts: 完了 (${reason})`);
+/** n個回復（MAX_HEARTSを超えない） */
+export async function addHearts(uid, n = 1) {
+  if (!uid) throw new Error("uid is required");
+  const db = getFirestoreDb();
+  const ref = doc(db, "users", uid);
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const cur = (snap.data()?.hearts ?? 0) | 0;
+    const next = Math.min(MAX_HEARTS, cur + Math.max(0, n|0));
+    tx.set(
+      ref,
+      { hearts: next, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  });
+}
+
+/** 直接セット（0〜MAXに丸める） */
+export async function setHearts(uid, value) {
+  if (!uid) throw new Error("uid is required");
+  const v = Math.max(0, Math.min(MAX_HEARTS, Number(value) || 0));
+  const db = getFirestoreDb();
+  const ref = doc(db, "users", uid);
+
+  await runTransaction(db, async (tx) => {
+    await tx.get(ref); // 存在チェック兼ねる（なくてもmerge setで作成）
+    tx.set(
+      ref,
+      { hearts: v, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  });
 }

@@ -19,20 +19,7 @@ export default function ReviewListPage() {
         setReady(true);
         return;
       }
-<<<<<<< HEAD
 
-      const uid = user.uid;
-      const qref = query(
-        collection(db, "mistakes"),
-        where("uid", "==", uid),
-        where("status", "==", "open"),
-        orderBy("lastWrongAt", "desc"),
-        limit(50)
-      );
-      const snap = await getDocs(qref);
-      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-      setReady(true);
-=======
       try {
         const qref = query(
           collection(db, "mistakes"),
@@ -49,7 +36,6 @@ export default function ReviewListPage() {
       } finally {
         setReady(true);
       }
->>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
     });
     return () => unsub();
   }, []);

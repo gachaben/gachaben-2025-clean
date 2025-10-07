@@ -11,9 +11,6 @@ import {
 import { db, auth, ensureSignedIn } from "@/fbkit";
 
 export default function ReviewSessionStart() {
-  const [mistakes, setMistakes] = useState([]);
-  const [count, setCount] = useState(5);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [raw, setRaw] = useState([]);
   const [state, setState] = useState("loading");
@@ -24,7 +21,7 @@ export default function ReviewSessionStart() {
   const [onlyOpen, setOnlyOpen] = useState(true);
   const [limitN, setLimitN] = useState(10);
 
-  // 認証監視
+  // ---- 認証監視＋mistakes購読 ----
   useEffect(() => {
     let unsub = () => {};
     (async () => {
@@ -47,11 +44,13 @@ export default function ReviewSessionStart() {
             setState("ready");
           },
           (err) => {
+            console.error("snapshot error:", err);
             setMsg(err.message);
             setState("error");
           }
         );
       } catch (e) {
+        console.error("auth or fetch error:", e);
         setMsg(e.message);
         setState("error");
       }
@@ -59,6 +58,7 @@ export default function ReviewSessionStart() {
     return () => unsub();
   }, []);
 
+  // ---- 絞り込みリスト ----
   const subjects = useMemo(
     () => Array.from(new Set(raw.map((x) => x.subject).filter(Boolean))),
     [raw]
@@ -82,8 +82,12 @@ export default function ReviewSessionStart() {
     return arr;
   }, [raw, subject, unit, onlyOpen]);
 
+  // ---- セッション開始 ----
   const startSession = () => {
-    if (items.length === 0) return alert("対象がありません。条件を調整してね。");
+    if (items.length === 0) {
+      alert("対象がありません。条件を調整してね。");
+      return;
+    }
     const take = items.slice(0, Math.max(1, Number(limitN) || 1));
     const queue = take.map((m) => ({
       questionId: m.questionId,
@@ -105,6 +109,7 @@ export default function ReviewSessionStart() {
     });
   };
 
+  // ---- 表示 ----
   if (state === "loading") return <div className="p-4">読み込み中…</div>;
   if (state === "error") return <div className="p-4 text-red-600">Error: {msg}</div>;
 
@@ -113,6 +118,7 @@ export default function ReviewSessionStart() {
       <h2 className="text-xl font-bold">連続復習スタート</h2>
 
       <div className="p-3 border rounded bg-white flex flex-wrap gap-2 items-center">
+        {/* 科目選択 */}
         <select
           value={subject}
           onChange={(e) => {
@@ -129,6 +135,7 @@ export default function ReviewSessionStart() {
           ))}
         </select>
 
+        {/* 単元選択 */}
         <select
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
@@ -143,6 +150,7 @@ export default function ReviewSessionStart() {
           ))}
         </select>
 
+        {/* 未復習チェック */}
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -152,6 +160,7 @@ export default function ReviewSessionStart() {
           未復習のみ
         </label>
 
+        {/* 出題数 */}
         <label className="flex items-center gap-2 text-sm">
           出題数
           <input

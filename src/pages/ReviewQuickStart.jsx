@@ -1,6 +1,6 @@
 // src/pages/ReviewQuickStart.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 import {
   collection,
@@ -9,18 +9,14 @@ import {
   orderBy,
   limit,
   onSnapshot,
+  doc,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { getAuth } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "@/fbkit";
 import { fullRecoverHearts } from "../lib/hearts";
 
 const COOLDOWN_MIN = 10;
 
-// Date/Timestamp/number/undefined を安全に ms に変換
+/* -------------------- Utils -------------------- */
 function tsToMs(v) {
   if (!v) return 0;
   if (typeof v === "number") return v;
@@ -43,67 +39,41 @@ function formatMMSS(ms) {
   return `${mm}:${ss}`;
 }
 
+/* -------------------- Main Component -------------------- */
 export default function ReviewQuickStart() {
   const navigate = useNavigate();
   const auth = getFirebaseAuth();
   const db = getFirestoreDb();
 
   const [uid, setUid] = useState(auth.currentUser?.uid ?? null);
+  const [user, setUser] = useState(null);
   const [mistakes, setMistakes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const uid = getAuth().currentUser?.uid;
+  const [nowMs, setNowMs] = useState(Date.now()); // 秒ごと更新
 
-  const [user, setUser] = useState(null);
-  const [nowMs, setNowMs] = useState(Date.now()); // 秒カウントダウン用
-
-  // authの変化を追従
+  // 認証監視
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
     return () => unsub();
   }, [auth]);
 
-  const fmt = useMemo(() => {
-    try {
-      return new Intl.DateTimeFormat("ja-JP", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return { format: (d) => d?.toString?.() ?? "" };
-    }
-  }, []);
+  // ユーザーデータ購読
+  useEffect(() => {
     if (!uid) return;
     const un = onSnapshot(doc(db, "users", uid), (snap) => {
       setUser(snap.exists() ? { id: snap.id, ...snap.data() } : null);
     });
     return () => un && un();
-  }, [uid]);
+  }, [uid, db]);
 
-  // 1秒ごとに「現在時刻」を更新
+  // 時間カウント（毎秒）
   useEffect(() => {
     const t = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const hearts = user?.hearts ?? 0;
-  const lastAdAtMs = tsToMs(user?.lastAdHeartsAt);
-
-  const cdTotalMs = COOLDOWN_MIN * 60_000;
-  const cdRemainMs = Math.max(0, cdTotalMs - (nowMs - lastAdAtMs));
-  const canAdRecover = hearts < 5 && cdRemainMs === 0;
-
-  const toDate = (val) => {
-    if (val?.toDate) return val.toDate();
-    if (typeof val === "number") return new Date(val);
-    if (typeof val === "string") return new Date(val);
-    return null;
-  };
-
-  // mistakes 購読
+  // Mistakes購読
   useEffect(() => {
     if (!uid) {
       setMistakes([]);
@@ -131,8 +101,50 @@ export default function ReviewQuickStart() {
     return () => unsub();
   }, [db, uid]);
 
+  const fmt = useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat("ja-JP", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return { format: (d) => d?.toString?.() ?? "" };
+    }
+  }, []);
+
+  // --- Hearts回復 ---
+  const hearts = user?.hearts ?? 0;
+  const lastAdAtMs = tsToMs(user?.lastAdHeartsAt);
+  const cdTotalMs = COOLDOWN_MIN * 60_000;
+  const cdRemainMs = Math.max(0, cdTotalMs - (nowMs - lastAdAtMs));
+  const canAdRecover = hearts < 5 && cdRemainMs === 0;
+
+  const doAdRecover = async () => {
+    if (!uid) return alert("ログインを確認してください");
+    if (hearts >= 5) return alert("❤は満タンです！");
+    if (!canAdRecover) return;
+    try {
+      await fullRecoverHearts(uid, { reason: "ad" });
+      alert("広告視聴ボーナスで❤が全回復しました！");
+    } catch (e) {
+      console.error("ad recover error:", e);
+      alert("回復に失敗しました。時間をおいて再度お試しください。");
+    }
+  };
+
+  // --- Helpers ---
+  const toDate = (val) => {
+    if (val?.toDate) return val.toDate();
+    if (typeof val === "number") return new Date(val);
+    if (typeof val === "string") return new Date(val);
+    return null;
+  };
+
   if (loading) return <div style={{ padding: 16 }}>読み込み中...</div>;
-  if (error) return <div style={{ padding: 16 }}>エラー: {error}</div>;
+  if (error) return <div style={{ padding: 16, color: "red" }}>エラー: {error}</div>;
 
   const Empty = () => (
     <div
@@ -152,89 +164,15 @@ export default function ReviewQuickStart() {
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
         <button
           onClick={() => navigate("/")}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #ddd", background: "white" }}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 8,
+            border: "1px solid #ddd",
+            background: "white",
+          }}
         >
           トップへ
         </button>
-  const doAdRecover = async () => {
-    if (!uid) return alert("ログインを確認してください");
-    if (hearts >= 5) return alert("❤は満タンです！");
-    if (!canAdRecover) return; // ガード
-    try {
-      // 本来は広告SDKの視聴完了イベント後に実行
-      await fullRecoverHearts(uid, { reason: "ad" });
-      alert("広告視聴ボーナスで❤が全回復しました！");
-    } catch (e) {
-      console.error("ad recover error:", e);
-      alert("回復に失敗しました。時間をおいて再度お試しください。");
-    }
-  };
-
-  return (
-    <div style={{ padding: 16 }}>
-      <h2>復習モード QuickStart</h2>
-
-      <div
-        style={{
-          padding: 12,
-          border: "1px solid #ddd",
-          borderRadius: 8,
-          margin: "12px 0",
-        }}
-      >
-        <div style={{ marginBottom: 8 }}>
-          まだ復習する問題はありません<span role="img" aria-label="sparkles">✨</span>
-          <br />
-          <small>まず「サンプル投入」で動作確認してみよう</small>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            className="border px-3 py-2 rounded"
-            onClick={() => navigate("/review/seed")}
-          >
-            サンプル投入
-          </button>
-          <Link className="border px-3 py-2 rounded" to="/review/list">
-            一覧へ
-          </Link>
-        </div>
-      </div>
-
-      {/* 広告で❤全回復セクション */}
-      <div
-        style={{
-          padding: 12,
-          border: "1px dashed #bbb",
-          borderRadius: 8,
-          margin: "12px 0",
-          background: "#fafafa",
-        }}
-      >
-        <div style={{ fontWeight: 600, marginBottom: 6 }}>
-          ❤スタミナ: {hearts} / 5
-        </div>
-        <button
-          onClick={() => navigate("/review/quick-seed")}
-          style={{ padding: "8px 12px", borderRadius: 8, border: "1px solid #0aa", background: "#0ff2" }}
-        >
-          サンプル投入
-          className={`px-3 py-2 rounded border ${
-            !canAdRecover ? "opacity-60 cursor-not-allowed" : ""
-          }`}
-          disabled={!canAdRecover}
-          onClick={doAdRecover}
-        >
-          {canAdRecover
-            ? "広告視聴で❤全回復（今すぐ使用可能）"
-            : `広告視聴で❤全回復（${COOLDOWN_MIN}分クールダウン）`}
-        </button>
-        <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
-          {hearts >= 5
-            ? "❤は満タンです"
-            : cdRemainMs > 0
-            ? `再使用まで ${formatMMSS(cdRemainMs)}`
-            : "今すぐ使用できます"}
-        </div>
       </div>
     </div>
   );
@@ -243,6 +181,7 @@ export default function ReviewQuickStart() {
     <div style={{ padding: 16 }}>
       <h1 className="text-xl font-bold mb-2">復習モード QuickStart</h1>
 
+      {/* Mistakes リスト */}
       {mistakes.length === 0 ? (
         <Empty />
       ) : (
@@ -294,7 +233,40 @@ export default function ReviewQuickStart() {
         </ul>
       )}
 
-      {/* デバッグ用 */}
+      {/* 広告で❤全回復 */}
+      <div
+        style={{
+          padding: 12,
+          border: "1px dashed #bbb",
+          borderRadius: 8,
+          margin: "20px 0",
+          background: "#fafafa",
+        }}
+      >
+        <div style={{ fontWeight: 600, marginBottom: 6 }}>
+          ❤スタミナ: {hearts} / 5
+        </div>
+        <button
+          className={`px-3 py-2 rounded border ${
+            !canAdRecover ? "opacity-60 cursor-not-allowed" : ""
+          }`}
+          disabled={!canAdRecover}
+          onClick={doAdRecover}
+        >
+          {canAdRecover
+            ? "広告視聴で❤全回復（今すぐ使用可能）"
+            : `広告視聴で❤全回復（${COOLDOWN_MIN}分クールダウン）`}
+        </button>
+        <div style={{ marginTop: 6, fontSize: 12, opacity: 0.8 }}>
+          {hearts >= 5
+            ? "❤は満タンです"
+            : cdRemainMs > 0
+            ? `再使用まで ${formatMMSS(cdRemainMs)}`
+            : "今すぐ使用できます"}
+        </div>
+      </div>
+
+      {/* デバッグ情報 */}
       <div
         style={{
           marginTop: 12,
@@ -305,17 +277,24 @@ export default function ReviewQuickStart() {
       >
         <div style={{ fontWeight: 600, marginBottom: 4 }}>User Debug</div>
         <div style={{ fontSize: 13, lineHeight: 1.7 }}>
-          <div>uid: <code>{uid || "-"}</code></div>
-          <div>hearts: <code>{hearts}</code></div>
-          <div>battleTickets: <code>{user?.battleTickets ?? "-"}</code></div>
-          <div>daily.date: <code>{user?.daily?.date ?? "-"}</code></div>
+          <div>
+            uid: <code>{uid || "-"}</code>
+          </div>
+          <div>
+            hearts: <code>{hearts}</code>
+          </div>
+          <div>
+            battleTickets: <code>{user?.battleTickets ?? "-"}</code>
+          </div>
+          <div>
+            daily.date: <code>{user?.daily?.date ?? "-"}</code>
+          </div>
           <div>
             lastAdHeartsAt:{" "}
             <code>
-              {(() => {
-                const ms = lastAdAtMs;
-                return ms ? new Date(ms).toLocaleString() : "-";
-              })()}
+              {lastAdAtMs
+                ? new Date(lastAdAtMs).toLocaleString()
+                : "-"}
             </code>
           </div>
         </div>

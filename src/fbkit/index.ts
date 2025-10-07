@@ -1,22 +1,33 @@
 // src/fbkit/index.ts
-<<<<<<< HEAD
-export {
+import {
   getFirebaseApp,
   getFirestoreDb,
   getFirebaseAuth,
   getFirebaseStorage,
 } from "./app";
-=======
-import { getFirebaseApp, getFirestoreDb, getFirebaseAuth, getFirebaseStorage } from "./app";
 export * from "./config";
 
-// 個別関数をまとめて export
-export { getFirebaseApp } from "./app";
-export { getFirestoreDb } from "./app";
-export { getFirebaseAuth } from "./app";
-export { getFirebaseStorage } from "./app";
+// 便利関数の再エクスポート
+export { getFirebaseApp, getFirestoreDb, getFirebaseAuth, getFirebaseStorage };
 
-
-// 便利エイリアス
+// 直接使うエイリアス
 export const db = getFirestoreDb();
->>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
+export const auth = getFirebaseAuth();
+export const storage = getFirebaseStorage();
+
+/**
+ * ✅ ensureSignedIn()
+ * Firebase Auth のログイン完了を保証するヘルパー
+ */
+export async function ensureSignedIn() {
+  const auth = getFirebaseAuth();
+  if (auth.currentUser) return auth.currentUser;
+
+  return new Promise((resolve, reject) => {
+    const unsub = auth.onAuthStateChanged((user) => {
+      unsub();
+      if (user) resolve(user);
+      else reject(new Error("User not signed in"));
+    });
+  });
+}

@@ -1,27 +1,13 @@
-<<<<<<< HEAD
-export const firebaseConfig = {
-  apiKey: "demo",         // エミュ用途なのでダミーでOK（本番時は本物を入れる）
-  projectId: "demo-gachaben",
-  appId: "demo",
-};
-
-export const USE_EMU = import.meta.env.VITE_USE_EMU === "true";
-
-export const AUTH_PORT = Number(import.meta.env.VITE_AUTH_PORT ?? 9099);
-export const FIRESTORE_PORT = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8089);
-export const STORAGE_PORT = Number(import.meta.env.VITE_STORAGE_PORT ?? 9199);
-
-// localhost 判定を広めに（0.0.0.0 / ::1 もOK）
-export const isLocalhost =
-  typeof window !== "undefined" &&
-  ["localhost", "127.0.0.1", "0.0.0.0", "::1"].includes(window.location.hostname);
-=======
 // src/fbkit/config.ts
-const USE_EMU = (import.meta.env.VITE_USE_EMU ?? "false") === "true";
 
+// --- Emulator 使用判定 ---
+export const USE_EMU = (import.meta.env.VITE_USE_EMU ?? "false") === "true";
+
+// --- Firebase 設定 ---
+// ローカルエミュレータ使用時はダミーキーでOK
 export const firebaseConfig = USE_EMU
   ? {
-      apiKey: "fake-api-key",   // ← ここ大事
+      apiKey: "demo",              // エミュ用途（実キー不要）
       projectId: "demo-gachaben",
       appId: "demo-app",
     }
@@ -34,7 +20,13 @@ export const firebaseConfig = USE_EMU
       appId: import.meta.env.VITE_FIREBASE_APP_ID,
     };
 
+// --- ポート設定（エミュレータ用）---
+export const AUTH_PORT = Number(import.meta.env.VITE_AUTH_PORT ?? 9099);
+export const FIRESTORE_PORT = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8089);
+export const STORAGE_PORT = Number(import.meta.env.VITE_STORAGE_PORT ?? 9199);
+
+// --- localhost 判定 ---
 export const isBrowser = typeof window !== "undefined";
-export const isLocalhost = isBrowser && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-export { USE_EMU };
->>>>>>> 718a510 ( Firestore接続＆問題取得成功！不正解時にmistakesへ記録できるようにした)
+export const isLocalhost =
+  isBrowser &&
+  ["localhost", "127.0.0.1", "0.0.0.0", "::1"].includes(window.location.hostname);

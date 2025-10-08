@@ -4,11 +4,10 @@ import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
 
 // ==== ページ ==== //
-import HomePage from "@/pages/HomePage.jsx";              // ホーム
+// ホーム
+import HomePage from "@/pages/HomePage.jsx";              // ← 追加
 import Login from "@/pages/Login.jsx";                    // ログイン
-import HistoryPage from "@/pages/HistoryPage.jsx";        // 履歴（未使用ならOK）
 import BattlePage from "@/pages/BattlePage.jsx";          // バトル
-import ProblemsTestPage from "@/pages/ProblemsTestPage.jsx"; // Firestoreテスト
 import DebugPage from "@/pages/DebugPage.jsx";            // デバッグ
 
 // ==== 復習モード関連 ==== //
@@ -44,10 +43,8 @@ function Nav() {
     <nav className="p-2 flex flex-wrap gap-3 text-sm bg-gray-50 border-b">
       <Link to="/">🏠 Home</Link>
       <Link to="/login">🔑 Login</Link>
-      <Link to="/history">📜 History</Link>
       <Link to="/review">📘 Review</Link>
       <Link to="/battle">🥊 Battle</Link>
-      <Link to="/problems-test">🧩 ProblemsTest</Link>
       <Link to="/debug">🧭 Debug</Link>
     </nav>
   );
@@ -62,8 +59,6 @@ export default function App() {
         {/* 基本ページ */}
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/history" element={<HistoryPage />} />
-        <Route path="/problems-test" element={<ProblemsTestPage />} />
         <Route path="/debug" element={<DebugPage />} />
 
         {/* バトル（ログイン必須） */}

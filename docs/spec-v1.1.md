@@ -156,3 +156,9 @@ spec-v1.1.md → spec-v1.3.md に更新保存すればOKです。
  はい、ファイル化して /docs/spec-v1.3.md に出力したい
 
  内部メモリにだけ保存でOK
+
+ ### 🔧 2025-10-08：不要ファイル整理完了
+- OldBattlePage / HistoryPage / ProblemsTestPage など旧ページを削除
+- src/App.jsx を更新（HomePage / ReviewPage / BattlePage のみ保持）
+- Firebase Emulator 正常起動確認（Auth / Firestore / Storage）
+- baseline-2025-10-08-clean タグを作成（安定版）

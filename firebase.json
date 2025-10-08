@@ -1,12 +1,25 @@
 {
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
   "emulators": {
-    "firestore": {
-      "port": 8089,
-      "storage": "emulator_data/firestore"
-    },
     "auth": {
-      "port": 9099,
-      "storage": "emulator_data/auth"
+      "port": 9099
+    },
+    "firestore": {
+      "port": 8089
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true,
+      "port": 4000
     }
-  }
+  },
+  "project": "gachaben-2025"
 }

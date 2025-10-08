@@ -2,7 +2,7 @@
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
-
+import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
 // ==== ページ ==== //
 // ホーム
 import HomePage from "@/pages/HomePage.jsx";              // ← 追加
@@ -60,7 +60,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/debug" element={<DebugPage />} />
-
+        <Route path="/doremi" element={<DoReMiBoard />} />
         {/* バトル（ログイン必須） */}
         <Route
           path="/battle"

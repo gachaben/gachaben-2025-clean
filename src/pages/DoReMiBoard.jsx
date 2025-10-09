@@ -26,22 +26,12 @@ const noteBg = {
   do2: "#FFD54F",
 };
 
-const rippleVars = {
-  do:  { "--r1":"rgba(255,224,130,.8)", "--r2":"rgba(255,224,130,.5)", "--r3":"rgba(255,224,130,.3)" },
-  re:  { "--r1":"rgba(128,222,234,.8)", "--r2":"rgba(128,222,234,.5)", "--r3":"rgba(128,222,234,.3)" },
-  mi:  { "--r1":"rgba(197,225,165,.8)", "--r2":"rgba(197,225,165,.5)", "--r3":"rgba(197,225,165,.3)" },
-  fa:  { "--r1":"rgba(255,204,188,.8)", "--r2":"rgba(255,204,188,.5)", "--r3":"rgba(255,204,188,.3)" },
-  so:  { "--r1":"rgba(179,157,219,.8)", "--r2":"rgba(179,157,219,.5)", "--r3":"rgba(179,157,219,.3)" },
-  ra:  { "--r1":"rgba(244,143,177,.8)", "--r2":"rgba(244,143,177,.5)", "--r3":"rgba(244,143,177,.3)" },
-  si:  { "--r1":"rgba(174,213,129,.8)", "--r2":"rgba(174,213,129,.5)", "--r3":"rgba(174,213,129,.3)" },
-  do2: { "--r1":"rgba(255,213,79,.8)",  "--r2":"rgba(255,213,79,.5)",  "--r3":"rgba(255,213,79,.3)"  },
-};
-
 export default function DoReMiBoard() {
   const [earned, setEarned] = useState([]);
   const [uid, setUid] = useState("");
   const [loading, setLoading] = useState(true);
   const [rippleNote, setRippleNote] = useState("");
+  const [completed, setCompleted] = useState(false); // ← 追加：全音クリア状態
 
   useEffect(() => {
     const auth = getAuth();
@@ -53,13 +43,20 @@ export default function DoReMiBoard() {
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const data = snap.data();
-          setEarned(data?.login?.earnedNotes || []);
+          const notes = data?.login?.earnedNotes || [];
+          setEarned(notes);
+
+          // 🔔 全音揃ったら自動再生（初回のみ）
+          if (notes.length === allNotes.length && !completed) {
+            setCompleted(true);
+            setTimeout(() => playScale(true), 800); // 少し遅延して再生
+          }
         }
       }
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [completed]);
 
   const playNote = (noteId) => {
     const audio = new Audio(`/sounds/doremi/${noteId}.wav`);
@@ -67,19 +64,28 @@ export default function DoReMiBoard() {
     audio.play();
   };
 
-  // 解放済みのみ自動再生（高ドは長め）
-  const playScale = async () => {
+  // 🟡 ドレミファソラシド自動再生（completeMode=trueのとき光演出あり）
+  const playScale = async (completeMode = false) => {
     for (const n of allNotes) {
       if (earned.includes(n.label)) {
         playNote(n.id);
-        await new Promise((r) => setTimeout(r, n.id === "do2" ? 700 : 300));
+        if (completeMode) triggerRipple(n.label);
+        await new Promise((r) => setTimeout(r, n.id === "do2" ? 800 : 300));
       }
+    }
+
+    if (completeMode) {
+      // 虹背景フェード（クラス付与）
+      document.body.classList.add("rainbow-bg");
+      setTimeout(() => {
+        document.body.classList.remove("rainbow-bg");
+      }, 3000);
     }
   };
 
   const triggerRipple = (label) => {
     setRippleNote(label);
-    setTimeout(() => setRippleNote(""), 1000);
+    setTimeout(() => setRippleNote(""), 500);
   };
 
   if (loading) return <div className="text-center mt-10">読み込み中...</div>;
@@ -98,7 +104,6 @@ export default function DoReMiBoard() {
               onClick={() => unlocked && (playNote(note.id), triggerRipple(note.label))}
               className={isRipple ? "ripple-active" : ""}
               style={{
-                ...rippleVars[note.id],
                 width: 60,
                 height: 60,
                 borderRadius: 10,
@@ -119,8 +124,13 @@ export default function DoReMiBoard() {
 
       <br />
       <button
-        onClick={playScale}
-        style={{ padding: "10px 20px", fontSize: 18, background: "#cce", borderRadius: 8 }}
+        onClick={() => playScale()}
+        style={{
+          padding: "10px 20px",
+          fontSize: 18,
+          background: "#cce",
+          borderRadius: 8,
+        }}
       >
         ▶️ ドレミファソラシド 再生
       </button>

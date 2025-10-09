@@ -2,7 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "@/fbkit";
+import { getFirestoreDb } from "@/fbkit";
+const db = getFirestoreDb();
+
 import { Link } from "react-router-dom";
 
 export default function ReviewMistakesPage() {

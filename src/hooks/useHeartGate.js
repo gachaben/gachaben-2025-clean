@@ -30,11 +30,15 @@ export default function useHeartGate({ onProceed }) {
     }
   }, [consumeHeart, onProceed]);
 
-  // デモ：広告視聴で全回復（実SDKはここに実装）
-  const watchAd = useCallback(async () => {
-    await recoverHearts();
-    setAdOpen(false);
-  }, [recoverHearts]);
+ // デモ：広告視聴で全回復（実SDKはここに実装）
+const watchAd = useCallback(async () => {
+  await recoverHearts();
+
+  // 💖 見せ場の演出を2.5秒残す
+  setTimeout(() => {
+    setAdOpen(false); // ← ここを遅らせる！
+  }, 2500);
+}, [recoverHearts]);
 
   const closeAd = useCallback(() => setAdOpen(false), []);
 

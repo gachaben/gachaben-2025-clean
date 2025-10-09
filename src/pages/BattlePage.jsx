@@ -1,13 +1,15 @@
 // src/pages/BattlePage.jsx
 import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/fbkit";
+import { getFirestoreDb } from "@/fbkit";
 
 // ❤️ ハート関連
 import useHeartGate from "@/hooks/useHeartGate";
 import AdRewardModal from "@/components/AdRewardModal";
 import { useHearts } from "@/context/HeartsContext";
 
+
+const db = getFirestoreDb();
 // ==== 手アイコン ====
 const HAND_IMG = {
   g: "/images/janken/gu.png",

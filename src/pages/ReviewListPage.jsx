@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { getFirebaseAuth } from "@/fbkit";
-import { db } from "@/fbkit";
+import { getFirestoreDb } from "@/fbkit";
+const db = getFirestoreDb();
 import { collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 

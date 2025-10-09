@@ -1,154 +1,133 @@
 // src/pages/DoReMiBoard.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import "@/styles/doremi.css";
 
-const notes = [
-  { id: "do", label: "ド", color: "#ff4d4d" }, // 赤
-  { id: "re", label: "レ", color: "#ff9933" }, // オレンジ
-  { id: "mi", label: "ミ", color: "#ffd633" }, // 黄
-  { id: "fa", label: "ファ", color: "#66cc66" }, // 緑
-  { id: "so", label: "ソ", color: "#3399ff" }, // 青
-  { id: "ra", label: "ラ", color: "#6666ff" }, // 藍
-  { id: "si", label: "シ", color: "#cc66ff" }, // 紫
-  { id: "do2", label: "ド", color: "#ffffff" }, // 白（最後のド）
+const allNotes = [
+  { id: "do",  label: "ド"  },
+  { id: "re",  label: "レ"  },
+  { id: "mi",  label: "ミ"  },
+  { id: "fa",  label: "ファ"},
+  { id: "so",  label: "ソ"  },
+  { id: "ra",  label: "ラ"  },
+  { id: "si",  label: "シ"  },
+  { id: "do2", label: "高ド"},
 ];
 
-export default function DoReMiBoard() {
-  const [activeNote, setActiveNote] = useState(null);
-  const [ripple, setRipple] = useState(false);
+const noteBg = {
+  do:  "#FFE082",
+  re:  "#80DEEA",
+  mi:  "#C5E1A5",
+  fa:  "#FFCCBC",
+  so:  "#B39DDB",
+  ra:  "#F48FB1",
+  si:  "#AED581",
+  do2: "#FFD54F",
+};
 
-  // 単音を鳴らす＋光らせる
-  const playNote = async (noteId, duration = 200, color = "#fff") => {
+const rippleVars = {
+  do:  { "--r1":"rgba(255,224,130,.8)", "--r2":"rgba(255,224,130,.5)", "--r3":"rgba(255,224,130,.3)" },
+  re:  { "--r1":"rgba(128,222,234,.8)", "--r2":"rgba(128,222,234,.5)", "--r3":"rgba(128,222,234,.3)" },
+  mi:  { "--r1":"rgba(197,225,165,.8)", "--r2":"rgba(197,225,165,.5)", "--r3":"rgba(197,225,165,.3)" },
+  fa:  { "--r1":"rgba(255,204,188,.8)", "--r2":"rgba(255,204,188,.5)", "--r3":"rgba(255,204,188,.3)" },
+  so:  { "--r1":"rgba(179,157,219,.8)", "--r2":"rgba(179,157,219,.5)", "--r3":"rgba(179,157,219,.3)" },
+  ra:  { "--r1":"rgba(244,143,177,.8)", "--r2":"rgba(244,143,177,.5)", "--r3":"rgba(244,143,177,.3)" },
+  si:  { "--r1":"rgba(174,213,129,.8)", "--r2":"rgba(174,213,129,.5)", "--r3":"rgba(174,213,129,.3)" },
+  do2: { "--r1":"rgba(255,213,79,.8)",  "--r2":"rgba(255,213,79,.5)",  "--r3":"rgba(255,213,79,.3)"  },
+};
+
+export default function DoReMiBoard() {
+  const [earned, setEarned] = useState([]);
+  const [uid, setUid] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [rippleNote, setRippleNote] = useState("");
+
+  useEffect(() => {
+    const auth = getAuth();
+    const db = getFirestore();
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUid(user.uid);
+        const ref = doc(db, "users", user.uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          setEarned(data?.login?.earnedNotes || []);
+        }
+      }
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
+  const playNote = (noteId) => {
     const audio = new Audio(`/sounds/doremi/${noteId}.wav`);
     audio.currentTime = 0;
     audio.play();
-
-    setActiveNote(noteId);
-    setTimeout(() => setActiveNote(null), duration);
   };
 
-  // ドレミファソラシドを順番に再生（波紋は最後のドだけ）
+  // 解放済みのみ自動再生（高ドは長め）
   const playScale = async () => {
-    for (let i = 0; i < notes.length; i++) {
-      const note = notes[i];
-      const isLast = i === notes.length - 1;
-      const duration = isLast ? 1200 : 200;
-
-      await playNote(note.id, duration, note.color);
-      await new Promise((r) => setTimeout(r, duration + 100));
-
-      // 最後のドだけ虹色波紋
-      if (isLast) {
-        setRipple(true);
-        setTimeout(() => setRipple(false), 2000);
+    for (const n of allNotes) {
+      if (earned.includes(n.label)) {
+        playNote(n.id);
+        await new Promise((r) => setTimeout(r, n.id === "do2" ? 700 : 300));
       }
     }
-    setActiveNote(null);
   };
 
+  const triggerRipple = (label) => {
+    setRippleNote(label);
+    setTimeout(() => setRippleNote(""), 1000);
+  };
+
+  if (loading) return <div className="text-center mt-10">読み込み中...</div>;
+
   return (
-    <div
-      style={{
-        position: "relative",
-        textAlign: "center",
-        padding: "60px",
-        overflow: "hidden",
-        background: ripple
-          ? "radial-gradient(circle, rgba(255,255,240,0.9) 0%, rgba(255,255,255,0) 80%)"
-          : "linear-gradient(to bottom, #dfe9f3, #ffffff)",
-        transition: "background 0.6s ease",
-      }}
-    >
-      {/* 🌈 最後のドの時だけ虹色波紋 */}
-      {ripple && (
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            width: "0px",
-            height: "0px",
-            background:
-              "conic-gradient(from 0deg, red, orange, yellow, green, cyan, blue, violet, red)",
-            borderRadius: "50%",
-            transform: "translate(-50%, -50%)",
-            animation: "ripple 1.8s ease-out forwards",
-            opacity: 0.7,
-            filter: "blur(8px)",
-          }}
-        />
-      )}
+    <div style={{ textAlign: "center", padding: 40 }}>
+      <h1>🎵 どれみ音システム（学習連動）</h1>
 
-      <h1>🌈 光るドレミファソラシド〜♪</h1>
-
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          gap: "10px",
-          flexWrap: "wrap",
-        }}
-      >
-        {notes.map((note) => (
-          <button
-            key={note.id}
-            onClick={() => playNote(note.id, 200, note.color)}
-            style={{
-              width: 70,
-              height: 70,
-              borderRadius: 12,
-              fontSize: "22px",
-              fontWeight: "bold",
-              transition: "all 0.15s ease",
-              background:
-                activeNote === note.id ? note.color : "#eef",
-              color: activeNote === note.id ? "#fff" : "#333",
-              boxShadow:
-                activeNote === note.id
-                  ? `0 0 25px 8px ${note.color}`
-                  : "none",
-            }}
-          >
-            {note.label}
-          </button>
-        ))}
+      <div style={{ display: "flex", justifyContent: "center", gap: 10 }}>
+        {allNotes.map((note) => {
+          const unlocked = earned.includes(note.label);
+          const isRipple = rippleNote === note.label;
+          return (
+            <button
+              key={note.id}
+              onClick={() => unlocked && (playNote(note.id), triggerRipple(note.label))}
+              className={isRipple ? "ripple-active" : ""}
+              style={{
+                ...rippleVars[note.id],
+                width: 60,
+                height: 60,
+                borderRadius: 10,
+                fontSize: 18,
+                fontWeight: "bold",
+                background: unlocked ? noteBg[note.id] : "#ccc",
+                opacity: unlocked ? 1 : 0.6,
+                cursor: unlocked ? "pointer" : "not-allowed",
+                transition: "box-shadow .3s ease",
+              }}
+              disabled={!unlocked}
+            >
+              {note.label}
+            </button>
+          );
+        })}
       </div>
 
       <br />
-
       <button
         onClick={playScale}
-        style={{
-          padding: "10px 25px",
-          fontSize: "18px",
-          background: "linear-gradient(90deg, #ffb347, #ffcc33)",
-          border: "none",
-          borderRadius: "10px",
-          color: "#333",
-          fontWeight: "bold",
-          boxShadow: "0 3px 8px rgba(0,0,0,0.2)",
-          cursor: "pointer",
-          transition: "transform 0.1s ease",
-        }}
+        style={{ padding: "10px 20px", fontSize: 18, background: "#cce", borderRadius: 8 }}
       >
-        ▶️ ドレミファソラシド〜♪
+        ▶️ ドレミファソラシド 再生
       </button>
 
-      <style>
-        {`
-          @keyframes ripple {
-            0% {
-              width: 0px;
-              height: 0px;
-              opacity: 0.9;
-            }
-            100% {
-              width: 1200px;
-              height: 1200px;
-              opacity: 0;
-            }
-          }
-        `}
-      </style>
+      <p className="mt-4 text-gray-600 text-sm">
+        uid: {uid} / earned: {earned.join(", ")}
+      </p>
     </div>
   );
 }

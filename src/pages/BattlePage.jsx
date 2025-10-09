@@ -1,10 +1,14 @@
 // src/pages/BattlePage.jsx
 import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/fbkit"; // ← Firestore接続用
-// ↑ すでに src/fbkit/app.ts などで export 済みの db を使う
+import { db } from "@/fbkit";
 
-// 手アイコン
+// ❤️ ハート関連（追加）
+import useHeartGate from "@/hooks/useHeartGate";
+import AdHeartModal from "@/components/AdHeartModal";
+import { useHearts } from "@/context/HeartsContext";
+
+// ==== 手アイコン ====
 const HAND_IMG = {
   g: "/images/janken/gu.png",
   c: "/images/janken/choki.png",
@@ -64,9 +68,10 @@ function judge(user, cpu) {
   return "lose";
 }
 
-// ---- メインコンポーネント ----
+// ==== メイン ====
 export default function BattlePage() {
-  const [phase, setPhase] = useState("janken");
+  const { hearts } = useHearts(); // 現在のハート数
+  const [phase, setPhase] = useState("ready");
   const [userPick, setUserPick] = useState(null);
   const [cpuPick, setCpuPick] = useState(null);
   const [result, setResult] = useState(null);
@@ -75,12 +80,18 @@ export default function BattlePage() {
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [answerResult, setAnswerResult] = useState(null);
 
-  // ---- Firestoreからユーザーのmistakesを取得して1問選ぶ ----
+  // ==== useHeartGate：ハート消費制御 ====
+  const { startWithHeart, adOpen, closeAd, watchAd } = useHeartGate({
+    onProceed: async () => {
+      setPhase("janken"); // バトル開始
+    },
+  });
+
+  // ---- Firestoreからユーザーmistakesを1問取得 ----
   const loadUserQuestion = async () => {
     const snap = await getDocs(collection(db, "mistakes"));
     const list = snap.docs.map((d) => d.data());
     if (list.length === 0) {
-      // データが無いときのfallback
       return {
         question: "（サンプル）カマキリは何の仲間？",
         choices: ["虫", "魚", "鳥", "草"],
@@ -90,16 +101,14 @@ export default function BattlePage() {
     return list[Math.floor(Math.random() * list.length)];
   };
 
-  // ---- CPU専用問題（仮） ----
-  const loadCpuQuestion = () => {
-    return {
-      question: "【CPUの出題】ハチの足は何本ある？",
-      choices: ["2本", "4本", "6本", "8本"],
-      answer: "6本",
-    };
-  };
+  // ---- CPU専用問題 ----
+  const loadCpuQuestion = () => ({
+    question: "【CPUの出題】ハチの足は何本ある？",
+    choices: ["2本", "4本", "6本", "8本"],
+    answer: "6本",
+  });
 
-  // ---- じゃんけん ----
+  // ---- じゃんけん処理 ----
   const handlePick = (hand) => {
     const cpu = HANDS[Math.floor(Math.random() * HANDS.length)];
     setUserPick(hand);
@@ -126,22 +135,16 @@ export default function BattlePage() {
   useEffect(() => {
     if (phase === "question" && questionSource) {
       if (questionSource === "user") {
-        // 自分が出題者：Firestoreから取得
         loadUserQuestion().then((q) => {
           setQuestionObj(q);
-
-          // CPUが1秒後に選択肢を選ぶ
+          // CPUが1秒後に回答
           setTimeout(() => {
-            const cpuChoice =
-              q.choices[Math.floor(Math.random() * q.choices.length)];
+            const cpuChoice = q.choices[Math.floor(Math.random() * q.choices.length)];
             setSelectedAnswer(cpuChoice);
-
-            // さらに1秒後に結果
             setTimeout(() => handleAutoCpuAnswer(cpuChoice, q.answer), 1000);
           }, 1000);
         });
       } else {
-        // CPUが出題者
         const q = loadCpuQuestion();
         setQuestionObj(q);
       }
@@ -149,7 +152,7 @@ export default function BattlePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, questionSource]);
 
-  // ---- CPUが自動で答える ----
+  // ---- CPU自動回答 ----
   const handleAutoCpuAnswer = (choice, correctAnswer) => {
     const correct = choice === correctAnswer;
     setAnswerResult(correct ? "CPUは正解！" : "CPUは不正解！");
@@ -157,7 +160,7 @@ export default function BattlePage() {
     setTimeout(reset, 2000);
   };
 
-  // ---- ユーザーが答える ----
+  // ---- ユーザー回答 ----
   const handleUserAnswer = (choice) => {
     setSelectedAnswer(choice);
     const correct = choice === questionObj.answer;
@@ -177,95 +180,105 @@ export default function BattlePage() {
     setPhase("janken");
   };
 
-  // ---- UI ----
+  // ==== UI ====
   return (
     <div className="p-4 space-y-6 text-center">
-      <h1 className="text-lg font-bold">Battle</h1>
+      <h1 className="text-lg font-bold">🥊 バトルモード</h1>
+      <div className="text-sm text-gray-600">現在のハート：{hearts}</div>
 
-      {/* 中央タイトル */}
-      {phase === "janken" && <div className="text-2xl font-bold">じゃんけん！</div>}
-      {phase === "result" && <div className="text-2xl font-bold">ポン！</div>}
-      {phase === "question" && (
-        <div className="text-xl font-semibold text-indigo-600">
-          {questionSource === "user" ? "あなたが出題！" : "CPUが出題！"}
-        </div>
+      {/* ---- ハートがあれば開始 ---- */}
+      {phase === "ready" && (
+        <button
+          onClick={startWithHeart}
+          className="px-6 py-3 bg-rose-300 hover:bg-rose-400 rounded-lg font-bold shadow transition"
+        >
+          ▶️ バトル開始（ハート1消費）
+        </button>
       )}
 
-      {/* CPU */}
-      <section className="border rounded-lg bg-gray-50 p-4">
-        <div className="text-sm text-gray-500 mb-2">相手（CPU）</div>
-        <div className="min-h-28 flex items-center justify-center">
-          <HandRow selected={cpuPick} disabled />
-        </div>
-      </section>
+      {/* ---- じゃんけん ---- */}
+      {phase !== "ready" && (
+        <>
+          {phase === "janken" && <div className="text-2xl font-bold">じゃんけん！</div>}
+          {phase === "result" && <div className="text-2xl font-bold">ポン！</div>}
+          {phase === "question" && (
+            <div className="text-xl font-semibold text-indigo-600">
+              {questionSource === "user" ? "あなたが出題！" : "CPUが出題！"}
+            </div>
+          )}
 
-      {/* あなた */}
-      <section className="border rounded-lg bg-gray-50 p-4">
-        <div className="text-sm text-gray-500 mb-2">あなた</div>
-        <div className="min-h-28 flex items-center justify-center">
-          <HandRow
-            selected={userPick}
-            disabled={!!userPick || phase !== "janken"}
-            onPick={handlePick}
-          />
-        </div>
-      </section>
+          {/* CPU */}
+          <section className="border rounded-lg bg-gray-50 p-4">
+            <div className="text-sm text-gray-500 mb-2">相手（CPU）</div>
+            <div className="min-h-28 flex items-center justify-center">
+              <HandRow selected={cpuPick} disabled />
+            </div>
+          </section>
 
-      {/* 勝敗 */}
-      {phase === "result" && result && (
-        <div className="text-xl font-bold mt-2">
-          {result === "win" && <span className="text-emerald-600">あなたの勝ち！</span>}
-          {result === "lose" && <span className="text-rose-600">CPUの勝ち！</span>}
-          {result === "draw" && <span className="text-gray-600">あいこ！</span>}
-        </div>
-      )}
+          {/* あなた */}
+          <section className="border rounded-lg bg-gray-50 p-4">
+            <div className="text-sm text-gray-500 mb-2">あなた</div>
+            <div className="min-h-28 flex items-center justify-center">
+              <HandRow
+                selected={userPick}
+                disabled={!!userPick || phase !== "janken"}
+                onPick={handlePick}
+              />
+            </div>
+          </section>
 
-      {/* 問題表示 */}
-      {phase === "question" && questionObj && (
-        <div className="mt-6 p-4 border rounded bg-white w-full max-w-md mx-auto">
-          <div className="font-bold mb-3">{questionObj.question}</div>
-          <div className="grid grid-cols-2 gap-2">
-            {questionObj.choices.map((c, i) => (
-              <button
-                key={i}
-                onClick={
-                  questionSource === "cpu"
-                    ? () => handleUserAnswer(c)
-                    : undefined
+          {/* 勝敗 */}
+          {phase === "result" && result && (
+            <div className="text-xl font-bold mt-2">
+              {result === "win" && <span className="text-emerald-600">あなたの勝ち！</span>}
+              {result === "lose" && <span className="text-rose-600">CPUの勝ち！</span>}
+              {result === "draw" && <span className="text-gray-600">あいこ！</span>}
+            </div>
+          )}
+
+          {/* 問題 */}
+          {phase === "question" && questionObj && (
+            <div className="mt-6 p-4 border rounded bg-white w-full max-w-md mx-auto">
+              <div className="font-bold mb-3">{questionObj.question}</div>
+              <div className="grid grid-cols-2 gap-2">
+                {questionObj.choices.map((c, i) => (
+                  <button
+                    key={i}
+                    onClick={questionSource === "cpu" ? () => handleUserAnswer(c) : undefined}
+                    disabled={selectedAnswer !== null || questionSource === "user"}
+                    className={[
+                      "border rounded p-2 transition",
+                      selectedAnswer === c
+                        ? "bg-yellow-100 border-yellow-400"
+                        : questionSource === "user"
+                        ? "cursor-default opacity-60"
+                        : "hover:bg-gray-50",
+                    ].join(" ")}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 結果 */}
+          {phase === "answer" && (
+            <div className="text-2xl font-bold mt-4">
+              <span
+                className={
+                  answerResult.includes("正解") ? "text-emerald-600" : "text-rose-600"
                 }
-                disabled={
-                  selectedAnswer !== null || questionSource === "user"
-                }
-                className={[
-                  "border rounded p-2 transition",
-                  selectedAnswer === c
-                    ? "bg-yellow-100 border-yellow-400"
-                    : questionSource === "user"
-                    ? "cursor-default opacity-60"
-                    : "hover:bg-gray-50",
-                ].join(" ")}
               >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
+                {answerResult}
+              </span>
+            </div>
+          )}
+        </>
       )}
 
-      {/* 結果 */}
-      {phase === "answer" && (
-        <div className="text-2xl font-bold mt-4">
-          <span
-            className={
-              answerResult.includes("正解")
-                ? "text-emerald-600"
-                : "text-rose-600"
-            }
-          >
-            {answerResult}
-          </span>
-        </div>
-      )}
+      {/* ❤️ ハート広告モーダル */}
+      <AdHeartModal open={adOpen} onClose={closeAd} onWatch={watchAd} />
     </div>
   );
 }

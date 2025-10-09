@@ -3,9 +3,9 @@ import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/fbkit";
 
-// ❤️ ハート関連（追加）
+// ❤️ ハート関連
 import useHeartGate from "@/hooks/useHeartGate";
-import AdHeartModal from "@/components/AdHeartModal";
+import AdRewardModal from "@/components/AdRewardModal";
 import { useHearts } from "@/context/HeartsContext";
 
 // ==== 手アイコン ====
@@ -70,12 +70,12 @@ function judge(user, cpu) {
 
 // ==== メイン ====
 export default function BattlePage() {
-  const { hearts } = useHearts(); // 現在のハート数
+  const { hearts, addHearts } = useHearts();
   const [phase, setPhase] = useState("ready");
   const [userPick, setUserPick] = useState(null);
   const [cpuPick, setCpuPick] = useState(null);
   const [result, setResult] = useState(null);
-  const [questionSource, setQuestionSource] = useState(null); // 'user' or 'cpu'
+  const [questionSource, setQuestionSource] = useState(null);
   const [questionObj, setQuestionObj] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [answerResult, setAnswerResult] = useState(null);
@@ -87,7 +87,7 @@ export default function BattlePage() {
     },
   });
 
-  // ---- Firestoreからユーザーmistakesを1問取得 ----
+  // ---- Firestoreからmistakesを取得 ----
   const loadUserQuestion = async () => {
     const snap = await getDocs(collection(db, "mistakes"));
     const list = snap.docs.map((d) => d.data());
@@ -101,14 +101,12 @@ export default function BattlePage() {
     return list[Math.floor(Math.random() * list.length)];
   };
 
-  // ---- CPU専用問題 ----
   const loadCpuQuestion = () => ({
     question: "【CPUの出題】ハチの足は何本ある？",
     choices: ["2本", "4本", "6本", "8本"],
     answer: "6本",
   });
 
-  // ---- じゃんけん処理 ----
   const handlePick = (hand) => {
     const cpu = HANDS[Math.floor(Math.random() * HANDS.length)];
     setUserPick(hand);
@@ -131,13 +129,11 @@ export default function BattlePage() {
     }, 700);
   };
 
-  // ---- 出題フェーズ ----
   useEffect(() => {
     if (phase === "question" && questionSource) {
       if (questionSource === "user") {
         loadUserQuestion().then((q) => {
           setQuestionObj(q);
-          // CPUが1秒後に回答
           setTimeout(() => {
             const cpuChoice = q.choices[Math.floor(Math.random() * q.choices.length)];
             setSelectedAnswer(cpuChoice);
@@ -149,10 +145,8 @@ export default function BattlePage() {
         setQuestionObj(q);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, questionSource]);
 
-  // ---- CPU自動回答 ----
   const handleAutoCpuAnswer = (choice, correctAnswer) => {
     const correct = choice === correctAnswer;
     setAnswerResult(correct ? "CPUは正解！" : "CPUは不正解！");
@@ -160,7 +154,6 @@ export default function BattlePage() {
     setTimeout(reset, 2000);
   };
 
-  // ---- ユーザー回答 ----
   const handleUserAnswer = (choice) => {
     setSelectedAnswer(choice);
     const correct = choice === questionObj.answer;
@@ -180,13 +173,11 @@ export default function BattlePage() {
     setPhase("janken");
   };
 
-  // ==== UI ====
   return (
     <div className="p-4 space-y-6 text-center">
       <h1 className="text-lg font-bold">🥊 バトルモード</h1>
       <div className="text-sm text-gray-600">現在のハート：{hearts}</div>
 
-      {/* ---- ハートがあれば開始 ---- */}
       {phase === "ready" && (
         <button
           onClick={startWithHeart}
@@ -196,7 +187,6 @@ export default function BattlePage() {
         </button>
       )}
 
-      {/* ---- じゃんけん ---- */}
       {phase !== "ready" && (
         <>
           {phase === "janken" && <div className="text-2xl font-bold">じゃんけん！</div>}
@@ -207,7 +197,6 @@ export default function BattlePage() {
             </div>
           )}
 
-          {/* CPU */}
           <section className="border rounded-lg bg-gray-50 p-4">
             <div className="text-sm text-gray-500 mb-2">相手（CPU）</div>
             <div className="min-h-28 flex items-center justify-center">
@@ -215,7 +204,6 @@ export default function BattlePage() {
             </div>
           </section>
 
-          {/* あなた */}
           <section className="border rounded-lg bg-gray-50 p-4">
             <div className="text-sm text-gray-500 mb-2">あなた</div>
             <div className="min-h-28 flex items-center justify-center">
@@ -227,7 +215,6 @@ export default function BattlePage() {
             </div>
           </section>
 
-          {/* 勝敗 */}
           {phase === "result" && result && (
             <div className="text-xl font-bold mt-2">
               {result === "win" && <span className="text-emerald-600">あなたの勝ち！</span>}
@@ -236,7 +223,6 @@ export default function BattlePage() {
             </div>
           )}
 
-          {/* 問題 */}
           {phase === "question" && questionObj && (
             <div className="mt-6 p-4 border rounded bg-white w-full max-w-md mx-auto">
               <div className="font-bold mb-3">{questionObj.question}</div>
@@ -262,7 +248,6 @@ export default function BattlePage() {
             </div>
           )}
 
-          {/* 結果 */}
           {phase === "answer" && (
             <div className="text-2xl font-bold mt-4">
               <span
@@ -278,7 +263,12 @@ export default function BattlePage() {
       )}
 
       {/* ❤️ ハート広告モーダル */}
-      <AdHeartModal open={adOpen} onClose={closeAd} onWatch={watchAd} />
+<AdRewardModal
+  open={adOpen}
+  onClose={closeAd}
+  onReward={watchAd}  // ← watchAdの中でrecoverHearts()が呼ばれる！
+/>
+
     </div>
   );
 }

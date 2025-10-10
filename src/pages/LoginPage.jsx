@@ -1,4 +1,3 @@
-// src/pages/LoginPage.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,9 +9,11 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
 import { getFirebaseAuth, getFirestoreDb } from "@/firebase";
+import NoteTrack from "@/components/ui/NoteTrack";
 
 const auth = getFirebaseAuth();
 const db = getFirestoreDb();
@@ -23,128 +24,159 @@ async function ensureUserDoc(uid, email) {
   if (!snap.exists()) {
     await setDoc(ref, {
       email: email ?? "",
-      role: "user",                 // 既定は user
-      displayName: "",
-      displayNameLower: "",
+      role: "user",
+      rewardAttempts: 0,
       createdAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
     });
-    return { role: "user" };
+    return { role: "user", rewardAttempts: 0 };
   } else {
-    // 既存ユーザーは lastLoginAt を更新（軽量化のため setDoc は使わない）
-    // createdAt は既存のままにする
-    try {
-      await setDoc(ref, { lastLoginAt: serverTimestamp() }, { merge: true });
-    } catch {}
-    return snap.data() || { role: "user" };
+    await updateDoc(ref, { lastLoginAt: serverTimestamp() });
+    return snap.data();
   }
-}
-
-function redirectByRole(navigate, role) {
-  if (role === "banned") {
-    navigate("/banned", { replace: true });
-    return;
-  }
-  if (role === "admin") {
-    navigate("/history", { replace: true });
-    return;
-  }
-  navigate("/", { replace: true });
 }
 
 export default function LoginPage() {
   const nav = useNavigate();
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
-  const [mode, setMode] = useState("login"); // "login" | "register"
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(null);
+  const [attempts, setAttempts] = useState(0);
 
-  // すでにログイン済みなら → role を見て自動遷移
+  // --- ログイン済みなら Firestore からユーザーデータ取得 ---
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
-      if (!u) return;
-      try {
+      if (u) {
         const data = await ensureUserDoc(u.uid, u.email || "");
-        redirectByRole(nav, data.role || "user");
-      } catch (e) {
-        console.error("[auth] role redirect error", e);
+        setUser(u);
+        setAttempts(data.rewardAttempts || 0);
+      } else {
+        setUser(null);
       }
     });
     return () => unsub();
-  }, [nav]);
+  }, []);
 
-  async function onSubmit(e) {
+  // --- 広告視聴ボタン（挑戦＋保存） ---
+  async function handleWatchAd() {
+    if (!user) return alert("ログインしてください！");
+    const ref = doc(db, "users", user.uid);
+    const newAttempts = attempts + 1;
+
+    await updateDoc(ref, { rewardAttempts: newAttempts });
+    setAttempts(newAttempts);
+
+    if (newAttempts >= 7) {
+      console.log("🌈 プレミアム確定ガチャ発動！");
+      await updateDoc(ref, { rewardAttempts: 0 }); // リセット
+      setTimeout(() => setAttempts(0), 1000);
+    }
+  }
+
+  // --- 通常ログイン or 登録 ---
+  async function handleLogin(e) {
     e.preventDefault();
     setErr(null);
     setLoading(true);
     try {
-      const cred = mode === "login"
-        ? await signInWithEmailAndPassword(auth, email, pass)
-        : await createUserWithEmailAndPassword(auth, email, pass);
-
-      // ユーザードキュメントの整備 → ロールで遷移
+      const cred = await signInWithEmailAndPassword(auth, email, pass).catch(
+        async (err) => {
+          if (err.code === "auth/user-not-found") {
+            return await createUserWithEmailAndPassword(auth, email, pass);
+          }
+          throw err;
+        }
+      );
       const data = await ensureUserDoc(cred.user.uid, cred.user.email || "");
-      redirectByRole(nav, data.role || "user");
+      setUser(cred.user);
+      setAttempts(data.rewardAttempts || 0);
     } catch (e) {
-      console.error("[auth]", e);
-      setErr(e.message || String(e));
+      console.error("AUTH ERROR:", e);
+      setErr(e.message);
     } finally {
       setLoading(false);
     }
   }
 
+  // --- ログイン済み画面 ---
+  if (user) {
+    const progress = (attempts / 7) * 100;
+    return (
+      <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-yellow-100 to-yellow-300">
+        <h1 className="text-lg font-bold text-yellow-800 mb-4">
+          🎁 プレミアムガチャチャンス
+        </h1>
+
+        <NoteTrack
+          progress={progress}
+          onFull={() => console.log("🌈 ドレミ×2 キュイーン発動！")}
+        />
+
+        <p className="text-sm mt-4 text-gray-700">
+          挑戦回数：{attempts}/7
+        </p>
+
+        <button
+          onClick={handleWatchAd}
+          className="mt-4 px-4 py-2 rounded-lg bg-yellow-500 text-white font-bold shadow-lg hover:bg-yellow-400 transition"
+        >
+          🎬 広告を見てプレミアムガチャに挑戦！
+        </button>
+
+        <button
+          onClick={() => {
+            auth.signOut();
+            setUser(null);
+          }}
+          className="mt-6 text-xs text-gray-500 underline"
+        >
+          ログアウト
+        </button>
+      </div>
+    );
+  }
+
+  // --- 未ログイン画面 ---
   return (
     <div className="max-w-md mx-auto p-4 space-y-4">
-      <h1 className="text-lg font-bold">Login</h1>
+      <h1 className="text-lg font-bold">🔒 ログイン</h1>
 
-      <form onSubmit={onSubmit} className="space-y-3">
+      <form onSubmit={handleLogin} className="space-y-3">
         <div className="space-y-1">
-          <label className="text-sm text-neutral-600">Email</label>
+          <label className="text-sm text-neutral-600">メールアドレス</label>
           <input
             type="email"
             className="w-full border rounded px-3 py-2"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            autoComplete="email"
           />
         </div>
         <div className="space-y-1">
-          <label className="text-sm text-neutral-600">Password</label>
+          <label className="text-sm text-neutral-600">パスワード</label>
           <input
             type="password"
             className="w-full border rounded px-3 py-2"
             value={pass}
             onChange={(e) => setPass(e.target.value)}
             required
-            autoComplete="current-password"
           />
         </div>
 
         {err && <div className="text-sm text-red-600">{err}</div>}
 
-        <div className="flex items-center gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className={`px-4 py-2 rounded text-sm border ${loading ? "opacity-50" : "hover:bg-gray-50"}`}
-          >
-            {mode === "login" ? "ログイン" : "新規登録"}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode(mode === "login" ? "register" : "login")}
-            className="text-blue-600 hover:underline text-sm"
-          >
-            {mode === "login" ? "→ 新規登録に切替" : "→ ログインに戻る"}
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full px-4 py-2 rounded bg-blue-600 text-white font-bold shadow-md hover:bg-blue-500 transition ${
+            loading ? "opacity-50" : ""
+          }`}
+        >
+          {loading ? "処理中..." : "ログイン / 新規登録"}
+        </button>
       </form>
-
-      <div className="text-xs text-neutral-500">
-        ログイン後はロールに応じて自動遷移します：admin→/history、banned→/banned、それ以外→/
-      </div>
     </div>
   );
 }

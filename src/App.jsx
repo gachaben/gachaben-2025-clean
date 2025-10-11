@@ -4,6 +4,8 @@ import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
 import ChallengeTestPage from "@/pages/ChallengeTestPage.jsx";
 import LessonTestPage from "@/pages/LessonTestPage.jsx";
+import BattleTestPage from "@/pages/BattleTestPage.jsx";
+import ActiveTimeTestPage from "@/pages/ActiveTimeTestPage";
 
 // ==== ページ ==== //
 import HomePage from "@/pages/HomePage.jsx";
@@ -78,6 +80,10 @@ export default function App() {
           <Route path="/doremi" element={<DoReMiBoard />} />
           <Route path="/lesson-test" element={<LessonTestPage />} />
           <Route path="/challenge-test" element={<ChallengeTestPage />} /> 
+          <Route path="/battle-test" element={<BattleTestPage />} />
+          <Route path="/active-test" element={<ActiveTimeTestPage />} />
+
+
           {/* ==== バトル（ログイン必須） ==== */}
           <Route
             path="/battle"

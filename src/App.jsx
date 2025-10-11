@@ -1,18 +1,24 @@
+// ------------------------------------------------------
 // src/App.jsx
+// 🚀 ガチャ弁アプリ ルーティング設定（CPU出題バトル対応版）
+// ------------------------------------------------------
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
+
+// ==== テストページ ==== //
 import ChallengeTestPage from "@/pages/ChallengeTestPage.jsx";
 import LessonTestPage from "@/pages/LessonTestPage.jsx";
-import BattleTestPage from "@/pages/BattleTestPage.jsx";
-import ActiveTimeTestPage from "@/pages/ActiveTimeTestPage";
+import ActiveTimeTestPage from "@/pages/ActiveTimeTestPage.jsx";
 
-// ==== ページ ==== //
+// ==== メインページ ==== //
 import HomePage from "@/pages/HomePage.jsx";
 import Login from "@/pages/Login.jsx";
-import BattlePage from "@/pages/BattlePage.jsx";
 import DebugPage from "@/pages/DebugPage.jsx";
 import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
+
+// ✅ 新しいCPU出題バトルページ
+import BattleChallengePage from "@/pages/BattleChallengePage.jsx";
 
 // ==== 復習モード関連 ==== //
 import ReviewHomePage from "@/pages/ReviewHomePage.jsx";
@@ -26,7 +32,9 @@ import ReviewSessionStart from "@/pages/ReviewSessionStart.jsx";
 import { HeartsProvider } from "@/context/HeartsContext";
 import TopBar from "@/components/TopBar";
 
-// ==== 認証ガード ==== //
+// ------------------------------------------------------
+// 🔐 認証状態管理
+// ------------------------------------------------------
 function useAuthState() {
   const [state, setState] = React.useState({ user: null, loading: true });
 
@@ -47,7 +55,9 @@ function RequireAuth({ children }) {
   return children;
 }
 
-// ==== ナビ（開発用） ==== //
+// ------------------------------------------------------
+// 🧭 開発用ナビゲーションバー
+// ------------------------------------------------------
 function Nav() {
   return (
     <nav className="p-2 flex flex-wrap gap-3 text-sm bg-gray-50 border-b justify-center">
@@ -61,7 +71,9 @@ function Nav() {
   );
 }
 
-// ==== ルーティング本体 ==== //
+// ------------------------------------------------------
+// 🚀 ルーティング本体
+// ------------------------------------------------------
 export default function App() {
   return (
     <HeartsProvider>
@@ -79,17 +91,16 @@ export default function App() {
           <Route path="/debug" element={<DebugPage />} />
           <Route path="/doremi" element={<DoReMiBoard />} />
           <Route path="/lesson-test" element={<LessonTestPage />} />
-          <Route path="/challenge-test" element={<ChallengeTestPage />} /> 
-          <Route path="/battle-test" element={<BattleTestPage />} />
+          <Route path="/challenge-test" element={<ChallengeTestPage />} />
           <Route path="/active-test" element={<ActiveTimeTestPage />} />
-
 
           {/* ==== バトル（ログイン必須） ==== */}
           <Route
             path="/battle"
             element={
               <RequireAuth>
-                <BattlePage />
+                {/* 🆕 CPU出題方式バトル */}
+                <BattleChallengePage user={{ grade: 3 }} />
               </RequireAuth>
             }
           />

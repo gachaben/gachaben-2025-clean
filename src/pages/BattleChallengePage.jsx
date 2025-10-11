@@ -1,6 +1,6 @@
 // ------------------------------------------------------
-// 🎵 BattleChallengePage.jsx（v1.8）
-// CPU出題バトル：♬演出＋下固定UI改良＋安全フォールバック
+// 🎵 BattleChallengePage.jsx（v2.2）
+// 音階名非表示 + 飛ぶ音符最前面 + バトルゲージ適用
 // ------------------------------------------------------
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -10,9 +10,9 @@ import QuestionPanel from "@/components/battle/QuestionPanel";
 import CardBar from "@/components/battle/CardBar";
 import ReviveModal from "@/components/battle/ReviveModal";
 import ResultModal from "@/components/battle/ResultModal";
-import useCardManager from "@/hooks/useCardManager";
-import NoteTrackActiveTime from "@/components/ui/NoteTrackActiveTime";
 import NoteBurst from "@/components/ui/NoteBurst";
+import NoteTrackBattle from "@/components/ui/NoteTrackBattle"; // ✅ 追加
+import useCardManager from "@/hooks/useCardManager";
 
 export default function BattleChallengePage({ user }) {
   const [level, setLevel] = useState(1);
@@ -95,12 +95,16 @@ export default function BattleChallengePage({ user }) {
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gradient-to-b from-indigo-50 to-white relative pt-10 pb-[240px]">
-      {/* ♬ 飛ぶ音符 */}
-      {showBurst > 0 && <NoteBurst count={showBurst} color="#fb7185" />}
+      {/* ♬ 飛ぶ音符（最前面） */}
+      {showBurst > 0 && (
+        <div className="fixed inset-0 z-[99999] pointer-events-none">
+          <NoteBurst count={showBurst} color="#fb7185" />
+        </div>
+      )}
 
       {/* 問題パネル */}
       {question && !showResult && !showRevive && (
-        <div className="flex flex-col items-center w-full mb-8 mt-10">
+        <div className="flex flex-col items-center w-full mb-16 mt-10">
           <QuestionPanel
             key={question.id || question.text}
             question={question}
@@ -109,17 +113,11 @@ export default function BattleChallengePage({ user }) {
         </div>
       )}
 
-      {/* ==== 固定UIエリア ==== */}
-      {/* カードバー（♬の上・230px固定） */}
+      {/* 🎴 カードバー */}
       {!showResult && !showRevive && (
         <div
           className="fixed left-0 w-full flex justify-center z-[9999]"
-          style={{
-            bottom: "230px",
-            width: "100%",
-            display: "flex",
-            justifyContent: "center",
-          }}
+          style={{ bottom: "160px" }}
         >
           <CardBar cards={cards} onUse={handleUseCard} />
         </div>
@@ -127,16 +125,10 @@ export default function BattleChallengePage({ user }) {
 
       {/* ♬ ドレミゲージ（最下部固定） */}
       <div
-        className="fixed left-0 w-full flex justify-center z-20"
-        style={{
-          bottom: "40px",
-          width: "100%",
-          display: "flex",
-          justifyContent: "center",
-          zIndex: 20,
-        }}
+        className="fixed left-0 w-full flex justify-center z-[9999]"
+        style={{ bottom: "40px" }}
       >
-        <NoteTrackActiveTime progress={progress} />
+        <NoteTrackBattle progress={progress * 15} />
       </div>
 
       {/* ==== モーダル ==== */}

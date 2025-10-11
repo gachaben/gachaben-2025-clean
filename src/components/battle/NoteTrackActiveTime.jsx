@@ -1,40 +1,52 @@
 // ------------------------------------------------------
-// 🎵 src/components/battle/NoteTrackActiveTime.jsx
-// ドレミチャレンジバトル用：音符進行ゲージ（7段）
+// 🎵 NoteTrackActiveTime.jsx（v3.0）
+// 丸付き音符＋波うちカラー演出（ドレミ非表示対応）
 // ------------------------------------------------------
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
+import { motion } from "framer-motion";
 
-const NOTES = ["ド", "レ", "ミ", "ファ", "ソ", "ラ", "シ"];
-
-export default function NoteTrackActiveTime({ progress = 0 }) {
-  const [animateNote, setAnimateNote] = useState(null);
-
-  useEffect(() => {
-    if (progress > 0) {
-      setAnimateNote(progress - 1);
-      const t = setTimeout(() => setAnimateNote(null), 1000);
-      return () => clearTimeout(t);
-    }
-  }, [progress]);
+export default function NoteTrackActiveTime({
+  progress = 0,        // 0〜7
+  showLabels = true,   // ドレミ名を表示するか
+}) {
+  // 各音符のカラー波パターン
+  const COLORS = [
+    "#f472b6", // ピンク
+    "#fb7185", // ローズ
+    "#f59e0b", // アンバー
+    "#60a5fa", // ブルー
+    "#34d399", // グリーン
+    "#a78bfa", // バイオレット
+    "#facc15", // イエロー
+  ];
 
   return (
-    <div className="flex flex-col items-center mb-4">
-      <div className="flex gap-2 mb-1">
-        {NOTES.map((note, idx) => {
-          const active = idx < progress;
-          const isCurrent = idx === animateNote;
-          const color = active
-            ? idx === 6
-              ? "bg-gradient-to-r from-pink-400 via-yellow-400 to-sky-400"
-              : "bg-pink-400"
-            : "bg-gray-200";
+    <div className="flex flex-col items-center select-none">
+      {/* 音符ゲージ */}
+      <div className="flex space-x-3">
+        {[1, 2, 3, 4, 5, 6, 7].map((i) => {
+          const active = progress >= i;
+          const color = COLORS[(i - 1) % COLORS.length];
+
           return (
             <motion.div
-              key={idx}
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${color}`}
-              animate={isCurrent ? { scale: [1, 1.3, 1] } : {}}
-              transition={{ duration: 0.6 }}
+              key={i}
+              animate={{
+                scale: active ? [1, 1.15, 1] : 1,
+                opacity: active ? 1 : 0.3,
+              }}
+              transition={{
+                duration: 1.2,
+                repeat: active ? Infinity : 0,
+                ease: "easeInOut",
+              }}
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-xl font-bold ${
+                active ? "shadow-lg" : ""
+              }`}
+              style={{
+                background: active ? color : "#e5e7eb",
+                color: active ? "#fff" : "#9ca3af",
+              }}
             >
               ♪
             </motion.div>
@@ -42,29 +54,12 @@ export default function NoteTrackActiveTime({ progress = 0 }) {
         })}
       </div>
 
-      <div className="flex gap-2 text-xs text-gray-600">
-        {NOTES.map((n, i) => (
-          <span
-            key={i}
-            className={i < progress ? "text-pink-500 font-bold" : ""}
-          >
-            {n}
-          </span>
-        ))}
-      </div>
-
-      <AnimatePresence>
-        {progress >= 7 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: [1, 1.1, 1] }}
-            exit={{ opacity: 0 }}
-            className="mt-3 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-yellow-400 to-sky-400"
-          >
-            🎉 ドレミファソラシド完成！
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ドレミファソラシド表記（任意表示） */}
+      {showLabels && (
+        <div className="text-xs text-gray-400 mt-2 tracking-wide">
+          ド レ ミ ファ ソ ラ シ ド
+        </div>
+      )}
     </div>
   );
 }

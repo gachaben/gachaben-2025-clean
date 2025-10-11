@@ -95,15 +95,25 @@ export default function App() {
           <Route path="/active-test" element={<ActiveTimeTestPage />} />
 
           {/* ==== バトル（ログイン必須） ==== */}
-          <Route
-            path="/battle"
-            element={
-              <RequireAuth>
-                {/* 🆕 CPU出題方式バトル */}
-                <BattleChallengePage user={{ grade: 3 }} />
-              </RequireAuth>
-            }
-          />
+<Route
+  path="/battle"
+  element={
+    <RequireAuth>
+      <BattleChallengePage user={{ grade: 3 }} />
+    </RequireAuth>
+  }
+/>
+
+{/* ✅ /battle/challenge 直アクセス用ルート */}
+<Route
+  path="/battle/challenge"
+  element={
+    <RequireAuth>
+      <BattleChallengePage user={{ grade: 3 }} />
+    </RequireAuth>
+  }
+/>
+
 
           {/* ==== 復習モード ==== */}
           <Route path="/review" element={<ReviewHomePage />} />

@@ -1,50 +1,59 @@
 // ------------------------------------------------------
-// 🎴 src/components/battle/CardBar.jsx
-// ドレミチャレンジバトル：手札UI（カード3枚まで）
+// 🎴 CardBar.jsx（v1.4）
+// ドレミチャレンジ用：カード3回制限＋復活除外
 // ------------------------------------------------------
 import React from "react";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 
-export default function CardBar({ cards = [], onUse }) {
-  if (!cards.length) return null;
+const CARD_INFO = [
+  { id: "cut", label: "🧠 選択肢カット" },
+  { id: "extend", label: "⏰ 時間延長" },
+  { id: "reroll", label: "🔄 チェンジ" },
+  { id: "boost", label: "🌟 ブースト" },
+  { id: "revive", label: "❤️ 復活" },
+];
+
+export default function CardBar({ cardsLeft = 3, usedCards = {}, onUse }) {
+  const isLocked = cardsLeft <= 0;
 
   return (
-    <div className="fixed bottom-3 left-1/2 -translate-x-1/2 w-full flex justify-center">
-      <div className="flex gap-3 px-4 py-2 bg-white/90 backdrop-blur-md rounded-2xl shadow-md border border-gray-200">
-        {cards.map((card, idx) => (
-          <motion.button
+    <div className="flex flex-wrap justify-center gap-2 bg-white/70 backdrop-blur-md p-3 rounded-2xl shadow-md border border-gray-200 w-[95%] max-w-md">
+      {CARD_INFO.map((card) => {
+        const usedCount = usedCards[card.id] || 0;
+        const disabled =
+          (isLocked && card.id !== "revive") || // 残回数0なら使用不可
+          (card.id !== "revive" && usedCount > 0); // 各カード1回まで
+
+        return (
+          <motion.div
             key={card.id}
-            whileHover={!card.used ? { scale: 1.05 } : {}}
-            whileTap={!card.used ? { scale: 0.95 } : {}}
-            disabled={card.used}
-            onClick={() => {
-              if (!card.used) onUse(card);
-            }}
-            className={`relative px-3 py-2 rounded-xl font-bold text-sm text-white shadow-sm ${
-              card.used
-                ? "bg-gray-400 opacity-60 cursor-not-allowed"
-                : "bg-gradient-to-r from-pink-400 to-rose-400"
-            }`}
+            whileTap={{ scale: disabled ? 1 : 0.9 }}
+            className="flex flex-col items-center"
           >
-            <span>{card.name}</span>
-
-            {/* 使用済マーク */}
-            {card.used && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="absolute inset-0 flex items-center justify-center font-extrabold text-white text-xs bg-black/30 rounded-xl"
-              >
-                USED
-              </motion.span>
+            <Button
+              disabled={disabled}
+              onClick={() => onUse && onUse(card.id)}
+              className={`text-xs px-3 py-1.5 rounded-xl border font-semibold shadow-sm transition-all ${
+                disabled
+                  ? "bg-gray-300 border-gray-300 text-gray-500 cursor-not-allowed"
+                  : "bg-gradient-to-r from-pink-300 to-yellow-300 text-white border-none hover:opacity-90"
+              }`}
+            >
+              {card.label}
+            </Button>
+            {card.id !== "revive" && (
+              <span className="text-[10px] text-gray-600 mt-1">
+                {usedCount > 0 ? "使用済" : ""}
+              </span>
             )}
+          </motion.div>
+        );
+      })}
 
-            {/* ツールチップ風説明 */}
-            <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-[10px] text-gray-700 bg-white px-2 py-1 rounded-lg shadow hidden group-hover:block whitespace-nowrap">
-              {card.desc}
-            </span>
-          </motion.button>
-        ))}
+      {/* 残り使用回数表示 */}
+      <div className="text-xs text-gray-700 font-semibold mt-2 w-full text-center">
+        カード残り：{cardsLeft} / 3
       </div>
     </div>
   );

@@ -1,35 +1,46 @@
 // ------------------------------------------------------
-// 🌈 src/components/ui/NoteTrackLogin.jsx（常時虹流れVer.）
+// 🌈 src/components/ui/NoteTrackLogin.jsx（七色波動Ver）
 // ------------------------------------------------------
 
 import React, { useEffect, useRef, useState } from "react";
 import { NOTE_KIND } from "@/constants/noteKinds";
+import NoteFlyRainbow from "@/components/ui/effects/NoteFlyRainbow";
 
 export default function NoteTrackLogin({ progress = 0, onFull }) {
   const kind = NOTE_KIND.login;
   const audioRef = useRef(null);
-  const [waveKey, setWaveKey] = useState(0);
   const [isFull, setIsFull] = useState(false);
+  const [waveKey, setWaveKey] = useState(0);
 
-  const filled = Math.min(7, Math.floor(progress / 15)); // 1音 = 15%
+  const filled = Math.min(7, Math.floor(progress / 15));
   const wasFullRef = useRef(false);
 
+  // 満タン時のみ一度発火
   useEffect(() => {
     const nowFull = filled >= 7;
     if (!wasFullRef.current && nowFull) {
-      setWaveKey((k) => k + 1);
       setIsFull(true);
       audioRef.current?.play().catch(() => {});
       onFull?.();
-
       const t = setTimeout(() => setIsFull(false), 4000);
       return () => clearTimeout(t);
     }
     wasFullRef.current = nowFull;
   }, [filled, onFull]);
 
+  // 🌈 各音符の基本色（7色の虹）
+  const rainbowColors = [
+    "#ff6666", // 赤
+    "#ff9933", // オレンジ
+    "#ffcc33", // 黄
+    "#66cc66", // 緑
+    "#3399ff", // 青
+    "#9966ff", // 紫
+    "#ff66cc", // ピンク
+  ];
+
   return (
-    <div className="flex flex-col items-center gap-3 select-none relative">
+    <div className="flex flex-col items-center gap-3 select-none relative overflow-visible">
       <div
         className={`relative flex gap-4 p-4 rounded-2xl bg-white/30 backdrop-blur-md overflow-hidden shadow-inner ${
           isFull ? "is-full" : ""
@@ -37,39 +48,33 @@ export default function NoteTrackLogin({ progress = 0, onFull }) {
       >
         {Array.from({ length: 7 }).map((_, i) => {
           const lit = i < filled;
+          const color = rainbowColors[i % rainbowColors.length];
           return (
             <div
               key={`${waveKey}-${i}`}
-              className="note relative w-12 h-12 flex justify-center items-center rounded-full border-2 border-white shadow-lg text-white font-bold transition-all duration-700 overflow-hidden"
+              className="note relative w-12 h-12 flex justify-center items-center rounded-full border-2 border-white shadow-lg text-white font-bold overflow-hidden"
               style={{
                 opacity: lit ? 1 : 0.3,
                 transform: lit ? "scale(1)" : "scale(0.9)",
-                boxShadow: lit
-                  ? "0 0 16px rgba(255,255,255,0.8)"
-                  : "none",
                 backgroundImage: lit
-                  ? kind.gradient
+                  ? `linear-gradient(180deg, ${color}, #fff)`
                   : "linear-gradient(180deg,#ddd,#999)",
                 backgroundSize: "400% 400%",
+                boxShadow: lit ? `0 0 18px ${color}88` : "none",
               }}
             >
-              <span className="relative z-20 text-3xl">𝄞</span>
+              <span className="relative z-10 text-3xl">𝄞</span>
 
-              {/* 🌈 常時虹の流れ（点灯中のみ） */}
+              {/* 🌊 虹色の波（個別カラーでゆらぐ） */}
               {lit && (
                 <span
-                  className="rainbowFlow absolute inset-0 rounded-full opacity-50"
-                  style={{ animationDelay: `${i * 80}ms` }}
-                />
-              )}
-
-              {/* 💥 満タン時の強波 */}
-              {isFull && (
-                <span
                   key={`${waveKey}-wave-${i}`}
-                  className="wave absolute inset-0 rounded-full z-10"
+                  className={`wave absolute inset-0 rounded-full ${
+                    isFull ? "pulse-strong" : "pulse-soft"
+                  }`}
                   style={{
-                    animationDelay: `${i * 120}ms`,
+                    "--wave-color": color,
+                    animationDelay: `${i * 0.25}s`,
                   }}
                 />
               )}
@@ -86,50 +91,55 @@ export default function NoteTrackLogin({ progress = 0, onFull }) {
 
       <audio src={kind.sound} ref={audioRef} preload="auto" />
 
+      {/* 🌈 満タンで4音符が舞う */}
+      {isFull && (
+        <NoteFlyRainbow
+          trigger={isFull}
+          startBottom="60%"
+          duration={3400}
+          height={180}
+          size={30}
+        />
+      )}
+
       <style>{`
-        /* 🌈 常時やさしい虹の流れ */
-        .note .rainbowFlow {
-          background: linear-gradient(
-            270deg,
-            #ff3b3b, #fbbf24, #34d399, #60a5fa,
-            #a78bfa, #ec4899, #facc15, #ff3b3b
-          );
-          background-size: 400% 400%;
-          animation: gentleFlow 6s linear infinite;
-        }
-
-        @keyframes gentleFlow {
-          0%   { background-position: 0% 50%; opacity: 0.4; }
-          50%  { background-position: 100% 50%; opacity: 0.6; }
-          100% { background-position: 0% 50%; opacity: 0.4; }
-        }
-
-        /* 💥 満タン時の輝き波 */
         .note .wave {
+          position: absolute;
+          inset: 0;
+          border-radius: 9999px;
           background: linear-gradient(
             270deg,
-            #ff3b3b, #fbbf24, #34d399, #60a5fa,
-            #a78bfa, #ec4899, #facc15, #ff3b3b
+            var(--wave-color),
+            #ffffff,
+            var(--wave-color)
           );
-          background-size: 400% 400%;
-          opacity: 0;
-          animation: none;
+          background-size: 300% 300%;
+          opacity: 0.5;
+          mix-blend-mode: overlay;
         }
 
-        .is-full .note .wave {
-          animation-name: rainbowPulse;
-          animation-duration: 3800ms;
-          animation-timing-function: ease-in-out;
-          animation-iteration-count: 1;
-          animation-fill-mode: both;
+        /* 🌊 ゆるやかに虹が流れる */
+        .note .wave.pulse-soft {
+          animation: rainbowFlow 5s ease-in-out infinite;
         }
 
-        @keyframes rainbowPulse {
-          0%   { background-position: 0% 50%;   opacity: 0.2; filter: brightness(1.0); }
-          25%  { background-position: 25% 50%;  opacity: 0.8; filter: brightness(1.2); }
-          50%  { background-position: 100% 50%; opacity: 1.0; filter: brightness(1.4); }
-          75%  { background-position: 50% 50%;  opacity: 0.8; filter: brightness(1.2); }
-          100% { background-position: 0% 50%;   opacity: 0.0; filter: brightness(1.0); }
+        /* 🌈 満タン時は強く2回光る */
+        .note .wave.pulse-strong {
+          animation: rainbowBurst 3s ease-in-out 2;
+        }
+
+        @keyframes rainbowFlow {
+          0%   { background-position: 0% 50%; opacity: 0.45; }
+          50%  { background-position: 100% 50%; opacity: 0.8; filter: brightness(1.4); }
+          100% { background-position: 0% 50%; opacity: 0.45; filter: brightness(1.1); }
+        }
+
+        @keyframes rainbowBurst {
+          0%   { background-position: 0% 50%; opacity: 0.6; filter: brightness(1.2); }
+          25%  { background-position: 25% 50%; opacity: 1.0; filter: brightness(1.6); }
+          50%  { background-position: 100% 50%; opacity: 1.0; filter: brightness(1.8); }
+          75%  { background-position: 50% 50%; opacity: 0.8; filter: brightness(1.4); }
+          100% { background-position: 0% 50%; opacity: 0.6; filter: brightness(1.1); }
         }
       `}</style>
     </div>

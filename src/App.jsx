@@ -2,6 +2,8 @@
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
+import ChallengeTestPage from "@/pages/ChallengeTestPage.jsx";
+import LessonTestPage from "@/pages/LessonTestPage.jsx";
 
 // ==== ページ ==== //
 import HomePage from "@/pages/HomePage.jsx";
@@ -74,7 +76,8 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/debug" element={<DebugPage />} />
           <Route path="/doremi" element={<DoReMiBoard />} />
-
+          <Route path="/lesson-test" element={<LessonTestPage />} />
+          <Route path="/challenge-test" element={<ChallengeTestPage />} /> 
           {/* ==== バトル（ログイン必須） ==== */}
           <Route
             path="/battle"

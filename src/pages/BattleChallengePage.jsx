@@ -1,32 +1,36 @@
 // ------------------------------------------------------
-// 🎵 BattleChallengePage.jsx（v2.4）
-// Auth連携でuid取得 → DP加算修正版
+// 🎵 BattleChallengePage.jsx（v2.8）
+// 各正解ごとに +10pt 加算 → ランク変化時は即モーダル表示
 // ------------------------------------------------------
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // ✅ 追加
+import { getAuth } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 import { db } from "@/fbkit";
 
 import QuestionPanel from "@/components/battle/QuestionPanel";
 import CardBar from "@/components/battle/CardBar";
 import ReviveModal from "@/components/battle/ReviveModal";
-import ResultModal from "@/components/battle/ResultModal";
 import NoteBurst from "@/components/ui/NoteBurst";
 import NoteTrackBattle from "@/components/ui/NoteTrackBattle";
 import useCardManager from "@/hooks/useCardManager";
 import { updateDoremiPoints } from "@/utils/updateDoremiPoints";
+import RankUpModal from "@/components/ui/RankUpModal";
 
 export default function BattleChallengePage({ user }) {
-  const auth = getAuth(); // ✅ Authインスタンス
-  const currentUser = auth.currentUser; // ✅ 現在ログイン中ユーザー
+  const auth = getAuth();
+  const currentUser = auth.currentUser;
+  const navigate = useNavigate();
 
   const [level, setLevel] = useState(1);
   const [question, setQuestion] = useState(null);
   const [progress, setProgress] = useState(0);
   const [bonus, setBonus] = useState(0);
-  const [showResult, setShowResult] = useState(false);
   const [showRevive, setShowRevive] = useState(false);
   const [showBurst, setShowBurst] = useState(0);
+
+  // 🎹 ランクアップモーダル
+  const [modal, setModal] = useState({ show: false, old: "", new: "" });
 
   const { cards, useCard, applyEffect, resetCards } = useCardManager();
 
@@ -43,10 +47,12 @@ export default function BattleChallengePage({ user }) {
       if (!snap.empty) {
         const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         const random = docs[Math.floor(Math.random() * docs.length)];
-        const text = random.text || random.body?.q || "問題が見つかりません";
-        const choices = random.choices || ["6", "8", "9", "12"];
-        const answer = random.answer || random.body?.a || "12";
-        setQuestion({ id: random.id, text, choices, answer });
+        setQuestion({
+          id: random.id,
+          text: random.text || random.body?.q || "問題が見つかりません",
+          choices: random.choices || ["6", "8", "9", "12"],
+          answer: random.answer || random.body?.a || "12",
+        });
       } else {
         setQuestion({
           text: "3×4は？",
@@ -56,11 +62,6 @@ export default function BattleChallengePage({ user }) {
       }
     } catch (e) {
       console.error("❌ fetchQuestion失敗:", e);
-      setQuestion({
-        text: "3×4は？",
-        choices: ["6", "8", "9", "12"],
-        answer: "12",
-      });
     }
   };
 
@@ -68,18 +69,23 @@ export default function BattleChallengePage({ user }) {
   const handleAnswer = async (isCorrect, lv) => {
     try {
       if (isCorrect) {
-        // ✅ Authユーザーのuidを優先使用
-        const uid = currentUser?.uid || user?.uid;
-        if (!uid) throw new Error("ユーザーUIDが取得できません");
+        const user = auth.currentUser;
+        if (user) {
+          const updated = await updateDoremiPoints(user.uid, 10);
+          console.log("✅ 1問ごとDP加算 (+10pt)");
 
-        // Firestore: 勝利時 +10 DP
-        await updateDoremiPoints(uid, 10);
+          // 🎹 ランクアップ検知（即表示）
+          if (updated && updated.rank !== updated.prevRank) {
+            console.log("🎶 RankUpModal即発火:", updated.prevRank, "→", updated.rank);
+            setModal({ show: true, old: updated.prevRank, new: updated.rank });
+          }
+        }
 
         const add = (lv === 1 ? 1 : lv === 2 ? 2 : 3) + bonus;
         setBonus(0);
         setProgress((p) => Math.min(p + add, 7));
         setShowBurst(add);
-        setTimeout(() => setShowBurst(0), 2000);
+        setTimeout(() => setShowBurst(0), 1200);
         setQuestion(null);
         setTimeout(() => fetchQuestion(lv), 800);
       } else {
@@ -94,11 +100,14 @@ export default function BattleChallengePage({ user }) {
     fetchQuestion(level);
   }, []);
 
+  // 🎵 7音達成時（クリアで結果画面へ遷移）
   useEffect(() => {
-    console.log("progress 値:", progress);
     if (progress >= 7) {
-      setShowResult(true);
       resetCards();
+      console.log("🎯 バトルクリア → 結果画面へ遷移します");
+      setTimeout(() => {
+        navigate(`/battle/result?result=win&score=${progress}`);
+      }, 1000);
     }
   }, [progress]);
 
@@ -128,7 +137,7 @@ export default function BattleChallengePage({ user }) {
       )}
 
       {/* 問題 */}
-      {question && !showResult && !showRevive && (
+      {question && !showRevive && (
         <div className="flex flex-col items-center w-full mb-16 mt-10">
           <QuestionPanel
             key={question.id || question.text}
@@ -139,7 +148,7 @@ export default function BattleChallengePage({ user }) {
       )}
 
       {/* カードバー */}
-      {!showResult && !showRevive && (
+      {!showRevive && (
         <div
           className="fixed left-0 w-full flex justify-center z-[9999]"
           style={{ bottom: "160px" }}
@@ -160,17 +169,13 @@ export default function BattleChallengePage({ user }) {
         />
       )}
 
-      {showResult && (
-        <ResultModal
-          onClose={() => {
-            setLevel(1);
-            setProgress(0);
-            setShowResult(false);
-            setQuestion(null);
-            fetchQuestion(1);
-          }}
-        />
-      )}
+      {/* 🎹 ランクアップ表示 */}
+      <RankUpModal
+        show={modal.show}
+        oldRank={modal.old}
+        newRank={modal.new}
+        onClose={() => setModal({ show: false, old: "", new: "" })}
+      />
     </div>
   );
 }

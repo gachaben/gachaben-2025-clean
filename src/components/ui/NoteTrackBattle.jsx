@@ -9,7 +9,7 @@ export default function NoteTrackBattle({ progress = 0, onFull }) {
   const [waveKey, setWaveKey] = useState(0);
   const [isFull, setIsFull] = useState(false);
   const [showRainbow, setShowRainbow] = useState(false);
-  const filled = Math.min(7, Math.floor(progress / 15));
+  const filled = Math.min(7, progress);
   const wasFullRef = useRef(false);
 
   useEffect(() => {

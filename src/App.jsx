@@ -1,6 +1,6 @@
 // ------------------------------------------------------
-// src/App.jsx
-// 🚀 ガチャ弁アプリ ルーティング設定（CPU出題バトル対応版）
+// 🚀 src/App.jsx
+// ガチャ弁アプリ ルーティング設定（CPU出題バトル対応 + 履歴 + 結果）
 // ------------------------------------------------------
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
@@ -17,10 +17,12 @@ import Login from "@/pages/Login.jsx";
 import DebugPage from "@/pages/DebugPage.jsx";
 import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
 
-// ✅ 新しいCPU出題バトルページ
+// ==== バトル関連 ==== //
 import BattleChallengePage from "@/pages/BattleChallengePage.jsx";
+import BattleResultPage from "@/pages/BattleResultPage.jsx";
+import BattleHistoryPage from "@/pages/BattleHistoryPage.jsx";
 
-// ==== 復習モード関連 ==== //
+// ==== 復習モード ==== //
 import ReviewHomePage from "@/pages/ReviewHomePage.jsx";
 import ReviewQuickStart from "@/pages/ReviewQuickStart.jsx";
 import ReviewMistakesPage from "@/pages/ReviewMistakesPage.jsx";
@@ -94,26 +96,39 @@ export default function App() {
           <Route path="/challenge-test" element={<ChallengeTestPage />} />
           <Route path="/active-test" element={<ActiveTimeTestPage />} />
 
-          {/* ==== バトル（ログイン必須） ==== */}
-<Route
-  path="/battle"
-  element={
-    <RequireAuth>
-      <BattleChallengePage user={{ grade: 3 }} />
-    </RequireAuth>
-  }
-/>
-
-{/* ✅ /battle/challenge 直アクセス用ルート */}
-<Route
-  path="/battle/challenge"
-  element={
-    <RequireAuth>
-      <BattleChallengePage user={{ grade: 3 }} />
-    </RequireAuth>
-  }
-/>
-
+          {/* ==== バトル ==== */}
+          <Route
+            path="/battle"
+            element={
+              <RequireAuth>
+                <BattleChallengePage user={{ grade: 3 }} />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/battle/challenge"
+            element={
+              <RequireAuth>
+                <BattleChallengePage user={{ grade: 3 }} />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/battle/result"
+            element={
+              <RequireAuth>
+                <BattleResultPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/battle/history"
+            element={
+              <RequireAuth>
+                <BattleHistoryPage />
+              </RequireAuth>
+            }
+          />
 
           {/* ==== 復習モード ==== */}
           <Route path="/review" element={<ReviewHomePage />} />

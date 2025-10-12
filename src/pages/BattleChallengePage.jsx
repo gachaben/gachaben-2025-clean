@@ -1,6 +1,6 @@
 // ------------------------------------------------------
-// 🎵 BattleChallengePage.jsx（v2.2）
-// 音階名非表示 + 飛ぶ音符最前面 + バトルゲージ適用
+// 🎵 BattleChallengePage.jsx（v2.3）
+// ドレミゲージ点灯修正版＋Z階層調整
 // ------------------------------------------------------
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -11,8 +11,9 @@ import CardBar from "@/components/battle/CardBar";
 import ReviveModal from "@/components/battle/ReviveModal";
 import ResultModal from "@/components/battle/ResultModal";
 import NoteBurst from "@/components/ui/NoteBurst";
-import NoteTrackBattle from "@/components/ui/NoteTrackBattle"; // ✅ 追加
+import NoteTrackBattle from "@/components/ui/NoteTrackBattle";
 import useCardManager from "@/hooks/useCardManager";
+import { updateDoremiPoints } from "@/utils/updateDoremiPoints";
 
 export default function BattleChallengePage({ user }) {
   const [level, setLevel] = useState(1);
@@ -60,11 +61,14 @@ export default function BattleChallengePage({ user }) {
   };
 
   // 🎯 回答処理
-  const handleAnswer = (isCorrect, lv) => {
+  const handleAnswer = async (isCorrect, lv) => {
     if (isCorrect) {
+      // Firestore: 勝利時 +10 DP
+      await updateDoremiPoints(user?.uid, 10);
+
       const add = (lv === 1 ? 1 : lv === 2 ? 2 : 3) + bonus;
-      setProgress((p) => Math.min(p + add, 7));
       setBonus(0);
+      setProgress((p) => Math.min(p + add, 7)); // ✅ progress ちゃんと増える
       setShowBurst(add);
       setTimeout(() => setShowBurst(0), 2000);
       setQuestion(null);
@@ -79,6 +83,7 @@ export default function BattleChallengePage({ user }) {
   }, []);
 
   useEffect(() => {
+    console.log("progress 値:", progress); // ← ✅ 正しい位置に
     if (progress >= 7) {
       setShowResult(true);
       resetCards();
@@ -95,9 +100,17 @@ export default function BattleChallengePage({ user }) {
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gradient-to-b from-indigo-50 to-white relative pt-10 pb-[240px]">
-      {/* ♬ 飛ぶ音符（最前面） */}
+      {/* ♬ ドレミゲージ（最下部） ← 先に描画して最前面化 */}
+      <div
+        className="fixed left-0 w-full flex justify-center z-[100000]"
+        style={{ bottom: "40px" }}
+      >
+        <NoteTrackBattle progress={progress} />
+      </div>
+
+      {/* ♬ 飛ぶ音符（少し下げる） */}
       {showBurst > 0 && (
-        <div className="fixed inset-0 z-[99999] pointer-events-none">
+        <div className="fixed inset-0 z-[9990] pointer-events-none">
           <NoteBurst count={showBurst} color="#fb7185" />
         </div>
       )}
@@ -122,14 +135,6 @@ export default function BattleChallengePage({ user }) {
           <CardBar cards={cards} onUse={handleUseCard} />
         </div>
       )}
-
-      {/* ♬ ドレミゲージ（最下部固定） */}
-      <div
-        className="fixed left-0 w-full flex justify-center z-[9999]"
-        style={{ bottom: "40px" }}
-      >
-        <NoteTrackBattle progress={progress * 15} />
-      </div>
 
       {/* ==== モーダル ==== */}
       {showRevive && (

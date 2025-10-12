@@ -1,41 +1,41 @@
 // ------------------------------------------------------
-// 🎵 updateDoremiPoints.js
-// Firestore: ユーザーのドレミポイントを加算する
+// 🎵 src/utils/updateDoremiPoints.js
+// Firestore の users/{uid} に doremiPoints を加算保存
 // ------------------------------------------------------
-import { db } from "@/fbkit";
 import { doc, getDoc, setDoc, updateDoc, increment } from "firebase/firestore";
+import { db } from "@/fbkit";
 
 /**
- * ドレミポイントを加算する
+ * ドレミポイント加算ユーティリティ
  * @param {string} uid - ユーザーID
- * @param {number} add - 加算ポイント数
+ * @param {number} addPoints - 加算するポイント（例：10）
  */
-export async function updateDoremiPoints(uid, add = 0) {
-  if (!uid || add === 0) return;
+export async function updateDoremiPoints(uid, addPoints = 0) {
+  if (!uid) throw new Error("uid が指定されていません");
 
-  const ref = doc(db, "users", uid);
+  const userRef = doc(db, "users", uid);
 
   try {
-    const snap = await getDoc(ref);
+    const snap = await getDoc(userRef);
 
     if (snap.exists()) {
-      // 既存ユーザー → doremiPoints を加算
-      await updateDoc(ref, {
-        doremiPoints: increment(add),
+      // 既存ユーザー → 加算
+      await updateDoc(userRef, {
+        doremiPoints: increment(addPoints),
         updatedAt: new Date(),
       });
     } else {
-      // 新規ユーザーの場合 → 新規作成
-      await setDoc(ref, {
-        doremiPoints: add,
+      // 初回ユーザー → 新規作成
+      await setDoc(userRef, {
+        doremiPoints: addPoints,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
     }
 
-    console.log(`🎵 ${add} ドレミポイントを加算しました`);
-  } catch (e) {
-    console.error("❌ ドレミポイント加算エラー:", e);
-    throw e;
+    console.log(`🎵 ${addPoints} DP を加算しました`);
+  } catch (err) {
+    console.error("❌ updateDoremiPoints 失敗:", err);
+    throw err;
   }
 }

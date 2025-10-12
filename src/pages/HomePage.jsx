@@ -1,13 +1,15 @@
 // ------------------------------------------------------
-// 🎵 src/pages/HomePage.jsx（ログイン音符＋波動同期＋虹ゲージ）
+// 🎵 src/pages/HomePage.jsx（ログイン音符＋波動同期＋虹ゲージ＋シーズン背景）
 // ------------------------------------------------------
 // ・下部にログイン音符ゲージ（𝄞 ト音記号 × 虹グラデ）
 // ・ゲージが満タンになると NoteBurst が中央で波打つ
+// ・背景には今月のシーズンテーマ音符（🎹 鍵盤楽器）
 // ------------------------------------------------------
 
 import React, { useEffect, useState } from "react";
 import NoteTrackLogin from "@/components/ui/NoteTrackLogin";
 import NoteBurst from "@/components/NoteBurst";
+import SeasonTitleBg from "@/components/ui/SeasonTitleBg";
 
 export default function HomePage() {
   const [progress, setProgress] = useState(0);
@@ -34,21 +36,25 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-blue-100 to-blue-300 relative overflow-hidden">
-      <h1 className="text-lg font-bold text-blue-700 mb-6">
+      {/* 🎹 今月のシーズン背景（音符が上下に舞う演出） */}
+      <SeasonTitleBg themeIcon="🎹" themeName="鍵盤楽器シリーズ" />
+
+      <h1 className="text-lg font-bold text-blue-700 mb-6 z-10 relative">
         🌈 ト音記号ログインゲージテスト
       </h1>
 
       {/* 🌈 ト音記号ゲージ */}
-      <NoteTrackLogin progress={progress} onFull={handleFull} />
+      <div className="z-10 relative">
+        <NoteTrackLogin progress={progress} onFull={handleFull} />
+      </div>
 
       {/* 🌊 満タン時の波演出 */}
       {showWave && (
         <div
-          className="absolute"
+          className="absolute z-50"
           style={{
             bottom: "50%", // ゲージの位置合わせ
             transform: "translateY(60%)",
-            zIndex: 50,
           }}
         >
           <NoteBurst
@@ -62,7 +68,7 @@ export default function HomePage() {
         </div>
       )}
 
-      <p className="text-sm mt-4 text-blue-600">
+      <p className="text-sm mt-4 text-blue-600 z-10 relative">
         👆 画面をタップして音を解禁（デモ用）
       </p>
     </div>

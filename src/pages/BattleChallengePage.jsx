@@ -1,9 +1,10 @@
 // ------------------------------------------------------
-// 🎵 BattleChallengePage.jsx（v2.3）
-// ドレミゲージ点灯修正版＋Z階層調整
+// 🎵 BattleChallengePage.jsx（v2.4）
+// Auth連携でuid取得 → DP加算修正版
 // ------------------------------------------------------
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // ✅ 追加
 import { db } from "@/fbkit";
 
 import QuestionPanel from "@/components/battle/QuestionPanel";
@@ -16,6 +17,9 @@ import useCardManager from "@/hooks/useCardManager";
 import { updateDoremiPoints } from "@/utils/updateDoremiPoints";
 
 export default function BattleChallengePage({ user }) {
+  const auth = getAuth(); // ✅ Authインスタンス
+  const currentUser = auth.currentUser; // ✅ 現在ログイン中ユーザー
+
   const [level, setLevel] = useState(1);
   const [question, setQuestion] = useState(null);
   const [progress, setProgress] = useState(0);
@@ -62,19 +66,27 @@ export default function BattleChallengePage({ user }) {
 
   // 🎯 回答処理
   const handleAnswer = async (isCorrect, lv) => {
-    if (isCorrect) {
-      // Firestore: 勝利時 +10 DP
-      await updateDoremiPoints(user?.uid, 10);
+    try {
+      if (isCorrect) {
+        // ✅ Authユーザーのuidを優先使用
+        const uid = currentUser?.uid || user?.uid;
+        if (!uid) throw new Error("ユーザーUIDが取得できません");
 
-      const add = (lv === 1 ? 1 : lv === 2 ? 2 : 3) + bonus;
-      setBonus(0);
-      setProgress((p) => Math.min(p + add, 7)); // ✅ progress ちゃんと増える
-      setShowBurst(add);
-      setTimeout(() => setShowBurst(0), 2000);
-      setQuestion(null);
-      setTimeout(() => fetchQuestion(lv), 800);
-    } else {
-      setShowRevive(true);
+        // Firestore: 勝利時 +10 DP
+        await updateDoremiPoints(uid, 10);
+
+        const add = (lv === 1 ? 1 : lv === 2 ? 2 : 3) + bonus;
+        setBonus(0);
+        setProgress((p) => Math.min(p + add, 7));
+        setShowBurst(add);
+        setTimeout(() => setShowBurst(0), 2000);
+        setQuestion(null);
+        setTimeout(() => fetchQuestion(lv), 800);
+      } else {
+        setShowRevive(true);
+      }
+    } catch (e) {
+      console.error("❌ handleAnswer失敗:", e);
     }
   };
 
@@ -83,7 +95,7 @@ export default function BattleChallengePage({ user }) {
   }, []);
 
   useEffect(() => {
-    console.log("progress 値:", progress); // ← ✅ 正しい位置に
+    console.log("progress 値:", progress);
     if (progress >= 7) {
       setShowResult(true);
       resetCards();
@@ -100,7 +112,7 @@ export default function BattleChallengePage({ user }) {
 
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gradient-to-b from-indigo-50 to-white relative pt-10 pb-[240px]">
-      {/* ♬ ドレミゲージ（最下部） ← 先に描画して最前面化 */}
+      {/* ♬ ドレミゲージ */}
       <div
         className="fixed left-0 w-full flex justify-center z-[100000]"
         style={{ bottom: "40px" }}
@@ -108,14 +120,14 @@ export default function BattleChallengePage({ user }) {
         <NoteTrackBattle progress={progress} />
       </div>
 
-      {/* ♬ 飛ぶ音符（少し下げる） */}
+      {/* ♬ 飛ぶ音符 */}
       {showBurst > 0 && (
         <div className="fixed inset-0 z-[9990] pointer-events-none">
           <NoteBurst count={showBurst} color="#fb7185" />
         </div>
       )}
 
-      {/* 問題パネル */}
+      {/* 問題 */}
       {question && !showResult && !showRevive && (
         <div className="flex flex-col items-center w-full mb-16 mt-10">
           <QuestionPanel
@@ -126,7 +138,7 @@ export default function BattleChallengePage({ user }) {
         </div>
       )}
 
-      {/* 🎴 カードバー */}
+      {/* カードバー */}
       {!showResult && !showRevive && (
         <div
           className="fixed left-0 w-full flex justify-center z-[9999]"
@@ -136,7 +148,7 @@ export default function BattleChallengePage({ user }) {
         </div>
       )}
 
-      {/* ==== モーダル ==== */}
+      {/* モーダル */}
       {showRevive && (
         <ReviveModal
           onRevive={() => setShowRevive(false)}

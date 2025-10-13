@@ -1,62 +1,94 @@
-// src/context/HeartsContext.jsx
+// ------------------------------------------------------
+// 💖 HeartsContext.jsx（v3.1 認証完了後購読＋安全ガード）
+// ------------------------------------------------------
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { doc, onSnapshot, updateDoc, increment, setDoc } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, onSnapshot } from "firebase/firestore";
-import { ensureUserDoc, consumeHeart as consumeHeartApi, recoverHearts as recoverHeartsApi } from "@/lib/heartUtils";
+import { db } from "@/fbkit";
 
-const HeartsContext = createContext(null);
+const HeartsContext = createContext();
 
 export function HeartsProvider({ children }) {
+  const [hearts, setHearts] = useState(null); // null = 未ロード
   const [uid, setUid] = useState(null);
-  const [hearts, setHearts] = useState(5);
-  const [loading, setLoading] = useState(true);
+  const auth = getAuth();
 
+  // ✅ 認証状態の監視
   useEffect(() => {
-    const auth = getAuth();
-    const db = getFirestore();
-
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
+    const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("👤 Auth ready:", user.uid);
+        setUid(user.uid);
+      } else {
         setUid(null);
-        setHearts(5);
-        setLoading(false);
-        return;
       }
-      setUid(user.uid);
-      await ensureUserDoc();
-
-      // リアルタイムに hearts を購読
-      const ref = doc(db, "users", user.uid);
-      const off = onSnapshot(ref, (snap) => {
-        const data = snap.data();
-        setHearts(data?.hearts ?? 5);
-        setLoading(false);
-      });
-      return () => off();
     });
-    return () => unsub();
+    return () => unsubAuth();
   }, []);
 
+  // ✅ Firestore購読（uidが確定してから開始）
+  useEffect(() => {
+    if (!uid) return;
+    const ref = doc(db, "users", uid);
+
+    const unsub = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (typeof data.hearts === "number") {
+          setHearts(data.hearts);
+          console.log("💖 Firestore hearts更新:", data.hearts);
+        } else {
+          // heartsが存在しない場合は初期化
+          setDoc(ref, { hearts: 5 }, { merge: true });
+          setHearts(5);
+        }
+      } else {
+        // ドキュメントが無ければ作成
+        setDoc(ref, { hearts: 5 }, { merge: true });
+        setHearts(5);
+      }
+    });
+
+    return () => unsub();
+  }, [uid]);
+
+  // ❤️ ハート消費
   const consumeHeart = async () => {
-    const ok = await consumeHeartApi();
-    // onSnapshot が state を更新してくれるのでここでは何もしない
-    return ok;
+    if (!uid || hearts === null) return false;
+    const ref = doc(db, "users", uid);
+
+    if (hearts <= 0) {
+      console.warn("💔 ハートが足りません");
+      return false;
+    }
+
+    try {
+      await updateDoc(ref, { hearts: increment(-1) });
+      console.log("❤️ ハートを1つ消費");
+      return true;
+    } catch (e) {
+      console.error("❌ consumeHeart失敗:", e);
+      return false;
+    }
   };
 
-  const recoverHearts = async () => {
-    await recoverHeartsApi();
-    return true;
+  // 💖 広告視聴で全回復
+  const recoverHearts = async (value = 5) => {
+    if (!uid) return;
+    const ref = doc(db, "users", uid);
+    try {
+      await updateDoc(ref, { hearts: value });
+      console.log("💖 ハート全回復:", value);
+    } catch (e) {
+      console.error("❌ recoverHearts失敗:", e);
+    }
   };
 
   return (
-    <HeartsContext.Provider value={{ uid, hearts, loading, consumeHeart, recoverHearts }}>
+    <HeartsContext.Provider value={{ hearts, consumeHeart, recoverHearts }}>
       {children}
     </HeartsContext.Provider>
   );
 }
 
-export function useHearts() {
-  const ctx = useContext(HeartsContext);
-  if (!ctx) throw new Error("useHearts must be used within HeartsProvider");
-  return ctx;
-}
+export const useHearts = () => useContext(HeartsContext);

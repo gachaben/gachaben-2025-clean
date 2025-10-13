@@ -1,75 +1,29 @@
 // ------------------------------------------------------
-// 📚 src/components/battle/QuestionPanel.jsx
-// ドレミチャレンジバトル：出題＋選択肢UI
+// 🎯 QuestionPanel.jsx（正誤判定を親へ返す）
 // ------------------------------------------------------
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React from "react";
 
 export default function QuestionPanel({ question, onAnswer }) {
-  const [selected, setSelected] = useState(null);
-  const [isCorrect, setIsCorrect] = useState(null);
-
-  const handleClick = (choice) => {
-    if (selected !== null) return; // 2回押し防止
-    setSelected(choice);
-    const correct = choice === question.answer;
-    setIsCorrect(correct);
-    setTimeout(() => onAnswer(correct), 1200);
+  const handleSelect = (choice) => {
+    const isCorrect = choice === question.answer;
+    console.log("💡 選択:", choice, "答え:", question.answer, "→", isCorrect);
+    onAnswer(isCorrect);
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-md mt-6 px-4">
-      {/* 問題文 */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-lg font-bold text-gray-800 text-center mb-6"
-      >
-        {question.text}
-      </motion.div>
-
-      {/* 選択肢ボタン */}
-      <div className="grid grid-cols-1 gap-3 w-full">
-        {question.choices.map((choice, idx) => {
-          const isSelected = selected === choice;
-          const correct = isCorrect && isSelected;
-          const incorrect = !isCorrect && isSelected;
-          return (
-            <motion.button
-              key={idx}
-              whileHover={!selected ? { scale: 1.03 } : {}}
-              whileTap={!selected ? { scale: 0.97 } : {}}
-              disabled={selected !== null}
-              onClick={() => handleClick(choice)}
-              className={`w-full py-3 rounded-xl text-lg font-semibold border shadow-sm transition-colors duration-300 ${
-                correct
-                  ? "bg-green-400 text-white border-green-500"
-                  : incorrect
-                  ? "bg-rose-400 text-white border-rose-500"
-                  : "bg-white text-gray-700 border-gray-300 hover:bg-indigo-50"
-              }`}
-            >
-              {choice}
-            </motion.button>
-          );
-        })}
-      </div>
-
-      {/* 正誤フィードバック */}
-      <AnimatePresence>
-        {selected && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className={`mt-4 text-lg font-bold ${
-              isCorrect ? "text-green-500" : "text-rose-500"
-            }`}
+    <div className="flex flex-col items-center">
+      <h2 className="text-xl font-bold mb-6">{question.text}</h2>
+      <div className="flex flex-col gap-3 w-[260px]">
+        {question.choices.map((c) => (
+          <button
+            key={c}
+            onClick={() => handleSelect(c)}
+            className="px-4 py-2 bg-white rounded-xl shadow hover:bg-pink-50 border border-gray-200"
           >
-            {isCorrect ? "⭕ 正解！" : "❌ ざんねん！"}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            {c}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -1,8 +1,6 @@
-// src/fbkit/index.ts
 // ------------------------------------------------------
-// Firebase 統合エクスポート（v1.3.1 準拠）
-// app.ts で定義された getFirebaseApp / getFirestoreDb 等を統合。
-// どのページからでも import { db, auth, storage } from "@/fbkit" が可能。
+// src/fbkit/index.ts（完全版）
+// Firebase 統合エクスポート
 // ------------------------------------------------------
 
 import {
@@ -12,6 +10,7 @@ import {
   getFirebaseStorage,
 } from "./app";
 import { firebaseConfig } from "./config";
+import { ensureSignedIn } from "./auth";
 
 // ---- 関数群の再エクスポート ----
 export {
@@ -20,12 +19,12 @@ export {
   getFirestoreDb,
   getFirebaseAuth,
   getFirebaseStorage,
+  ensureSignedIn,
 };
 
-// ---- シングルトンとして即時取得（他ページ互換）----
+// ---- シングルトン ----
 export const db = getFirestoreDb();
 export const auth = getFirebaseAuth();
 export const storage = getFirebaseStorage();
-export { ensureSignedIn } from "./auth";
 
 console.log("[FBKIT] index.ts initialized (db/auth/storage ready)");

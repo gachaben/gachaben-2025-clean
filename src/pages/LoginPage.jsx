@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from "react";
+// ------------------------------------------------------
+// src/pages/LoginPage.jsx（統合版・最新版）
+// ------------------------------------------------------
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  onAuthStateChanged,
 } from "firebase/auth";
 import {
   doc,
@@ -12,171 +14,148 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { getFirebaseAuth, getFirestoreDb } from "@/firebase";
-import NoteTrack from "@/components/ui/NoteTrack";
+import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
 
-const auth = getFirebaseAuth();
-const db = getFirestoreDb();
-
+// ------------------------------------------------------
+// 🧩 ensureUserDoc()
+// Firestoreにユーザーデータがなければ自動初期化。
+// 新規登録時に hearts / battleTickets / doremiPoints などを追加。
+// ------------------------------------------------------
 async function ensureUserDoc(uid, email) {
+  const db = getFirestoreDb();
   const ref = doc(db, "users", uid);
   const snap = await getDoc(ref);
+
   if (!snap.exists()) {
-    await setDoc(ref, {
+    const initialData = {
       email: email ?? "",
       role: "user",
       rewardAttempts: 0,
+      hearts: 5,
+      lastAdHeartsAt: null,
+      battleTickets: 3,
+      lastAdTicketsAt: null,
+      doremiPoints: 0,
+      doremiRank: "ビギナー",
       createdAt: serverTimestamp(),
       lastLoginAt: serverTimestamp(),
-    });
-    return { role: "user", rewardAttempts: 0 };
+    };
+    await setDoc(ref, initialData);
+    console.log("✅ user initialized (new):", uid);
+    return initialData;
   } else {
+    const data = snap.data();
+    const update = {};
+
+    // 欠けているフィールドを自動補完
+    if (data.hearts == null) update.hearts = 5;
+    if (data.lastAdHeartsAt == null) update.lastAdHeartsAt = null;
+    if (data.battleTickets == null) update.battleTickets = 3;
+    if (data.lastAdTicketsAt == null) update.lastAdTicketsAt = null;
+    if (data.doremiPoints == null) update.doremiPoints = 0;
+    if (data.doremiRank == null) update.doremiRank = "ビギナー";
+
+    if (Object.keys(update).length > 0) {
+      await updateDoc(ref, update);
+      console.log("🩷 user updated with missing fields:", update);
+    }
+
     await updateDoc(ref, { lastLoginAt: serverTimestamp() });
-    return snap.data();
+    return { ...data, ...update };
   }
 }
 
+// ------------------------------------------------------
+// 🔐 LoginPage コンポーネント
+// ------------------------------------------------------
 export default function LoginPage() {
-  const nav = useNavigate();
   const [email, setEmail] = useState("");
-  const [pass, setPass] = useState("");
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState(null);
-  const [attempts, setAttempts] = useState(0);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  // --- ログイン済みなら Firestore からユーザーデータ取得 ---
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        const data = await ensureUserDoc(u.uid, u.email || "");
-        setUser(u);
-        setAttempts(data.rewardAttempts || 0);
-      } else {
-        setUser(null);
-      }
-    });
-    return () => unsub();
-  }, []);
-
-  // --- 広告視聴ボタン（挑戦＋保存） ---
-  async function handleWatchAd() {
-    if (!user) return alert("ログインしてください！");
-    const ref = doc(db, "users", user.uid);
-    const newAttempts = attempts + 1;
-
-    await updateDoc(ref, { rewardAttempts: newAttempts });
-    setAttempts(newAttempts);
-
-    if (newAttempts >= 7) {
-      console.log("🌈 プレミアム確定ガチャ発動！");
-      await updateDoc(ref, { rewardAttempts: 0 }); // リセット
-      setTimeout(() => setAttempts(0), 1000);
-    }
-  }
-
-  // --- 通常ログイン or 登録 ---
-  async function handleLogin(e) {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    setErr(null);
-    setLoading(true);
+    setError("");
+
+    const auth = getFirebaseAuth();
+    const emailNorm = email.trim().toLowerCase();
+    const passRaw = password;
+
+    if (!emailNorm) return setError("メールアドレスを入力してください");
+    if (!passRaw || passRaw.length < 6)
+      return setError("パスワードは6文字以上にしてください");
+
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, pass).catch(
-        async (err) => {
-          if (err.code === "auth/user-not-found") {
-            return await createUserWithEmailAndPassword(auth, email, pass);
-          }
+      // ① サインイン or 新規作成
+      let user;
+      try {
+        const result = await signInWithEmailAndPassword(auth, emailNorm, passRaw);
+        user = result.user;
+      } catch (err) {
+        if (err.code === "auth/user-not-found") {
+          const result = await createUserWithEmailAndPassword(
+            auth,
+            emailNorm,
+            passRaw
+          );
+          user = result.user;
+        } else {
           throw err;
         }
-      );
-      const data = await ensureUserDoc(cred.user.uid, cred.user.email || "");
-      setUser(cred.user);
-      setAttempts(data.rewardAttempts || 0);
-    } catch (e) {
-      console.error("AUTH ERROR:", e);
-      setErr(e.message);
-    } finally {
-      setLoading(false);
+      }
+
+      // ② Firestore初期化（ここで hearts, battleTickets など自動設定）
+      const data = await ensureUserDoc(user.uid, user.email);
+
+      // ③ ロールに応じて遷移
+      const role = data?.role ?? "user";
+      if (role === "parent") navigate("/parent-home");
+      else if (role === "admin") navigate("/admin-reward");
+      else navigate("/");
+    } catch (err) {
+      console.error("[Login] error:", err);
+      setError(`ログインに失敗しました: ${err.code || err.message}`);
     }
-  }
+  };
 
-  // --- ログイン済み画面 ---
-  if (user) {
-    const progress = (attempts / 7) * 100;
-    return (
-      <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-yellow-100 to-yellow-300">
-        <h1 className="text-lg font-bold text-yellow-800 mb-4">
-          🎁 プレミアムガチャチャンス
-        </h1>
-
-        <NoteTrack
-          progress={progress}
-          onFull={() => console.log("🌈 ドレミ×2 キュイーン発動！")}
-        />
-
-        <p className="text-sm mt-4 text-gray-700">
-          挑戦回数：{attempts}/7
-        </p>
-
-        <button
-          onClick={handleWatchAd}
-          className="mt-4 px-4 py-2 rounded-lg bg-yellow-500 text-white font-bold shadow-lg hover:bg-yellow-400 transition"
-        >
-          🎬 広告を見てプレミアムガチャに挑戦！
-        </button>
-
-        <button
-          onClick={() => {
-            auth.signOut();
-            setUser(null);
-          }}
-          className="mt-6 text-xs text-gray-500 underline"
-        >
-          ログアウト
-        </button>
-      </div>
-    );
-  }
-
-  // --- 未ログイン画面 ---
   return (
-    <div className="max-w-md mx-auto p-4 space-y-4">
-      <h1 className="text-lg font-bold">🔒 ログイン</h1>
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-100 px-4">
+      <h1 className="text-3xl font-bold mb-6">🔐 ログイン</h1>
 
-      <form onSubmit={handleLogin} className="space-y-3">
-        <div className="space-y-1">
-          <label className="text-sm text-neutral-600">メールアドレス</label>
-          <input
-            type="email"
-            className="w-full border rounded px-3 py-2"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-sm text-neutral-600">パスワード</label>
-          <input
-            type="password"
-            className="w-full border rounded px-3 py-2"
-            value={pass}
-            onChange={(e) => setPass(e.target.value)}
-            required
-          />
-        </div>
-
-        {err && <div className="text-sm text-red-600">{err}</div>}
-
+      <form
+        onSubmit={handleLogin}
+        className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md"
+      >
+        <input
+          type="email"
+          placeholder="メールアドレス"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full mb-4 px-4 py-2 border rounded"
+          required
+        />
+        <input
+          type="password"
+          placeholder="パスワード（6文字以上）"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full mb-4 px-4 py-2 border rounded"
+          required
+        />
+        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
         <button
           type="submit"
-          disabled={loading}
-          className={`w-full px-4 py-2 rounded bg-blue-600 text-white font-bold shadow-md hover:bg-blue-500 transition ${
-            loading ? "opacity-50" : ""
-          }`}
+          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
         >
-          {loading ? "処理中..." : "ログイン / 新規登録"}
+          ログイン / 新規登録
         </button>
       </form>
     </div>
   );
 }
+
+// ------------------------------------------------------
+// ✅ 外部で再利用できるよう export
+// ------------------------------------------------------
+export { ensureUserDoc };

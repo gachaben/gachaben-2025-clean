@@ -1,75 +1,69 @@
 // ------------------------------------------------------
-// 🧠 src/hooks/useCardManager.js
-// ドレミチャレンジバトル：カード効果管理フック
+// 🎴 useCardManager.js（v1.0）
+// カード使用・効果処理を統合管理するカスタムフック
 // ------------------------------------------------------
 import { useState } from "react";
 
-// 初期カードセット（バトル開始時に配布）
-const DEFAULT_CARDS = [
-  { id: "cut", name: "🧠 選択肢カット", desc: "選択肢を1つ消す", used: false },
-  { id: "time", name: "⏰ 時間延長", desc: "制限時間+5秒", used: false },
-  { id: "change", name: "🔄 チェンジ", desc: "出題を変更", used: false },
-  { id: "boost", name: "🌟 ブースト", desc: "次の正解ポイント+1", used: false },
+// カードの初期セット
+const initialCards = [
+  { id: "cut", name: "選択肢カット", used: false },
+  { id: "revive", name: "復活カード", used: false },
+  { id: "boost", name: "スタートブースト", used: false },
+  { id: "time", name: "時間延長", used: false },
+  { id: "change", name: "チェンジ", used: false },
 ];
 
 export default function useCardManager() {
-  const [cards, setCards] = useState(DEFAULT_CARDS);
+  const [cards, setCards] = useState(initialCards);
 
   // ✅ カード使用処理
   const useCard = (cardId) => {
-    const card = cards.find((c) => c.id === cardId);
-    if (!card || card.used) return null;
-
-    // 使用状態に更新
     setCards((prev) =>
       prev.map((c) => (c.id === cardId ? { ...c, used: true } : c))
     );
-
-    return card;
   };
 
-  // ✅ 効果適用処理
-  const applyEffect = (cardId, question, timer) => {
-    let modified = { question, timer, bonus: 0 };
+  // ✅ 効果適用ロジック
+  const applyEffect = (cardId, question, bonus) => {
+    let result = { question, bonus };
 
     switch (cardId) {
-      case "cut":
-        // 選択肢を1つランダム削除
-        if (question.choices.length > 2) {
-          const idx = Math.floor(Math.random() * question.choices.length);
-          const newChoices = question.choices.filter(
-            (_, i) => i !== idx && question.choices[i] !== question.answer
-          );
-          modified.question = { ...question, choices: newChoices };
+      case "cut": // 🧠 選択肢カット（4択→3択）
+        if (question?.choices?.length > 3) {
+          const filtered = question.choices.slice(0, 3);
+          result.question = { ...question, choices: filtered };
+          console.log("🧠 選択肢カット発動");
         }
         break;
 
-      case "time":
-        // 制限時間延長（+5秒）
-        modified.timer = (timer || 0) + 5;
+      case "revive": // ❤️ 復活カード（ミス時に自動発動予定）
+        console.log("❤️ 復活カードは自動扱い（ここでは非発動）");
         break;
 
-      case "change":
-        // 出題変更（親が再取得する想定）
-        modified.question = null;
+      case "boost": // 🌟 スタートブースト（+2pt）
+        console.log("🌟 スタートブースト発動 → +2ボーナス");
+        result.bonus = 2;
         break;
 
-      case "boost":
-        // 次の正解時のポイント +1 ボーナス
-        modified.bonus = 1;
+      case "time": // ⏰ 時間延長（制限時間+5秒）
+        console.log("⏰ 時間延長カード発動 → +5秒");
+        // → 時間制限ロジック導入時に連動予定
+        break;
+
+      case "change": // 🔄 チェンジ（再出題）
+        console.log("🔄 チェンジカード発動 → 再出題");
+        result.question = null; // nullなら再取得させる
         break;
 
       default:
         break;
     }
 
-    return modified;
+    return result;
   };
 
-  // ✅ リセット処理
-  const resetCards = () => {
-    setCards(DEFAULT_CARDS.map((c) => ({ ...c, used: false })));
-  };
+  // ✅ 全カードリセット（バトル終了時）
+  const resetCards = () => setCards(initialCards);
 
   return {
     cards,

@@ -1,105 +1,68 @@
-// src/fbkit/app.ts
-import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+// ------------------------------------------------------
+// src/fbkit/app.ts（完全版）
+// Firebase初期化＋Emulator接続＋export統一
+// ------------------------------------------------------
+import { initializeApp, getApp, getApps } from "firebase/app";
 import {
-  initializeFirestore,
+  getAuth,
+  connectAuthEmulator,
+} from "firebase/auth";
+import {
   getFirestore,
   connectFirestoreEmulator,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-  type Firestore,
 } from "firebase/firestore";
-import { getAuth, type Auth, connectAuthEmulator } from "firebase/auth";
-import { getStorage, type FirebaseStorage, connectStorageEmulator } from "firebase/storage";
+import { getStorage, connectStorageEmulator } from "firebase/storage";
 
-import {
-  firebaseConfig,
-  USE_EMU,
-  AUTH_PORT,
-  FIRESTORE_PORT,
-  STORAGE_PORT,
-  isLocalhost,
-} from "./config";
+const USE_EMU = (import.meta.env.VITE_USE_EMU ?? "false") === "true";
+const FS_PORT = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8088);
 
-// ---- シングルトン保持 ----
-let _app: FirebaseApp | undefined;
-let _db: Firestore | undefined;
-let _auth: Auth | undefined;
-let _storage: FirebaseStorage | undefined;
-
-// ---- 2重初期化防止フラグ（HMR対応）----
-declare global {
-  interface Window {
-    __GBEN_FS_INIT__?: boolean;
-  }
-}
-
-// ---- App ----
-export function getFirebaseApp(): FirebaseApp {
-  if (!_app) {
-    _app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-  }
-  return _app!;
-}
-
-// ---- Firestore ----
-export function getFirestoreDb(): Firestore {
-  if (_db) return _db;
-  const app = getFirebaseApp();
-
-  if (!window.__GBEN_FS_INIT__) {
-    const db = initializeFirestore(app, {
-      ignoreUndefinedProperties: true,
-      experimentalAutoDetectLongPolling: true,
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager(),
-      }),
-    });
-
-    if (isLocalhost && USE_EMU) {
-      const port = Number(import.meta.env.VITE_FIRESTORE_PORT || FIRESTORE_PORT || 8089);
-      connectFirestoreEmulator(db, "127.0.0.1", port);
-      console.log(`[FBKIT] Firestore -> emulator (127.0.0.1:${port})`);
+const firebaseConfig = USE_EMU
+  ? {
+      apiKey: "demo-key",
+      projectId: "demo-gachaben",
+      appId: "demo-app",
     }
+  : {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    };
 
-    _db = db;
-    window.__GBEN_FS_INIT__ = true;
-  } else {
-    _db = getFirestore(app);
-  }
+// ✅ 既に初期化済みなら再利用
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
 
-  return _db;
+// ✅ Emulator接続（ローカル動作用）
+if (USE_EMU) {
+  connectFirestoreEmulator(db, "127.0.0.1", FS_PORT);
+  connectAuthEmulator(auth, "http://127.0.0.1:9099");
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
+  console.log("🔥 Firebase Emulator connected:", {
+    firestore: `localhost:${FS_PORT}`,
+    auth: "localhost:9099",
+    storage: "localhost:9199",
+  });
 }
 
-// ---- Auth ----
-export function getFirebaseAuth(): Auth {
-  if (_auth) return _auth;
-  const a = getAuth(getFirebaseApp());
-
-  if (isLocalhost && USE_EMU) {
-    try {
-      const port = Number(import.meta.env.VITE_AUTH_PORT || AUTH_PORT || 9099);
-      connectAuthEmulator(a, `http://127.0.0.1:${port}`, { disableWarnings: true });
-      console.log(`[FBKIT] Auth -> emulator (127.0.0.1:${port})`);
-    } catch (e) {
-      console.error("Auth emulator connection failed", e);
-    }
-  }
-
-  _auth = a;
-  return _auth;
+// ------------------------------------------------------
+// 🧩 共通export
+// ------------------------------------------------------
+export function getFirebaseApp() {
+  return app;
+}
+export function getFirebaseAuth() {
+  return auth;
+}
+export function getFirestoreDb() {
+  return db;
+}
+export function getFirebaseStorage() {
+  return storage;
 }
 
-// ---- Storage ----
-export function getFirebaseStorage(): FirebaseStorage {
-  if (_storage) return _storage;
-  const s = getStorage(getFirebaseApp());
-
-  if (isLocalhost && USE_EMU) {
-    const port = Number(import.meta.env.VITE_STORAGE_PORT || STORAGE_PORT || 9199);
-    connectStorageEmulator(s, "127.0.0.1", port);
-    console.log(`[FBKIT] Storage -> emulator (localhost:${port})`);
-  }
-
-  _storage = s;
-  return _storage;
-}
+export { app, auth, db, storage };

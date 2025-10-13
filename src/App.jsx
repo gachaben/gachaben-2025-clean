@@ -1,6 +1,6 @@
 // ------------------------------------------------------
-// 🚀 src/App.jsx
-// ガチャ弁アプリ ルーティング設定（CPU出題バトル対応 + 履歴 + 結果）
+// 🚀 src/App.jsx（v2.6）
+// ガチャ弁アプリ ルーティング設定（index.jsxでBrowserRouterをラップ）
 // ------------------------------------------------------
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
@@ -13,7 +13,7 @@ import ActiveTimeTestPage from "@/pages/ActiveTimeTestPage.jsx";
 
 // ==== メインページ ==== //
 import HomePage from "@/pages/HomePage.jsx";
-import Login from "@/pages/Login.jsx";
+import LoginPage from "@/pages/LoginPage.jsx";   
 import DebugPage from "@/pages/DebugPage.jsx";
 import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
 
@@ -74,7 +74,7 @@ function Nav() {
 }
 
 // ------------------------------------------------------
-// 🚀 ルーティング本体
+// 🚀 ルーティング本体（BrowserRouterはindex.jsx側）
 // ------------------------------------------------------
 export default function App() {
   return (
@@ -89,14 +89,14 @@ export default function App() {
         <Routes>
           {/* ==== 基本ページ ==== */}
           <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/debug" element={<DebugPage />} />
           <Route path="/doremi" element={<DoReMiBoard />} />
           <Route path="/lesson-test" element={<LessonTestPage />} />
           <Route path="/challenge-test" element={<ChallengeTestPage />} />
           <Route path="/active-test" element={<ActiveTimeTestPage />} />
 
-          {/* ==== バトル ==== */}
+          {/* ==== バトル関連 ==== */}
           <Route
             path="/battle"
             element={

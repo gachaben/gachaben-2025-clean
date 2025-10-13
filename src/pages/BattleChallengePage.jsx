@@ -1,8 +1,9 @@
 // ------------------------------------------------------
-// 🎵 BattleChallengePage.jsx（v2.8）
-// 各正解ごとに +10pt 加算 → ランク変化時は即モーダル表示
+// 🎵 BattleChallengePage.jsx（v3.1：バトル券制＋問題ごとのDP加算を廃止）
+// DPは結果画面でのみ付与（勝10/負5）
 // ------------------------------------------------------
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, useRef } from "react";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
@@ -14,12 +15,11 @@ import ReviveModal from "@/components/battle/ReviveModal";
 import NoteBurst from "@/components/ui/NoteBurst";
 import NoteTrackBattle from "@/components/ui/NoteTrackBattle";
 import useCardManager from "@/hooks/useCardManager";
-import { updateDoremiPoints } from "@/utils/updateDoremiPoints";
 import RankUpModal from "@/components/ui/RankUpModal";
+import { consumeTicket } from "@/utils/useTickets"; // 🎫
 
 export default function BattleChallengePage({ user }) {
   const auth = getAuth();
-  const currentUser = auth.currentUser;
   const navigate = useNavigate();
 
   const [level, setLevel] = useState(1);
@@ -28,11 +28,11 @@ export default function BattleChallengePage({ user }) {
   const [bonus, setBonus] = useState(0);
   const [showRevive, setShowRevive] = useState(false);
   const [showBurst, setShowBurst] = useState(0);
-
-  // 🎹 ランクアップモーダル
   const [modal, setModal] = useState({ show: false, old: "", new: "" });
 
   const { cards, useCard, applyEffect, resetCards } = useCardManager();
+
+  const startedRef = useRef(false);
 
   // 🧠 Firestore 出題
   const fetchQuestion = async (lv) => {
@@ -65,22 +65,29 @@ export default function BattleChallengePage({ user }) {
     }
   };
 
-  // 🎯 回答処理
+  // 🎮 入場時：バトル券消費
+  useEffect(() => {
+    const startBattle = async () => {
+      if (startedRef.current) return;
+      startedRef.current = true;
+
+      const ok = await consumeTicket();
+      if (!ok) {
+        alert("🎫 バトル券が足りません。チャレンジ問題か広告で入手してください。");
+        navigate("/");
+        return;
+      }
+
+      console.log("🎫 バトル券消費完了 → 出題開始");
+      fetchQuestion(level);
+    };
+    startBattle();
+  }, []);
+
+  // 🎯 回答処理（※ここではDPを付与しない）
   const handleAnswer = async (isCorrect, lv) => {
     try {
       if (isCorrect) {
-        const user = auth.currentUser;
-        if (user) {
-          const updated = await updateDoremiPoints(user.uid, 10);
-          console.log("✅ 1問ごとDP加算 (+10pt)");
-
-          // 🎹 ランクアップ検知（即表示）
-          if (updated && updated.rank !== updated.prevRank) {
-            console.log("🎶 RankUpModal即発火:", updated.prevRank, "→", updated.rank);
-            setModal({ show: true, old: updated.prevRank, new: updated.rank });
-          }
-        }
-
         const add = (lv === 1 ? 1 : lv === 2 ? 2 : 3) + bonus;
         setBonus(0);
         setProgress((p) => Math.min(p + add, 7));
@@ -96,11 +103,7 @@ export default function BattleChallengePage({ user }) {
     }
   };
 
-  useEffect(() => {
-    fetchQuestion(level);
-  }, []);
-
-  // 🎵 7音達成時（クリアで結果画面へ遷移）
+  // 🎵 7音達成時 → 結果画面
   useEffect(() => {
     if (progress >= 7) {
       resetCards();
@@ -111,6 +114,7 @@ export default function BattleChallengePage({ user }) {
     }
   }, [progress]);
 
+  // 🧩 カード使用
   const handleUseCard = (card) => {
     const effect = applyEffect(card.id, question, 0);
     if (effect.question === null) fetchQuestion(level);
@@ -119,24 +123,20 @@ export default function BattleChallengePage({ user }) {
     useCard(card.id);
   };
 
+  const closeRankModal = () => setModal({ show: false, old: "", new: "" });
+
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gradient-to-b from-indigo-50 to-white relative pt-10 pb-[240px]">
-      {/* ♬ ドレミゲージ */}
-      <div
-        className="fixed left-0 w-full flex justify-center z-[100000]"
-        style={{ bottom: "40px" }}
-      >
+      <div className="fixed left-0 w-full flex justify-center z-[100000]" style={{ bottom: "40px" }}>
         <NoteTrackBattle progress={progress} />
       </div>
 
-      {/* ♬ 飛ぶ音符 */}
       {showBurst > 0 && (
         <div className="fixed inset-0 z-[9990] pointer-events-none">
           <NoteBurst count={showBurst} color="#fb7185" />
         </div>
       )}
 
-      {/* 問題 */}
       {question && !showRevive && (
         <div className="flex flex-col items-center w-full mb-16 mt-10">
           <QuestionPanel
@@ -147,34 +147,31 @@ export default function BattleChallengePage({ user }) {
         </div>
       )}
 
-      {/* カードバー */}
       {!showRevive && (
-        <div
-          className="fixed left-0 w-full flex justify-center z-[9999]"
-          style={{ bottom: "160px" }}
-        >
+        <div className="fixed left-0 w-full flex justify-center z=[9999]" style={{ bottom: "160px" }}>
           <CardBar cards={cards} onUse={handleUseCard} />
         </div>
       )}
 
-      {/* モーダル */}
       {showRevive && (
         <ReviveModal
-          onRevive={() => setShowRevive(false)}
-          onClose={() => {
-            setShowRevive(false);
-            setProgress(0);
-          }}
-          hasReviveCard={cards.some((c) => c.id === "revive" && !c.used)}
-        />
+  onRevive={() => setShowRevive(false)} // ❤️ 復活カードで続行
+  onClose={() => {
+    // ❌ 復活カードなし or やめる → 負け確定
+    setShowRevive(false);
+    setProgress(0);
+    navigate(`/battle/result?result=lose`);
+  }}
+  hasReviveCard={cards.some((c) => c.id === "revive" && !c.used)}
+/>
+
       )}
 
-      {/* 🎹 ランクアップ表示 */}
       <RankUpModal
         show={modal.show}
         oldRank={modal.old}
         newRank={modal.new}
-        onClose={() => setModal({ show: false, old: "", new: "" })}
+        onClose={closeRankModal}
       />
     </div>
   );

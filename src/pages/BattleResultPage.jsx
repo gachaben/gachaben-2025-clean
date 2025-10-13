@@ -1,77 +1,107 @@
 // ------------------------------------------------------
-// 🥊 BattleResultPage.jsx
-// バトル終了時の結果保存＋ドレミポイント加算
+// 🎵 BattleResultPage.jsx（DP最終ルール版：勝10/負5・復活は加点なし）
 // ------------------------------------------------------
+
 import React, { useEffect, useState } from "react";
-import { auth } from "@/fbkit";
-import { saveBattleRecord } from "@/utils/saveBattleRecord";
+import { useLocation, useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth";
 import { updateDoremiPoints } from "@/utils/updateDoremiPoints";
+import { grantTickets } from "@/utils/useTickets";
+import RankUpModal from "@/components/ui/RankUpModal";
+import NoteBurst from "@/components/ui/NoteBurst";
 
 export default function BattleResultPage() {
-  const [msg, setMsg] = useState("saving...");
-  const [recId, setRecId] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const auth = getAuth();
+  const user = auth.currentUser;
 
+  const [modal, setModal] = useState({ show: false, old: "", new: "" });
+  const [result, setResult] = useState("lose");
+  const [dpGain, setDpGain] = useState(0);
+  const [showBurst, setShowBurst] = useState(false);
+
+  // 🎯 URLクエリから勝敗を判定
   useEffect(() => {
-    (async () => {
-      const user = auth.currentUser;
-      if (!user) {
-        setMsg("未ログインです");
-        return;
+    const params = new URLSearchParams(location.search);
+    const res = params.get("result") || "lose";
+    setResult(res);
+  }, [location.search]);
+
+  // 🧮 DP加算＋参加賞処理（復活は加点なし）
+  useEffect(() => {
+    const handleResult = async () => {
+      if (!user) return;
+      const baseDp = result === "win" ? 10 : 5;
+
+      // 🎵 DP 更新（勝10 / 負5）
+      const updated = await updateDoremiPoints(user.uid, baseDp);
+      setDpGain(baseDp);
+      console.log(`✅ DP付与（最終ルール）：${baseDp}`);
+
+      // 🏅 ランクアップ判定
+      if (updated && updated.rank !== updated.prevRank) {
+        setModal({ show: true, old: updated.prevRank, new: updated.rank });
       }
 
-      const sp = new URLSearchParams(location.search);
-      const state = history.state?.usr || {};
-      const opponent = sp.get("opponent") ?? state.opponent ?? "CPU";
-      const result = (sp.get("result") ?? state.result ?? "win").toLowerCase();
-      const score = Number(sp.get("score") ?? state.score ?? 0);
+      // 🎫 参加賞：バトル券×5
+      await grantTickets(user.uid, 5);
+      console.log("🎁 参加賞: バトル券×5 配布");
 
-      try {
-        // 🧾 Firestoreに履歴を保存
-        const id = await saveBattleRecord({
-          uid: user.uid,
-          opponent,
-          result: ["win", "lose", "draw"].includes(result) ? result : "win",
-          score,
-          meta: { from: "BattleResultPage" },
-        });
-        setRecId(id);
+      // 🌈 エフェクト
+      setShowBurst(true);
+      setTimeout(() => setShowBurst(false), 2500);
+    };
 
-        // 🎵 ドレミポイント加算（ルール案①）
-        let add = 0;
-        if (result === "win") add = 10;
-        else if (result === "lose") add = 0;
+    handleResult();
+  }, [user, result]);
 
-        // 🔥 7音制覇ボーナス
-        if (score >= 7) add += 30;
-
-        if (add > 0) {
-          await updateDoremiPoints(user.uid, add);
-          console.log(`🎵 ${add}ポイント加算（結果: ${result} / スコア: ${score}）`);
-        }
-
-        setMsg(`保存完了！ (+${add}pt)`);
-      } catch (e) {
-        console.error(e);
-        setMsg("保存に失敗しました: " + String(e));
-      }
-    })();
-  }, []);
+  // 🧭 ボタン処理
+  const handleRetry = () => navigate("/battle/start");
+  const handleHome = () => navigate("/");
 
   return (
-    <div style={{ padding: 16 }}>
-      <h1>Battle Result</h1>
-      <p>{msg}</p>
-      {recId && (
-        <p>
-          id: <code>{recId}</code>
-        </p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white to-indigo-50 text-center relative">
+      <h1 className="text-4xl font-bold mb-6">
+        {result === "win" ? "🎉 勝利！" : "💡 よくがんばった！"}
+      </h1>
+
+      <p className="text-xl mb-4 text-gray-600">
+        {result === "win"
+          ? `+${dpGain} ドレミポイント獲得！`
+          : `参加評価として +${dpGain} DP`}
+      </p>
+
+      <p className="text-md text-gray-500 mb-8">🎫 参加賞：バトル券 ×5</p>
+
+      {showBurst && (
+        <div className="fixed inset-0 z-[9990] pointer-events-none">
+          <NoteBurst count={10} color="#a78bfa" />
+        </div>
       )}
-      <p>
-        <a href="/battle/history">履歴を見る</a>
-      </p>
-      <p>
-        <a href="/login">Loginへ戻る</a>
-      </p>
+
+      <div className="flex gap-4 mt-6">
+        <button
+          onClick={handleRetry}
+          className="px-6 py-3 rounded-full bg-indigo-500 text-white text-lg shadow-md hover:bg-indigo-600 transition"
+        >
+          もう一回バトル
+        </button>
+        <button
+          onClick={handleHome}
+          className="px-6 py-3 rounded-full bg-gray-300 text-gray-700 text-lg shadow-md hover:bg-gray-400 transition"
+        >
+          ホームにもどる
+        </button>
+      </div>
+
+      {/* 🎹 ランクアップ表示 */}
+      <RankUpModal
+        show={modal.show}
+        oldRank={modal.old}
+        newRank={modal.new}
+        onClose={() => setModal({ show: false, old: "", new: "" })}
+      />
     </div>
   );
 }

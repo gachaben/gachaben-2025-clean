@@ -3,18 +3,13 @@
 // Firebase初期化＋Emulator接続＋export統一
 // ------------------------------------------------------
 import { initializeApp, getApp, getApps } from "firebase/app";
-import {
-  getAuth,
-  connectAuthEmulator,
-} from "firebase/auth";
-import {
-  getFirestore,
-  connectFirestoreEmulator,
-} from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 import { getStorage, connectStorageEmulator } from "firebase/storage";
 
 const USE_EMU = (import.meta.env.VITE_USE_EMU ?? "false") === "true";
-const FS_PORT = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8088);
+// ✅ Firestoreのデフォルトポートを 8089 に修正
+const FS_PORT = Number(import.meta.env.VITE_FIRESTORE_PORT ?? 8089);
 
 const firebaseConfig = USE_EMU
   ? {
@@ -39,7 +34,7 @@ const storage = getStorage(app);
 
 // ✅ Emulator接続（ローカル動作用）
 if (USE_EMU) {
-  connectFirestoreEmulator(db, "127.0.0.1", FS_PORT);
+  connectFirestoreEmulator(db, "127.0.0.1", 8089);
   connectAuthEmulator(auth, "http://127.0.0.1:9099");
   connectStorageEmulator(storage, "127.0.0.1", 9199);
   console.log("🔥 Firebase Emulator connected:", {

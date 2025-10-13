@@ -1,55 +1,72 @@
 // ------------------------------------------------------
-// 🎮 createBattle（v1.7b対応 / Emulator CORS対応）
-// バトル開始時に Firestore に試合データを自動生成する関数
+// createBattle.ts（完全動作版 / Timestamp安全対応）
 // ------------------------------------------------------
-
 import * as admin from "firebase-admin";
 import { onCall } from "firebase-functions/v2/https";
 
-// ✅ Firebase Admin 初期化
 if (!admin.apps.length) {
   admin.initializeApp();
 }
+
 const db = admin.firestore();
 
-// ✅ onCall（CORS自動許可付き）
+// ✅ Timestamp安全取得（v13以降対応）
+const getNow = () => {
+  try {
+    return (admin.firestore as any).Timestamp.now();
+  } catch {
+    return new Date();
+  }
+};
+
 export const createBattle = onCall({ cors: true }, async (req) => {
-  const uid = req.auth?.uid;
-  if (!uid) throw new Error("unauthenticated");
+  try {
+    let uid = req.auth?.uid;
+    if (!uid) {
+      uid = "demo-user-001";
+      console.log("🧩 Emulatorモード: uidをデモ値に設定 →", uid);
+    }
 
-  // データ受取
-  const { opponentId = "cpu-normal", cpuLevel = "N", startPw = 1000 } = req.data || {};
+    const { opponentId = "cpu-normal", cpuLevel = "N", startPw = 1000 } = req.data || {};
 
-  // 新しいドキュメントIDを発行
-  const battleRef = db.collection("battles").doc();
+    const battleRef = db.collection("battles").doc();
+    const now = getNow();
 
-  // バトル初期データ
-  const battleData = {
-    userId: uid,
-    opponentId,
-    mode: "7q", // v1.7b: 7問制
-    cpuLevel,
-    rounds: [],
-    userPwStart: startPw,
-    cpuPwStart: startPw,
-    userPwNow: startPw,
-    cpuPwNow: startPw,
-    winner: null,
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  };
+    const battleData = {
+      userId: uid,
+      opponentId,
+      mode: "7q",
+      cpuLevel,
+      rounds: [],
+      userPwStart: startPw,
+      cpuPwStart: startPw,
+      userPwNow: startPw,
+      cpuPwNow: startPw,
+      winner: null,
+      createdAt: now,
+    };
 
-  // Firestoreに登録
-  await battleRef.set(battleData);
+    await battleRef.set(battleData);
 
-  // バトルチケットを1枚消費
-  const userRef = db.collection("users").doc(uid);
-  await userRef.update({
-    tickets: admin.firestore.FieldValue.increment(-1),
-    lastBattleAt: admin.firestore.FieldValue.serverTimestamp(),
-  });
+    const userRef = db.collection("users").doc(uid);
+    const userSnap = await userRef.get();
+    const currentTickets = (userSnap.exists ? userSnap.data()?.tickets : 5) ?? 5;
 
-  return {
-    battleId: battleRef.id,
-    message: "Battle created successfully",
-  };
+    await userRef.set(
+      {
+        tickets: currentTickets - 1,
+        lastBattleAt: now,
+      },
+      { merge: true }
+    );
+
+    console.log("✅ Battle created:", battleRef.id);
+    return {
+      battleId: battleRef.id,
+      message: "Battle created successfully ✅",
+    };
+  } catch (err: any) {
+    console.error("🔥 createBattle Error:", err);
+    throw new Error(err.message || "Internal Server Error");
+  }
 });

@@ -1,92 +1,53 @@
 // ------------------------------------------------------
-// ⚔️ index.ts（v2.1 完全統合版）
-// Firebase Functions Entry Point
+// 🎮 createBattle（v1.7b対応）
+// バトル開始時に Firestore に試合データを自動生成する関数
 // ------------------------------------------------------
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { setGlobalOptions } from "firebase-functions/v2";
-import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-// ------------------------------------------------------
-// ✅ Firebase 初期設定
-// ------------------------------------------------------
-setGlobalOptions({ region: "asia-northeast1" });
-initializeApp();
-const db = getFirestore();
+import * as admin from "firebase-admin";
+import { onCall } from "firebase-functions/v2/https";
 
-// ------------------------------------------------------
-// ⚔️ createBattle（バトル券チェック＋消費＋初期化）
-// ------------------------------------------------------
-export const createBattle = onCall(
-  async (req: any): Promise<{ battleId: string; ticketsLeft: number }> => {
-    const auth = req.auth;
-    if (!auth)
-      throw new HttpsError("unauthenticated", "サインインが必要です。");
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+const db = admin.firestore();
 
-    const { selectedItemId, questionCount } = req.data || {};
-    if (!selectedItemId || !questionCount) {
-      throw new HttpsError(
-        "invalid-argument",
-        "selectedItemId と questionCount は必須です。"
-      );
-    }
+export const createBattle = onCall(async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new Error("unauthenticated");
 
-    const userRef = db.collection("users").doc(auth.uid);
-    const userSnap = await userRef.get();
+  // データ受取（必要に応じて opponentId や CPUレベルを渡す）
+  const { opponentId = "cpu-normal", cpuLevel = "N", startPw = 1000 } = req.data || {};
 
-    if (!userSnap.exists) {
-      throw new HttpsError("not-found", "ユーザーが存在しません。");
-    }
+  // 新しいドキュメントIDを発行
+  const battleRef = db.collection("battles").doc();
 
-    const userData = userSnap.data() || {};
-    const currentTickets = userData.tickets ?? 0;
+  // バトル初期データ
+  const battleData = {
+    userId: uid,
+    opponentId,
+    mode: "7q", // v1.7b: 7問制
+    cpuLevel,
+    rounds: [], // 各問データを後で commitRound で追加
+    userPwStart: startPw,
+    cpuPwStart: startPw,
+    userPwNow: startPw,
+    cpuPwNow: startPw,
+    winner: null,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
 
-    // 🎫 チケットが不足していたらエラー
-    if (currentTickets <= 0) {
-      throw new HttpsError(
-        "failed-precondition",
-        "バトル券が足りません。チャレンジ問題か広告で入手してください。"
-      );
-    }
+  // Firestoreに登録
+  await battleRef.set(battleData);
 
-    // 🎫 バトル券を1枚消費
-    await userRef.update({
-      tickets: FieldValue.increment(-1),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+  // バトルチケットを1枚消費（7枚制）
+  const userRef = db.collection("users").doc(uid);
+  await userRef.update({
+    tickets: admin.firestore.FieldValue.increment(-1),
+    lastBattleAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
 
-    // CPUデータ生成
-    const cpuItemId = `cpu_${selectedItemId}`;
-    const seed = Math.random().toString(36).slice(2, 10);
-    const now = FieldValue.serverTimestamp();
-
-    // バトル初期データ
-    const battleRef = db.collection("battles").doc();
-    const init = {
-      ownerUid: auth.uid,
-      selectedItemId,
-      enemyItemId: cpuItemId,
-      enemyType: "CPU",
-      questionCount,
-      seed,
-      phase: "enemyPick",
-      round: 1,
-      myPwLeft: 300,
-      enemyPwLeft: 300,
-      myBet: null as number | null,
-      enemyBet: null as number | null,
-      currentQuestionId: null as string | null,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    await battleRef.set(init);
-
-    console.log(
-      `🎫 バトル券を1枚消費 (${currentTickets - 1} 枚残り) [uid=${auth.uid}]`
-    );
-    console.log(`⚔️ 新規バトル作成: ${battleRef.id}`);
-
-    return { battleId: battleRef.id, ticketsLeft: currentTickets - 1 };
-  }
-);
+  return {
+    battleId: battleRef.id,
+    message: "Battle created successfully",
+  };
+});

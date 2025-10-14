@@ -1,161 +1,102 @@
 // ------------------------------------------------------
-// src/pages/LoginPage.jsx（統合版・最新版）
+// ☀️ LoginPage.jsx（朝フェード明けの夜明けバージョン）
 // ------------------------------------------------------
-import React, { useState } from "react";
+
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
-import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
+import NoteBurst from "../components/ui/NoteBurst";
+import { motion } from "framer-motion";
 
-// ------------------------------------------------------
-// 🧩 ensureUserDoc()
-// Firestoreにユーザーデータがなければ自動初期化。
-// 新規登録時に hearts / battleTickets / doremiPoints などを追加。
-// ------------------------------------------------------
-async function ensureUserDoc(uid, email) {
-  const db = getFirestoreDb();
-  const ref = doc(db, "users", uid);
-  const snap = await getDoc(ref);
-
-  if (!snap.exists()) {
-    const initialData = {
-      email: email ?? "",
-      role: "user",
-      rewardAttempts: 0,
-      hearts: 5,
-      lastAdHeartsAt: null,
-      battleTickets: 3,
-      lastAdTicketsAt: null,
-      doremiPoints: 0,
-      doremiRank: "ビギナー",
-      createdAt: serverTimestamp(),
-      lastLoginAt: serverTimestamp(),
-    };
-    await setDoc(ref, initialData);
-    console.log("✅ user initialized (new):", uid);
-    return initialData;
-  } else {
-    const data = snap.data();
-    const update = {};
-
-    // 欠けているフィールドを自動補完
-    if (data.hearts == null) update.hearts = 5;
-    if (data.lastAdHeartsAt == null) update.lastAdHeartsAt = null;
-    if (data.battleTickets == null) update.battleTickets = 3;
-    if (data.lastAdTicketsAt == null) update.lastAdTicketsAt = null;
-    if (data.doremiPoints == null) update.doremiPoints = 0;
-    if (data.doremiRank == null) update.doremiRank = "ビギナー";
-
-    if (Object.keys(update).length > 0) {
-      await updateDoc(ref, update);
-      console.log("🩷 user updated with missing fields:", update);
-    }
-
-    await updateDoc(ref, { lastLoginAt: serverTimestamp() });
-    return { ...data, ...update };
-  }
-}
-
-// ------------------------------------------------------
-// 🔐 LoginPage コンポーネント
-// ------------------------------------------------------
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+const LoginPage = () => {
   const navigate = useNavigate();
+  const [showButton, setShowButton] = useState(false);
+  const [audio] = useState(() => new Audio("/sounds/morning_birds.mp3")); // 鳥の声
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError("");
+  useEffect(() => {
+    // 鳥の声再生（フェード後）
+    audio.volume = 0.6;
+    const timer1 = setTimeout(() => {
+      audio.play().catch(() => {}); // モバイルでもエラー回避
+    }, 800);
 
-    const auth = getFirebaseAuth();
-    const emailNorm = email.trim().toLowerCase();
-    const passRaw = password;
+    // スタートボタン出現
+    const timer2 = setTimeout(() => setShowButton(true), 6000);
 
-    if (!emailNorm) return setError("メールアドレスを入力してください");
-    if (!passRaw || passRaw.length < 6)
-      return setError("パスワードは6文字以上にしてください");
-
-    try {
-      // ① サインイン or 新規作成
-      let user;
-      try {
-        const result = await signInWithEmailAndPassword(auth, emailNorm, passRaw);
-        user = result.user;
-      } catch (err) {
-        if (err.code === "auth/user-not-found") {
-          const result = await createUserWithEmailAndPassword(
-            auth,
-            emailNorm,
-            passRaw
-          );
-          user = result.user;
-        } else {
-          throw err;
-        }
-      }
-
-      // ② Firestore初期化（ここで hearts, battleTickets など自動設定）
-      const data = await ensureUserDoc(user.uid, user.email);
-
-      // ③ ロールに応じて遷移
-      const role = data?.role ?? "user";
-      if (role === "parent") navigate("/parent-home");
-      else if (role === "admin") navigate("/admin-reward");
-      else navigate("/");
-    } catch (err) {
-      console.error("[Login] error:", err);
-      setError(`ログインに失敗しました: ${err.code || err.message}`);
-    }
-  };
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      audio.pause();
+      audio.currentTime = 0;
+    };
+  }, [audio]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-100 px-4">
-      <h1 className="text-3xl font-bold mb-6">🔐 ログイン</h1>
+    <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden text-center bg-gradient-to-b from-orange-100 via-sky-100 to-white">
+      {/* ☀️ 朝日（光の流れ） */}
+      <div className="absolute inset-0 bg-[url('/images/light-rays.png')] bg-top bg-no-repeat opacity-40 animate-light z-0" />
 
-      <form
-        onSubmit={handleLogin}
-        className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md"
+      {/* 🌈 光のグラデーション */}
+      <div className="absolute inset-0 bg-gradient-to-r from-yellow-100 via-pink-100 to-sky-100 opacity-30 animate-glow z-0" />
+
+      {/* 🎵 音符sequence（夜明けの音） */}
+      <NoteBurst
+        mode="sequence"
+        labels={["ド", "レ", "ミ", "ファ", "ソ", "ラ", "シ", "ド"]}
+        intervalMs={400}
+        waveDelayMs={600}
+        waveStepMs={80}
+        type="study"
+      />
+
+      {/* 🌅 タイトル */}
+      <motion.h1
+        className="relative z-10 text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-orange-500 to-yellow-500 drop-shadow-lg"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
       >
-        <input
-          type="email"
-          placeholder="メールアドレス"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full mb-4 px-4 py-2 border rounded"
-          required
-        />
-        <input
-          type="password"
-          placeholder="パスワード（6文字以上）"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full mb-4 px-4 py-2 border rounded"
-          required
-        />
-        {error && <p className="text-red-500 text-sm mb-2">{error}</p>}
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600"
+        DORESTA 🌅
+      </motion.h1>
+
+      {/* 💬 サブタイトル */}
+      <motion.p
+        className="relative z-10 mt-2 text-lg text-gray-700"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+      >
+        今日も音が生まれる世界へ。
+      </motion.p>
+
+      {/* 🎮 スタートボタン */}
+      {showButton && (
+        <motion.button
+          onClick={() => navigate("/home")}
+          className="relative z-10 mt-10 px-8 py-3 bg-pink-500 text-white text-lg rounded-full shadow-lg hover:bg-pink-600 transition"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6 }}
         >
-          ログイン / 新規登録
-        </button>
-      </form>
+          スタート！
+        </motion.button>
+      )}
+
+      <style>{`
+        @keyframes lightFlow {
+          0% { background-position: 0 top; opacity: 0.3; }
+          50% { background-position: 100px top; opacity: 0.7; }
+          100% { background-position: 0 top; opacity: 0.3; }
+        }
+        @keyframes morningGlow {
+          0% { opacity: 0.3; }
+          50% { opacity: 0.6; }
+          100% { opacity: 0.3; }
+        }
+        .animate-light { animation: lightFlow 12s ease-in-out infinite; }
+        .animate-glow { animation: morningGlow 8s ease-in-out infinite; }
+      `}</style>
     </div>
   );
-}
+};
 
-// ------------------------------------------------------
-// ✅ 外部で再利用できるよう export
-// ------------------------------------------------------
-export { ensureUserDoc };
+export default LoginPage;

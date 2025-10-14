@@ -207,3 +207,102 @@ if (usedCount < 3 && !usedCards.includes(card.id)) {
 公平性	1バトル3回までという明確ルールで全員平等
 教育効果	判断・計画・リスク管理を体験的に学べる
 演出バランス	見やすく、過剰でない、自然なゲームテンポを維持
+
+
+
+🎵 作業メモ（2025-10-13 拡張版）
+🧩 技術進展：Firebase Emulator完全動作
+
+createBattle.ts（完全版）動作確認
+→ Firestoreに battles/{id} 正常生成、Timestamp.now() も正常
+
+firebase.json の emulator 設定を統一（functions:5002, firestore:8089, auth:9099, storage:9199, ui:4001）
+
+DebugPageから「createBattle実行」成功 ✅
+
+Firestore上で battles, users コレクション生成を確認
+
+Git保存推奨タグ：
+stable-2025-10-13-createBattleOK（完全成功版）
+
+🌈 構想更新（ドレスタ / ガチャ弁共通軸）
+🎮 1. バトル機能（DoReMiバトル・チャレンジバトル統合構想）
+
+CPU戦として稼働中（uid = demo-user-001でテスト完了）
+
+バトルは7問制（mode: "7q"）を基本形に
+
+バトル結果で「🎵音符」点灯 → 7つ点灯で「DoReMi称号」変化
+
+バトル勝利報酬：+10 Bpt、参加報酬：+5 Bpt
+
+次の段階では BattlePlayPage で出題＆PW削り連動へ
+
+💡今後の拡張案
+
+対戦前にカード選択（5枚中3枚使用）
+
+知略カード／スピードカード／安定カード／ブーストカード／リトライカード
+
+攻守両対応の効果を発動可能
+
+出題形式：スピード問題＋正解率で勝敗を決定
+
+イベントモード「DoReMiバトルフェス」対応予定
+
+🔥 2. チャレンジ機能（Cpt獲得モード）
+
+高難度問題／制限時間／スピード正答制
+
+成績に応じて「Cpt（チャレンジポイント）」を獲得
+
+Cptは「攻撃力強化」に反映され、称号ランクが変化
+
+優 → 王 → 龍 → 極 → 神
+
+Cpt による攻撃強化倍率（例：0.2〜1.0倍）をバトル計算式に統合予定
+
+💎 3. プレミアムガチャ（報酬連動型）
+
+「動画視聴」後に100%抽選発動（ハズレなし仕様）
+
+10種類のプレミアムアイテム（シリーズ単位で完結）
+
+同シリーズ内で重複排出あり → 収集率UPで演出変化
+
+ガチャ結果は「音符の光り方」＋「効果音」で演出
+
+🎶1〜7音符：ボーナス確率アップ
+
+将来的に、DoReMi称号・カード収集と連動
+
+💡補足
+
+ガチャ演出は /images/effects/A_spark.mp4 など動画演出済み
+
+広告視聴での1日1回追加ガチャ（確率 50% / 50%）も対応予定
+
+📦 Git保存（更新メモ）
+git add .
+git commit -m "🪶 Firebase Emulator完全同期＋構想更新（Battle / Challenge / Premium Gacha統合）"
+git tag -a concept-2025-10-13-doremi-core -m "DoReMiバトル構想＋Emulator安定版"
+git push
+git push origin concept-2025-10-13-doremi-core
+
+🔜 次回引継ぎ（さいかいするね 時点）
+
+users.tickets 更新反映チェック
+
+createBattle → seedBattleQuestions 呼び出し自動化
+
+BattlePlayPage にFirestoreのbattles情報を連携
+
+Cpt/Bpt反映システム導入（攻防力連動）
+
+プレミアムガチャのデータ構造をFirestore設計化
+
+この内容を docs/spec-v1.7b-battle.md に追記し、
+アプリ全体仕様として「DoReMiバトル三本柱（学習・チャレンジ・ガチャ）」を統合記録しておきます。
+
+次回「さいかいするね」と言ってもらえれば、
+この状態（createBattle成功＋構想統合済）からそのまま再開できます🔥

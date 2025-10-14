@@ -16,6 +16,7 @@ import HomePage from "@/pages/HomePage.jsx";
 import LoginPage from "@/pages/LoginPage.jsx";   
 import DebugPage from "@/pages/DebugPage.jsx";
 import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
+import StudyPage from "./pages/StudyPage";
 
 // ==== バトル関連 ==== //
 import BattleChallengePage from "@/pages/BattleChallengePage.jsx";
@@ -95,7 +96,7 @@ export default function App() {
           <Route path="/lesson-test" element={<LessonTestPage />} />
           <Route path="/challenge-test" element={<ChallengeTestPage />} />
           <Route path="/active-test" element={<ActiveTimeTestPage />} />
-
+          <Route path="/study" element={<StudyPage />} />
           {/* ==== バトル関連 ==== */}
           <Route
             path="/battle"

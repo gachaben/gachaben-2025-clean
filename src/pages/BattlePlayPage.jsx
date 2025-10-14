@@ -1,371 +1,116 @@
-// src/pages/BattlePlayPage.jsx
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
-import ItemCard from "../components/ItemCard";
-import useBattleFinish from "../hooks/useBattleFinish";
-import { ensureSignedIn } from "@/fbkit";
-import { recordMistake } from "../lib/recordMistakes";
+// ------------------------------------------------------
+// ⚔️ BattlePlayPage.jsx（青空ドレミバトル／昼フェーズ）
+// ------------------------------------------------------
 
-// ===== サンプル問顁E=====
-const QUESTIONS = [
-  { text: "カブトムシの幼虫がよく食べるものは�E�E, options: ["木の葁E, "腐葉圁E, "果物"], answer: "腐葉圁E },
-  { text: "セミが地中で過ごす年数は�E�E, options: ["1年", "3、E年", "10年"], answer: "3、E年" },
-];
+import React, { useEffect, useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import NoteBurst from "../components/ui/NoteBurst";
+import { motion } from "framer-motion";
 
-// ===== かけられるPW候裁E=====
-const PW_OPTIONS = [50, 100, 200, 300];
+const BattlePlayPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { doubleReward = false } = location.state || {};
 
-export default function BattlePlayPage() {
-  const { state } = useLocation();
-  const { onBattleFinish } = useBattleFinish();
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [score, setScore] = useState(0);
+  const [isFinished, setIsFinished] = useState(false);
 
-  const {
-    enemy,
-    selectedItem,
-    questionCount = 1,
-    initialEnemyPw = 400,
-    initialMyPw = 600,
-    userId,
-  } = state || {};
+  const questions = [
+    { q: "『ドレミ』の最初の音は？", a: "ド" },
+    { q: "ファの次は？", a: "ソ" },
+    { q: "シの前は？", a: "ラ" },
+    { q: "ドの１オクターブ上は？", a: "ド" },
+    { q: "ミの次は？", a: "ファ" },
+    { q: "ラの次は？", a: "シ" },
+    { q: "ソの前は？", a: "ファ" },
+  ];
 
-  // ===== バトル開始時刻・二重終亁E��ーチE=====
-  const startedAtRef = useRef(Date.now());
-  const finishedOnceRef = useRef(false);
+  const handleAnswer = (isCorrect) => {
+    if (isCorrect) setScore((prev) => prev + 1);
 
-  // ===== PW =====
-  const [myPw, setMyPw] = useState(initialMyPw);
-  const [enemyPw, setEnemyPw] = useState(initialEnemyPw);
-
-  // ===== 進行管琁E=====
-  // betEnemy ↁEbetMe ↁEquestion ↁEenemyAnswered ↁEresolve ↁE(next/result)
-  const [round, setRound] = useState(1);
-  const [phase, setPhase] = useState("betEnemy");
-
-  const [enemyBet, setEnemyBet] = useState(null);
-  const [myBet, setMyBet] = useState(null);
-  const [question, setQuestion] = useState(null);
-  const [myAnswer, setMyAnswer] = useState(null);
-  const [enemyAnswer, setEnemyAnswer] = useState(null);
-
-  // ラウンドログ�E�結果ペ�Eジ保存用�E�E
-  const [roundLogs, setRoundLogs] = useState([]);
-  // 画面表示用の簡易ログ
-  const [log, setLog] = useState([]);
-
-  // ===== ItemCard 用に敵チE�Eタ整形 =====
-  const enemyItem = useMemo(() => {
-    if (enemy && (enemy.seriesId || enemy.imageName || enemy.itemId)) return enemy;
-    if (enemy && enemy.item) return enemy.item;
-    if (selectedItem) {
-      return {
-        ...selectedItem,
-        itemId: (selectedItem.itemId ?? selectedItem.id ?? "cpu") + "-cpu",
-        name: (selectedItem.name ? `${selectedItem.name}�E�EPU�E�` : "CPU"),
-      };
-    }
-    return { itemId: "cpu-001", seriesId: "kontyu", stage: 3, imageName: "kabuto", name: "CPU", rank: "S" };
-  }, [enemy, selectedItem]);
-
-  // ===== 綱引きゲージ =====
-  const total = Math.max(1, myPw + enemyPw);
-  const enemyPct = (enemyPw / total) * 100;
-  const myPct = 100 - enemyPct;
-
-  // ===== CPUロジチE�� =====
-  const pickCpuBet = (remain) => {
-    const target = Math.max(50, Math.floor((remain * 0.2) / 50) * 50);
-    const affordable = PW_OPTIONS.filter((v) => v <= remain);
-    if (affordable.length === 0) return 50;
-    let best = affordable[0];
-    for (const v of affordable) if (Math.abs(v - target) <= Math.abs(best - target)) best = v;
-    return best;
-  };
-  const cpuCorrect = () => Math.random() < 0.6;
-
-  // ===== ラウンド開始時のリセチE�� =====
-  useEffect(() => {
-    setEnemyBet(null);
-    setMyBet(null);
-    setQuestion(null);
-    setMyAnswer(null);
-    setEnemyAnswer(null);
-    setPhase("betEnemy");
-  }, [round]);
-
-  // ===== 敵が�EにベッチE=====
-  useEffect(() => {
-    if (phase !== "betEnemy") return;
-    const id = setTimeout(() => {
-      const bet = pickCpuBet(enemyPw);
-      setEnemyBet(bet);
-      setLog((p) => [...p, `相手が ${bet} PW を�EチE��`]);
-      setPhase("betMe");
-    }, 700);
-    return () => clearTimeout(id);
-  }, [phase, enemyPw]);
-
-  // ===== 自刁E�EベッチE=====
-  const handleMyBet = (bet) => {
-    setMyBet(bet);
-    setQuestion(QUESTIONS[(round - 1) % QUESTIONS.length]);
-    setPhase("question");
-  };
-
-  // ===== 自刁E��筁EↁECPU回筁EↁEresolve =====
-  const handleMyAnswer = (opt) => {
-    if (!question) return;
-    setMyAnswer(opt);
-    setTimeout(() => {
-      const cpuIsCorrect = cpuCorrect();
-      const cpuOpt = cpuIsCorrect ? question.answer : question.options.find((o) => o !== question.answer);
-      setEnemyAnswer(cpuOpt);
-      setPhase("enemyAnswered");
-      setTimeout(() => setPhase("resolve"), 650);
-    }, 700);
-  };
-
-  // ===== 決着処琁E& 次ラウンド／終亁E��宁E=====
-  useEffect(() => {
-    if (phase !== "resolve" || !question) return;
-
-    const meCorrect = myAnswer === question.answer;
-    const enCorrect = enemyAnswer === question.answer;
-
-    const nextEnemyPw = Math.max(0, enemyPw - (meCorrect && myBet ? myBet : 0));
-    const nextMyPw    = Math.max(0, myPw    - (enCorrect && enemyBet ? enemyBet : 0));
-
-    if (meCorrect && myBet) setEnemyPw(nextEnemyPw);
-    if (enCorrect && enemyBet) setMyPw(nextMyPw);
-
-    const line = [
-      meCorrect ? `✁E自刁E��解 (-相扁E${myBet})` : "❁E自刁E��正解",
-      enCorrect ? `✁E相手正解 (-自刁E${enemyBet})` : "❁E相手不正解",
-    ].join(" / ");
-    setLog((p) => [...p, line]);
-
-    // ラウンドログ�E�詳細�E�E
-    setRoundLogs((prev) => [
-      ...prev,
-      {
-        round,
-        enemyBet,
-        myBet,
-        myAnswer,
-        enemyAnswer,
-        correctAnswer: question.answer,
-        meCorrect,
-        enCorrect,
-        myPwAfter: nextMyPw,
-        enemyPwAfter: nextEnemyPw,
-        qText: question.text,
-        qOptions: question.options,
-      },
-    ]);
-
-    // 不正解は mistakes に保孁E
-    (async () => {
-      if (!meCorrect && question && myAnswer) {
-        const user = await ensureSignedIn();
-        await recordMistake({
-          uid: user?.uid,
-          question,
-          picked: myAnswer,
-          source: "battle",
+    if (questionIndex + 1 >= questions.length) {
+      setIsFinished(true);
+      setTimeout(() => {
+        navigate("/battle/result", {
+          state: { isWin: score + (isCorrect ? 1 : 0) >= 4, doubleReward },
         });
-        // eslint-disable-next-line no-console
-        console.log("[mistake] recorded:", { uid: user?.uid, q: question.text, picked: myAnswer });
-      }
-    })();
-
-    const id = setTimeout(() => {
-      const nextRound = round + 1;
-      const isFinished = nextRound > questionCount || nextMyPw === 0 || nextEnemyPw === 0;
-
-      if (isFinished) {
-        if (!finishedOnceRef.current) {
-          finishedOnceRef.current = true; // ☁E��重終亁E��ーチE
-          // 勝敗
-          let winner = "draw";
-          if (nextMyPw === 0 && nextEnemyPw === 0) winner = "draw";
-          else if (nextEnemyPw === 0 || nextMyPw > nextEnemyPw) winner = "you";
-          else if (nextMyPw === 0 || nextEnemyPw > nextMyPw) winner = "enemy";
-
-          // 保存と遷移は hook 側に委譲
-          onBattleFinish({
-            start: startedAtRef.current,
-            end: Date.now(),
-            myFinalLeft: nextMyPw,
-            enemyFinalLeft: nextEnemyPw,
-            roundsPlayed: round,          // 実際にプレイした回数
-            questionCount,                // 予定問題数
-            winner,                       // "you" | "enemy" | "draw"
-            selectedItem,
-            enemyItem,
-            userId,
-            myPwStart: initialMyPw,
-            myPwEnd: nextMyPw,
-            enemyPwStart: initialEnemyPw,
-            enemyPwEnd: nextEnemyPw,
-            log: roundLogs,               // 吁E��ウンド�E詳細
-          });
-        }
-        return;
-      }
-      setRound(nextRound);
-    }, 700);
-
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]); // 依存�E phase に限定（他�E冁E��で参�E�E�E
-
-  // ===== 中央ゲージ =====
-  const Gauge = () => (
-    <section
-      style={{
-        padding: "12px 0",
-        background: "#f3f4f6",
-        borderTop: "1px solid #e5e7eb",
-        borderBottom: "1px solid #e5e7eb",
-        marginTop: 8,
-        marginBottom: 8,
-      }}
-    >
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 12px" }}>
-        <div style={{ textAlign: "center", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>PWゲージ</div>
-        <div
-          style={{
-            position: "relative",
-            height: 20,
-            borderRadius: 8,
-            overflow: "hidden",
-            border: "1px solid #d1d5db",
-            background: "#ffffff",
-          }}
-        >
-          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${enemyPct}%`, background: "rgba(239,68,68,0.9)" }} />
-          <div style={{ position: "absolute", right: 0, top: 0, bottom: 0, width: `${myPct}%`, background: "rgba(59,130,246,0.9)" }} />
-          <div style={{ position: "absolute", left: "50%", top: 0, bottom: 0, width: 2, background: "rgba(255,255,255,0.85)" }} />
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginTop: 4, color: "#4b5563" }}>
-          <span>相扁E{Math.round(enemyPct)}%</span>
-          <span>自刁E{Math.round(myPct)}%</span>
-        </div>
-      </div>
-    </section>
-  );
-
-  // ===== 相手�E選択肢�E�表示専用�E�E=====
-  const EnemyChoices = () => {
-    if (!question) return null;
-    return (
-      <div style={{ width: "100%", maxWidth: 720, padding: "0 12px", marginTop: 8 }}>
-        <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 6 }}>相手�E選択肢</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {question.options.map((opt) => {
-            const isPicked = enemyAnswer === opt;
-            return (
-              <button
-                key={`enemy-opt-${opt}`}
-                disabled
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: 6,
-                  border: `2px solid ${isPicked ? "#ef4444" : "#e5e7eb"}`,
-                  background: "#fff",
-                  opacity: 0.9,
-                }}
-              >
-                {opt}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
+      }, 1000);
+    } else {
+      setQuestionIndex((prev) => prev + 1);
+    }
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
-      {/* 上：相扁E*/}
-      <section className="flex-1 flex flex-col items-center justify-start border-b bg-gray-50 p-3">
-        <h2 className="font-bold">相扁E/h2>
-        <div className="mt-2"><ItemCard item={enemyItem} size="md" withFx /></div>
+    <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden text-center">
+      {/* ☀️ 背景（昼の青空＋光） */}
+      <div className="absolute inset-0 bg-gradient-to-b from-sky-200 via-sky-100 to-white z-0" />
+      <div className="absolute inset-0 bg-[url('/images/clouds_light.png')] bg-repeat-x bg-bottom opacity-70 animate-clouds z-0" />
 
-        {/* 敵 ベッチEI�E�表示のみ�E�E*/}
-        <div className="mt-3" style={{ width: "100%", maxWidth: 720, padding: "0 12px" }}>
-          <div className="text-sm font-semibold mb-1">
-            かけるPW�E�Eound {round}/{questionCount})
-            {phase === "betEnemy" && <span className="ml-2 text-xs text-gray-500">…思老E��</span>}
-          </div>
-          <div className="flex gap-2 flex-wrap opacity-90">
-            {PW_OPTIONS.map((pw) => (
-              <button
-                key={`enemy-${pw}`}
-                className="px-3 py-1 rounded border bg-white"
-                disabled
-                style={{ borderColor: enemyBet === pw ? "#ef4444" : "#e5e7eb", color: enemyBet === pw ? "#b91c1c" : "#111827" }}
-              >
-                {pw}
-              </button>
-            ))}
-          </div>
+      {/* 🌤 光の層（上から流れる） */}
+      <div className="absolute inset-0 bg-[url('/images/light-rays.png')] bg-top bg-no-repeat opacity-40 animate-light z-0" />
+
+      {/* 🎵 2倍中バッジ */}
+      {doubleReward && (
+        <motion.div
+          className="absolute top-4 right-4 bg-pink-500 text-white font-bold px-4 py-2 rounded-full shadow-md z-10"
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
+        >
+          🔥 ポイント2倍中！
+        </motion.div>
+      )}
+
+      {/* 🪄 問題ボード */}
+      <motion.div
+        className="relative z-10 mt-10 bg-white/80 backdrop-blur-md px-8 py-6 rounded-3xl shadow-xl max-w-md"
+        key={questionIndex}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <p className="text-lg text-gray-700 mb-2">
+          第 {questionIndex + 1} 問
+        </p>
+        <p className="text-2xl font-bold text-blue-600 mb-6">
+          {questions[questionIndex].q}
+        </p>
+        <div className="flex justify-center space-x-6">
+          <button
+            onClick={() => handleAnswer(true)}
+            className="px-6 py-2 bg-green-400 text-white rounded-xl shadow hover:bg-green-500 transition"
+          >
+            正解！
+          </button>
+          <button
+            onClick={() => handleAnswer(false)}
+            className="px-6 py-2 bg-gray-300 text-gray-700 rounded-xl shadow hover:bg-gray-400 transition"
+          >
+            ミス！
+          </button>
         </div>
+        <p className="mt-4 text-sm text-gray-500">スコア：{score}</p>
+      </motion.div>
 
-        {(phase === "question" || phase === "enemyAnswered" || phase === "resolve") && <EnemyChoices />}
-      </section>
+      {/* 🎵 正解時に軽く音符が舞う */}
+      {score > 0 && <NoteBurst mode="burst" quiet key={score} />}
 
-      {/* 中央ゲージ */}
-      <Gauge />
-
-      {/* 下：�E刁E*/}
-      <section className="flex-1 flex flex-col items-center justify-start bg-gray-50 p-3">
-        <h2 className="font-bold">自刁E/h2>
-        <div className="mt-2">
-          {selectedItem ? <ItemCard item={selectedItem} size="md" withFx /> : <div className="px-3 py-2 rounded bg-gray-200">アイチE��未選抁E/div>}
-        </div>
-
-        {phase === "betMe" && (
-          <div className="mt-3 w-full max-w-sm">
-            <div className="text-sm font-semibold mb-1">かけるPWを選ぶ�E�Eound {round}/{questionCount})</div>
-            <div className="flex gap-2 flex-wrap">
-              {PW_OPTIONS.map((pw) => (
-                <button
-                  key={`me-${pw}`}
-                  className="px-3 py-2 rounded bg-blue-600 text-white hover:opacity-90 disabled:opacity-40"
-                  disabled={pw > myPw}
-                  onClick={() => handleMyBet(pw)}
-                >
-                  {pw}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {phase === "question" && question && (
-          <div className="mt-4 w-full max-w-[720px]">
-            <div className="font-semibold mb-2">{question.text}</div>
-            <div className="flex gap-2 flex-wrap">
-              {question.options.map((opt) => (
-                <button
-                  key={`me-opt-${opt}`}
-                  className="px-3 py-2 rounded border bg-white hover:bg-blue-50"
-                  onClick={() => handleMyAnswer(opt)}
-                  disabled={!!myAnswer}
-                >
-                  {opt}
-                </button>
-              ))}
-            </div>
-            <div className="mt-2 text-xs text-gray-500">ベット：相扁E{enemyBet ?? "-"} / 自刁E{myBet ?? "-"}</div>
-          </div>
-        )}
-      </section>
-
-      {/* ログ�E�下部�E�E*/}
-      <div className="p-2 bg-gray-900 text-white text-xs">
-        {log.map((l, i) => (<div key={i}>{l}</div>))}
-      </div>
+      {/* 🌤 スタイル */}
+      <style>{`
+        @keyframes moveClouds {
+          0% { background-position: 0 bottom; }
+          100% { background-position: 1200px bottom; }
+        }
+        @keyframes lightFlow {
+          0% { background-position: 0 top; opacity: 0.3; }
+          50% { background-position: 100px top; opacity: 0.6; }
+          100% { background-position: 0 top; opacity: 0.3; }
+        }
+        .animate-clouds { animation: moveClouds 80s linear infinite; }
+        .animate-light { animation: lightFlow 10s ease-in-out infinite; }
+      `}</style>
     </div>
   );
-}
+};
+
+export default BattlePlayPage;

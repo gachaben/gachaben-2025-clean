@@ -1,14 +1,9 @@
 // ------------------------------------------------------
 // 🎰 MissionGachaPage.jsx（ミッションガチャ）
 // ------------------------------------------------------
-// - ログイン後にアクセス
-// - 🎥 広告視聴でガチャ可
-// - 結果は Firestore に保存（1日1回）
-// ------------------------------------------------------
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react"; // ←これを一番上！
 import { motion, AnimatePresence } from "framer-motion";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import AdRewardModal from "../components/ui/AdRewardModal";
 import NoteBurst from "../components/ui/NoteBurst";
@@ -29,7 +24,7 @@ export default function MissionGachaPage({ user }) {
 
   const today = new Date().toISOString().split("T")[0];
 
-  // --- Firestore確認（すでに今日のミッションがあるか） ---
+  // --- Firestore確認 ---
   useEffect(() => {
     if (!user?.uid) return;
     const fetchMission = async () => {
@@ -46,42 +41,58 @@ export default function MissionGachaPage({ user }) {
     fetchMission();
   }, [user, today]);
 
-  // --- 広告視聴完了時：ガチャ開始 ---
+  // ✅ 正しい位置に移動（ここが安全）
+  useEffect(() => {
+    console.log("✅ MissionGachaPage mounted", user?.uid);
+  }, [user]);
+
+  // --- 広告視聴完了時 ---
   const handleAdReward = () => {
+    console.log("🎬 広告報酬完了 → ガチャ開始");
     setShowAdModal(false);
-    startMissionGacha();
+    setTimeout(() => {
+      startMissionGacha();
+    }, 800);
   };
 
-  // --- ミッションガチャ回転処理 ---
+  // --- ミッションガチャ処理 ---
   const startMissionGacha = async () => {
+    console.log("🎯 startMissionGacha called", { uid: user?.uid });
     if (!user?.uid || spinning) return;
     setSpinning(true);
 
-    // ランダム抽選（確率重み付けも可能）
-    const weights = [0.4, 0.35, 0.25]; // study, challenge, battle
+    const weights = [0.4, 0.35, 0.25];
     const rand = Math.random();
     let result;
     if (rand < weights[0]) result = "study";
     else if (rand < weights[0] + weights[1]) result = "challenge";
     else result = "battle";
 
-    // 回転アニメーション時間
     setTimeout(async () => {
       setSelectedMission(result);
       setSpinning(false);
 
-      // Firestoreに保存
-      const ref = doc(db, "users", user.uid, "stats", "doremi");
-      await updateDoc(ref, {
-        dailyMission: {
-          type: result,
-          assignedDate: today,
-          completed: false,
-        },
-      });
+      try {
+        const ref = doc(db, "users", user.uid, "stats", "doremi");
+        await setDoc(
+          ref,
+          {
+            dailyMission: {
+              type: result,
+              assignedDate: today,
+              completed: false,
+            },
+          },
+          { merge: true }
+        );
+        console.log("✅ Firestore 保存完了", result);
+      } catch (err) {
+        console.error("🔥 Firestore 保存エラー", err);
+      }
     }, 3000);
   };
 
+  // --- UI ---
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden text-center bg-gradient-to-b from-blue-100 via-sky-100 to-white">
       {/* 🌈 背景 */}
@@ -157,6 +168,7 @@ export default function MissionGachaPage({ user }) {
       {/* 🎥 広告モーダル */}
       {showAdModal && (
         <AdRewardModal
+          open={showAdModal}
           onClose={() => setShowAdModal(false)}
           onReward={handleAdReward}
           rewardText="🎁 ミッションガチャが回せるようになった！"

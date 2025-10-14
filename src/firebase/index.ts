@@ -1,9 +1,17 @@
 // ------------------------------------------------------
-// 🌈 src/firebase/index.ts（エミュ対応＋本番対応）
+// 🌈 src/firebase/index.ts（エミュ対応＋本番対応＋匿名サインイン）
 // ------------------------------------------------------
 import { initializeApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
+import {
+  getFirestore,
+  connectFirestoreEmulator,
+} from "firebase/firestore";
+import {
+  getAuth,
+  connectAuthEmulator,
+  signInAnonymously,
+  onAuthStateChanged,
+} from "firebase/auth";
 
 // ------------------------------------------------------
 // 🧩 環境設定
@@ -47,6 +55,19 @@ if (USE_EMU) {
     console.warn("⚠️ Emulator connection skipped:", e);
   }
 }
+
+// ------------------------------------------------------
+// 👤 匿名サインイン（Emulator用）
+// ------------------------------------------------------
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    signInAnonymously(auth)
+      .then(() => console.log("✅ Anonymous sign-in success"))
+      .catch((err) => console.warn("⚠️ Sign-in failed:", err));
+  } else {
+    console.log("👤 Signed in:", user.uid);
+  }
+});
 
 // ------------------------------------------------------
 // ✅ Export

@@ -1,6 +1,6 @@
 // src/components/AdRewardModal.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { useRewardFx } from "@/context/RewardFxContext";
+import { useRewardFx } from "../../context/RewardFxContext";
 
 export default function AdRewardModal({ open, onClose, onReward }) {
   const { triggerHeart } = useRewardFx();

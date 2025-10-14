@@ -22,6 +22,7 @@ import StudyPage from "./pages/StudyPage";
 import BattleChallengePage from "@/pages/BattleChallengePage.jsx";
 import BattleResultPage from "@/pages/BattleResultPage.jsx";
 import BattleHistoryPage from "@/pages/BattleHistoryPage.jsx";
+import MissionGachaPage from "./pages/MissionGachaPage";
 
 // ==== 復習モード ==== //
 import ReviewHomePage from "@/pages/ReviewHomePage.jsx";
@@ -97,6 +98,8 @@ export default function App() {
           <Route path="/challenge-test" element={<ChallengeTestPage />} />
           <Route path="/active-test" element={<ActiveTimeTestPage />} />
           <Route path="/study" element={<StudyPage />} />
+          <Route path="/mission-gacha" element={<MissionGachaPage />} />
+
           {/* ==== バトル関連 ==== */}
           <Route
             path="/battle"

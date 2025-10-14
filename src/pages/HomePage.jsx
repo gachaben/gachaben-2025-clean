@@ -1,24 +1,35 @@
 // ------------------------------------------------------
-// 🏠 HomePage.jsx（今日のミッション進捗反映版）
+// 🎰 MissionGachaPage.jsx（ミッションガチャ）
 // ------------------------------------------------------
-// - Firestoreから dailyMission を取得
-// - 未達成なら「挑戦する！」ボタン
-// - 達成済みなら「🌈達成済み！」表示
-// - 1日1ミッション制
+// - ログイン後にアクセス
+// - 🎥 広告視聴でガチャ可
+// - 結果は Firestore に保存（1日1回）
 // ------------------------------------------------------
 
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { doc, getDoc } from "firebase/firestore";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../firebase";
-import { useNavigate } from "react-router-dom";
+import AdRewardModal from "../components/ui/AdRewardModal";
 import NoteBurst from "../components/ui/NoteBurst";
+import { useNavigate } from "react-router-dom";
 
-export default function HomePage({ user }) {
+const MISSION_TYPES = [
+  { id: "study", label: "📘 学習チャレンジ", color: "#60a5fa" },
+  { id: "challenge", label: "⚡ チャレンジ問題", color: "#facc15" },
+  { id: "battle", label: "🥊 バトルチャレンジ", color: "#f87171" },
+];
+
+export default function MissionGachaPage({ user }) {
   const navigate = useNavigate();
-  const [mission, setMission] = useState(null);
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [showAdModal, setShowAdModal] = useState(false);
+  const [selectedMission, setSelectedMission] = useState(null);
+  const [spinning, setSpinning] = useState(false);
+  const [alreadyAssigned, setAlreadyAssigned] = useState(false);
 
+  const today = new Date().toISOString().split("T")[0];
+
+  // --- Firestore確認（すでに今日のミッションがあるか） ---
   useEffect(() => {
     if (!user?.uid) return;
     const fetchMission = async () => {
@@ -26,113 +37,142 @@ export default function HomePage({ user }) {
       const snap = await getDoc(ref);
       if (snap.exists()) {
         const data = snap.data();
-        const today = new Date().toISOString().split("T")[0];
-        if (
-          data.dailyMission &&
-          data.dailyMission.assignedDate === today
-        ) {
-          setMission(data.dailyMission);
-          setIsCompleted(!!data.dailyMission.completed);
+        if (data.dailyMission?.assignedDate === today) {
+          setSelectedMission(data.dailyMission.type);
+          setAlreadyAssigned(true);
         }
       }
     };
     fetchMission();
-  }, [user]);
+  }, [user, today]);
 
-  const missionLabel = {
-    study: "📘 学習チャレンジ",
-    challenge: "⚡ チャレンジ問題",
-    battle: "🥊 バトルチャレンジ",
+  // --- 広告視聴完了時：ガチャ開始 ---
+  const handleAdReward = () => {
+    setShowAdModal(false);
+    startMissionGacha();
   };
 
-  const missionColor = {
-    study: "bg-blue-100 border-blue-300",
-    challenge: "bg-yellow-100 border-yellow-300",
-    battle: "bg-red-100 border-red-300",
+  // --- ミッションガチャ回転処理 ---
+  const startMissionGacha = async () => {
+    if (!user?.uid || spinning) return;
+    setSpinning(true);
+
+    // ランダム抽選（確率重み付けも可能）
+    const weights = [0.4, 0.35, 0.25]; // study, challenge, battle
+    const rand = Math.random();
+    let result;
+    if (rand < weights[0]) result = "study";
+    else if (rand < weights[0] + weights[1]) result = "challenge";
+    else result = "battle";
+
+    // 回転アニメーション時間
+    setTimeout(async () => {
+      setSelectedMission(result);
+      setSpinning(false);
+
+      // Firestoreに保存
+      const ref = doc(db, "users", user.uid, "stats", "doremi");
+      await updateDoc(ref, {
+        dailyMission: {
+          type: result,
+          assignedDate: today,
+          completed: false,
+        },
+      });
+    }, 3000);
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden text-center bg-gradient-to-b from-sky-100 via-blue-50 to-white">
-      {/* 🌤️ 背景演出 */}
+    <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden text-center bg-gradient-to-b from-blue-100 via-sky-100 to-white">
+      {/* 🌈 背景 */}
+      <div className="absolute inset-0 bg-[url('/images/light-rays.png')] bg-cover opacity-40 animate-light z-0" />
       <NoteBurst mode="burst" quiet />
-      <div className="absolute inset-0 bg-[url('/images/clouds.png')] bg-bottom bg-repeat-x opacity-50 animate-clouds" />
 
-      {/* 🏠 タイトル */}
+      {/* 🎵 タイトル */}
       <motion.h1
-        className="text-3xl font-bold text-pink-600 mb-6 drop-shadow-md z-10"
-        initial={{ opacity: 0, y: -10 }}
+        className="text-3xl font-bold text-blue-600 mb-4 z-10 drop-shadow-md"
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
       >
-        🎵 ドレスタ ホーム
+        🎰 今日のミッションガチャ！
       </motion.h1>
 
-      {/* 🌈 ミッションボックス */}
-      {mission ? (
-        <motion.div
-          className={`relative z-10 border-2 rounded-3xl shadow-lg px-6 py-4 w-80 ${missionColor[mission.type]}`}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <p className="text-xl font-bold mb-2">
-            {missionLabel[mission.type]}
-          </p>
-
-          {isCompleted ? (
-            <>
-              <p className="text-green-600 font-semibold mb-3">
-                🌈 今日のミッションは達成済み！
-              </p>
-              <motion.button
-                onClick={() => navigate("/mission/complete")}
-                className="px-6 py-2 bg-green-500 text-white rounded-full shadow hover:bg-green-600 transition"
-                whileTap={{ scale: 0.95 }}
-              >
-                🌟 達成演出を見る
-              </motion.button>
-            </>
+      {/* 🎁 ガチャエリア */}
+      <div className="relative z-10 w-72 h-72 flex items-center justify-center rounded-full border-8 border-white/50 bg-white/40 shadow-xl backdrop-blur-md">
+        <AnimatePresence>
+          {spinning ? (
+            <motion.div
+              key="spinning"
+              className="text-6xl font-bold animate-spin-slow"
+              style={{ color: "#facc15" }}
+            >
+              🎵
+            </motion.div>
+          ) : selectedMission ? (
+            <motion.div
+              key="result"
+              className="text-2xl font-bold text-gray-800"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", duration: 0.8 }}
+            >
+              {MISSION_TYPES.find((m) => m.id === selectedMission)?.label}
+            </motion.div>
           ) : (
-            <>
-              <p className="text-gray-700 mb-3">今日の挑戦が待っています。</p>
-              <motion.button
-                onClick={() => {
-                  if (mission.type === "study") navigate("/study");
-                  else if (mission.type === "challenge") navigate("/challenge");
-                  else if (mission.type === "battle") navigate("/battle/start");
-                }}
-                className="px-6 py-2 bg-pink-500 text-white rounded-full shadow hover:bg-pink-600 transition"
-                whileTap={{ scale: 0.95 }}
-              >
-                🚀 挑戦する！
-              </motion.button>
-            </>
+            <motion.div
+              key="ready"
+              className="text-lg text-gray-500 italic"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              🎥 広告を見てガチャを回そう！
+            </motion.div>
           )}
-        </motion.div>
-      ) : (
-        <motion.div
-          className="relative z-10 bg-white/70 backdrop-blur-md px-6 py-5 rounded-2xl border shadow-lg text-gray-700"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+        </AnimatePresence>
+      </div>
+
+      {/* 🎥 ガチャボタン */}
+      {!alreadyAssigned && !spinning && !selectedMission && (
+        <motion.button
+          onClick={() => setShowAdModal(true)}
+          className="mt-8 px-8 py-3 bg-pink-500 text-white rounded-2xl shadow-lg hover:scale-105 transition z-10"
+          whileTap={{ scale: 0.95 }}
         >
-          🎰 まだ今日のミッションが決まっていません！
-          <br />
-          <motion.button
-            onClick={() => navigate("/mission/gacha")}
-            className="mt-3 px-6 py-2 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600 transition"
-            whileTap={{ scale: 0.95 }}
-          >
-            🎥 ミッションガチャを回す！
-          </motion.button>
-        </motion.div>
+          🎥 広告を見てガチャを回す！
+        </motion.button>
       )}
 
-      {/* ☁️ アニメーション */}
+      {/* ✅ 結果ボタン */}
+      {selectedMission && !spinning && (
+        <motion.button
+          onClick={() => navigate("/home")}
+          className="mt-8 px-8 py-3 bg-green-500 text-white rounded-2xl shadow-lg hover:bg-green-600 transition"
+          whileTap={{ scale: 0.95 }}
+        >
+          ✅ ホームに進む
+        </motion.button>
+      )}
+
+      {/* 🎥 広告モーダル */}
+      {showAdModal && (
+        <AdRewardModal
+          onClose={() => setShowAdModal(false)}
+          onReward={handleAdReward}
+          rewardText="🎁 ミッションガチャが回せるようになった！"
+        />
+      )}
+
+      {/* 💫 背景アニメーション */}
       <style>{`
-        @keyframes moveClouds {
-          0% { background-position: 0 bottom; }
-          100% { background-position: 1000px bottom; }
+        @keyframes lightMove {
+          0% { background-position: 0 0; opacity: 0.3; }
+          50% { background-position: 100px 0; opacity: 0.6; }
+          100% { background-position: 0 0; opacity: 0.3; }
         }
-        .animate-clouds { animation: moveClouds 60s linear infinite; }
+        .animate-light { animation: lightMove 10s ease-in-out infinite; }
+        .animate-spin-slow { animation: spin 1.2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

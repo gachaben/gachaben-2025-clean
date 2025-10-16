@@ -1,19 +1,28 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+const handleCreateBattle = async () => {
+  console.log("🎯 createBattle 呼び出し開始");
 
-const {onRequest} = require("firebase-functions/v2/https");
-const logger = require("firebase-functions/logger");
+  try {
+    const res = await fetch(
+      "http://127.0.0.1:5002/gachaben-2025-clean/us-central1/createBattle",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          opponentId: "cpu-normal",
+          cpuLevel: "N",
+          startPw: 1000,
+        }),
+      }
+    );
 
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
-
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const result = await res.json();
+    console.log("✅ createBattle 成功:", result);
+    alert(`バトル作成OK！ID: ${result.id}`);
+  } catch (err) {
+    console.error("❌ createBattle エラー:", err);
+    alert(`エラー発生: ${err.message}`);
+  }
+};

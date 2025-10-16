@@ -1,6 +1,5 @@
 // ------------------------------------------------------
-// 🚀 src/App.jsx（v2.6）
-// ガチャ弁アプリ ルーティング設定（index.jsxでBrowserRouterをラップ）
+// 🚀 src/App.jsx（v2.7 修正版）
 // ------------------------------------------------------
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
@@ -13,16 +12,16 @@ import ActiveTimeTestPage from "@/pages/ActiveTimeTestPage.jsx";
 
 // ==== メインページ ==== //
 import HomePage from "@/pages/HomePage.jsx";
-import LoginPage from "@/pages/LoginPage.jsx";   
+import LoginPage from "@/pages/LoginPage.jsx";
 import DebugPage from "@/pages/DebugPage.jsx";
 import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
 import StudyPage from "./pages/StudyPage";
+import MissionGachaPage from "./pages/MissionGachaPage";
 
 // ==== バトル関連 ==== //
 import BattleChallengePage from "@/pages/BattleChallengePage.jsx";
 import BattleResultPage from "@/pages/BattleResultPage.jsx";
 import BattleHistoryPage from "@/pages/BattleHistoryPage.jsx";
-import MissionGachaPage from "./pages/MissionGachaPage";
 
 // ==== 復習モード ==== //
 import ReviewHomePage from "@/pages/ReviewHomePage.jsx";
@@ -76,15 +75,17 @@ function Nav() {
 }
 
 // ------------------------------------------------------
-// 🚀 ルーティング本体（BrowserRouterはindex.jsx側）
+// 🚀 ルーティング本体
 // ------------------------------------------------------
 export default function App() {
+  const { user, loading } = useAuthState();
+
+  if (loading)
+    return <div className="p-6 text-center text-gray-500">起動中...</div>;
+
   return (
     <HeartsProvider>
-      {/* ❤️ ハートバー常時表示 */}
       <TopBar />
-
-      {/* TopBar分の余白 */}
       <div className="pt-12">
         <Nav />
 
@@ -98,7 +99,17 @@ export default function App() {
           <Route path="/challenge-test" element={<ChallengeTestPage />} />
           <Route path="/active-test" element={<ActiveTimeTestPage />} />
           <Route path="/study" element={<StudyPage />} />
-          <Route path="/mission-gacha" element={<MissionGachaPage />} />
+
+          {/* ✅ 修正ポイント：userを渡す */}
+          <Route
+  path="/mission-gacha"
+  element={
+    <RequireAuth>
+      <MissionGachaPage />
+    </RequireAuth>
+  }
+/>
+
 
           {/* ==== バトル関連 ==== */}
           <Route

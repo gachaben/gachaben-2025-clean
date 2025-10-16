@@ -1,0 +1,73 @@
+作業メモ（2025-10-15）
+🔧 現在のテーマ
+
+Firebase Emulator（Functions）と React の接続確認。
+createBattle 関数を /debug ページから動作させるテスト。
+
+✅ 今日行った作業
+
+firebase.js（ローカルエミュ対応・完全版） を整備
+
+Firestore / Auth / Storage の emulator 接続を設定。
+
+匿名ログイン（signInAnonymously）成功を確認。
+
+MissionGachaPage.jsx の最新動作版を更新。
+
+AdRewardModal 呼び出し確認、クリックイベント可動。
+
+Firestore 書き込みも OK。
+
+DebugPage.jsx を emulator 対応版に書き換え。
+
+getFunctions + connectFunctionsEmulator の呼び出し追加。
+
+fetch("http://localhost:5002/gachaben-2025-clean/us-central1/createBattle") 形式に変更。
+
+app の import エラー修正済み（import app from "@/firebase" に統一）。
+
+⚠️ 現在の問題点
+
+React 側の fetch が CORS によりブロックされている。
+
+Access to fetch ... has been blocked by CORS policy
+Response to preflight request doesn’t pass access control check
+
+
+結果、Failed to fetch → FirebaseError: internal が発生。
+
+関数 createBattle 自体はエミュレータにデプロイ済みだが、
+CORS 設定（レスポンスヘッダ）が未追加。
+
+🧩 次回やること（明確なステップ）
+
+functions/index.js に CORS 設定を追加
+
+const cors = require("cors")({ origin: true });
+app.use(cors);
+
+
+を app.post("/createBattle", async (req, res) => { ... }) の上部に追加。
+
+再デプロイ or 再起動
+
+firebase emulators:start
+
+
+を実行し直す。
+
+/debug ページで再度「createBattle 実行」テスト。
+成功時には「✅ createBattle success」ログが出力される。
+
+🗂 状況まとめ
+項目	状態
+Firebase Emulator 接続	✅ 動作OK
+Firestore / Auth	✅ 認証・書き込みOK
+MissionGachaPage	✅ UI反応OK
+Functions 呼び出し	⚠️ CORSブロック中
+次回修正対象	functions/index.js に CORS 設定追加
+
+🪄 次回起動キーワード：
+
+「createBattle の CORS 直す」
+で続きをスムーズに再開できます。

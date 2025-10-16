@@ -32,51 +32,65 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createBattle = void 0;
 // ------------------------------------------------------
-// createBattle.ts（完全修正版 / v13 + Emulator OK）
+// createBattle.ts（完全動作版 / Timestamp安全対応）
 // ------------------------------------------------------
 const admin = __importStar(require("firebase-admin"));
 const https_1 = require("firebase-functions/v2/https");
-const cors_1 = __importDefault(require("cors"));
-const firestore_1 = require("firebase-admin/firestore"); // ✅ ← これがポイント！
 if (!admin.apps.length) {
     admin.initializeApp();
-    console.log("🔥 Firebase Admin initialized");
 }
 const db = admin.firestore();
-const corsHandler = (0, cors_1.default)({ origin: true });
-exports.createBattle = (0, https_1.onRequest)((req, res) => {
-    corsHandler(req, res, async () => {
-        try {
-            console.log("🧩 createBattle 呼び出し開始");
-            console.log("📦 req.body:", req.body);
-            const uid = req.body?.uid || "demo-user-001";
-            const { opponentId = "cpu-normal", cpuLevel = "N", startPw = 1000 } = req.body || {};
-            console.log("🧠 受信データ:", { uid, opponentId, cpuLevel, startPw });
-            const battleRef = await db.collection("battles").add({
-                userId: uid,
-                opponentId,
-                cpuLevel,
-                startPw,
-                createdAt: firestore_1.Timestamp.now(), // ✅ ← これが確実に動作する
-            });
-            console.log("✅ Battle created:", battleRef.id);
-            res.status(200).json({
-                battleId: battleRef.id,
-                message: "Battle created ✅",
-            });
+// ✅ Timestamp安全取得（v13以降対応）
+const getNow = () => {
+    try {
+        return admin.firestore.Timestamp.now();
+    }
+    catch {
+        return new Date();
+    }
+};
+exports.createBattle = (0, https_1.onCall)({ cors: true }, async (req) => {
+    try {
+        let uid = req.auth?.uid;
+        if (!uid) {
+            uid = "demo-user-001";
+            console.log("🧩 Emulatorモード: uidをデモ値に設定 →", uid);
         }
-        catch (err) {
-            console.error("🔥 createBattle Error:", err);
-            res.status(500).json({
-                error: err.message,
-                stack: err.stack,
-            });
-        }
-    });
+        const { opponentId = "cpu-normal", cpuLevel = "N", startPw = 1000 } = req.data || {};
+        const battleRef = db.collection("battles").doc();
+        const now = getNow();
+        const battleData = {
+            userId: uid,
+            opponentId,
+            mode: "7q",
+            cpuLevel,
+            rounds: [],
+            userPwStart: startPw,
+            cpuPwStart: startPw,
+            userPwNow: startPw,
+            cpuPwNow: startPw,
+            winner: null,
+            createdAt: now,
+        };
+        await battleRef.set(battleData);
+        const userRef = db.collection("users").doc(uid);
+        const userSnap = await userRef.get();
+        const currentTickets = (userSnap.exists ? userSnap.data()?.tickets : 5) ?? 5;
+        await userRef.set({
+            tickets: currentTickets - 1,
+            lastBattleAt: now,
+        }, { merge: true });
+        console.log("✅ Battle created:", battleRef.id);
+        return {
+            battleId: battleRef.id,
+            message: "Battle created successfully ✅",
+        };
+    }
+    catch (err) {
+        console.error("🔥 createBattle Error:", err);
+        throw new Error(err.message || "Internal Server Error");
+    }
 });

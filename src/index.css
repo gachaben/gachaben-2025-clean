@@ -1,6 +1,9 @@
 /* -------------------------------
    src/index.css  (clean)
 -------------------------------- */
+.firebase-emulator-warning {
+  display: none !important;
+}
 
 /* Tailwind を最上段に置く */
 @tailwind base;
@@ -140,3 +143,4 @@ body {
     @apply bg-background text-foreground;
   }
 }
+

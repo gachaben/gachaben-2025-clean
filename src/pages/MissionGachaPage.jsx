@@ -1,13 +1,14 @@
 // ------------------------------------------------------
-// 🎰 MissionGachaPage.jsx（ミッションガチャ）
+// 🎰 MissionGachaPage.jsx（ユーザー同期＋広告モーダル完全版）
 // ------------------------------------------------------
-import React, { useState, useEffect } from "react"; // ←これを一番上！
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import AdRewardModal from "../components/ui/AdRewardModal";
 import NoteBurst from "../components/ui/NoteBurst";
 import { useNavigate } from "react-router-dom";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const MISSION_TYPES = [
   { id: "study", label: "📘 学習チャレンジ", color: "#60a5fa" },
@@ -15,36 +16,55 @@ const MISSION_TYPES = [
   { id: "battle", label: "🥊 バトルチャレンジ", color: "#f87171" },
 ];
 
-export default function MissionGachaPage({ user }) {
+export default function MissionGachaPage() {
   const navigate = useNavigate();
+  const auth = getAuth();
+
+  // ✅ Firebaseユーザーをリアルタイム監視
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) console.log("👤 MissionGachaPage: ユーザー認識", u.uid);
+      else console.log("🚫 MissionGachaPage: 未ログイン");
+    });
+    return () => unsub();
+  }, [auth]);
+
+  // ✅ 状態管理
   const [showAdModal, setShowAdModal] = useState(false);
   const [selectedMission, setSelectedMission] = useState(null);
   const [spinning, setSpinning] = useState(false);
   const [alreadyAssigned, setAlreadyAssigned] = useState(false);
-
   const today = new Date().toISOString().split("T")[0];
 
-  // --- Firestore確認 ---
+  // ✅ Firestore 読み取り（毎回user変化後に実行）
   useEffect(() => {
     if (!user?.uid) return;
     const fetchMission = async () => {
-      const ref = doc(db, "users", user.uid, "stats", "doremi");
-      const snap = await getDoc(ref);
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.dailyMission?.assignedDate === today) {
-          setSelectedMission(data.dailyMission.type);
-          setAlreadyAssigned(true);
+      try {
+        const ref = doc(db, "users", user.uid, "stats", "doremi");
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.dailyMission?.assignedDate === today) {
+            console.log("📅 今日のミッションあり:", data.dailyMission.type);
+            setSelectedMission(data.dailyMission.type);
+            setAlreadyAssigned(true);
+          } else {
+            console.log("🆕 新しい日なのでリセット");
+            setAlreadyAssigned(false);
+            setSelectedMission(null);
+          }
+        } else {
+          console.log("📄 stats/doremi 未作成。新規作成予定。");
         }
+      } catch (err) {
+        console.error("🔥 Firestore 読み取りエラー", err);
       }
     };
     fetchMission();
   }, [user, today]);
-
-  // ✅ 正しい位置に移動（ここが安全）
-  useEffect(() => {
-    console.log("✅ MissionGachaPage mounted", user?.uid);
-  }, [user]);
 
   // --- 広告視聴完了時 ---
   const handleAdReward = () => {
@@ -85,7 +105,7 @@ export default function MissionGachaPage({ user }) {
           },
           { merge: true }
         );
-        console.log("✅ Firestore 保存完了", result);
+        console.log("✅ Firestore 保存完了:", result);
       } catch (err) {
         console.error("🔥 Firestore 保存エラー", err);
       }
@@ -97,7 +117,18 @@ export default function MissionGachaPage({ user }) {
     <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden text-center bg-gradient-to-b from-blue-100 via-sky-100 to-white">
       {/* 🌈 背景 */}
       <div className="absolute inset-0 bg-[url('/images/light-rays.png')] bg-cover opacity-40 animate-light z-0" />
-      <NoteBurst mode="burst" quiet />
+
+      {/* 🚫 NoteBurst のクリックブロック対策 */}
+      <NoteBurst
+        mode="burst"
+        quiet
+        style={{
+          position: "absolute",
+          inset: 0,
+          zIndex: -1,
+          pointerEvents: "none",
+        }}
+      />
 
       {/* 🎵 タイトル */}
       <motion.h1
@@ -146,8 +177,16 @@ export default function MissionGachaPage({ user }) {
       {/* 🎥 ガチャボタン */}
       {!alreadyAssigned && !spinning && !selectedMission && (
         <motion.button
-          onClick={() => setShowAdModal(true)}
-          className="mt-8 px-8 py-3 bg-pink-500 text-white rounded-2xl shadow-lg hover:scale-105 transition z-10"
+          onClick={() => {
+            console.log("🎥 ガチャボタン押下 ✅");
+            setShowAdModal(true);
+          }}
+          className="mt-8 px-8 py-3 bg-pink-500 text-white rounded-2xl shadow-lg hover:scale-105 transition"
+          style={{
+            position: "relative",
+            zIndex: 999999,
+            pointerEvents: "auto",
+          }}
           whileTap={{ scale: 0.95 }}
         >
           🎥 広告を見てガチャを回す！

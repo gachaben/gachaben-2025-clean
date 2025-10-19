@@ -1,12 +1,79 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.finishBattle = exports.commitRound = exports.createBattle = void 0;
 // ------------------------------------------------------
 // functions/src/index.ts
+// Emulator CORS対応 完全版（最終）
 // ------------------------------------------------------
-const createBattle_1 = require("./createBattle");
-Object.defineProperty(exports, "createBattle", { enumerable: true, get: function () { return createBattle_1.createBattle; } });
-const commitRound_1 = require("./commitRound");
-Object.defineProperty(exports, "commitRound", { enumerable: true, get: function () { return commitRound_1.commitRound; } });
-const finishBattle_1 = require("./finishBattle");
-Object.defineProperty(exports, "finishBattle", { enumerable: true, get: function () { return finishBattle_1.finishBattle; } });
+const functions = __importStar(require("firebase-functions"));
+const admin = __importStar(require("firebase-admin"));
+const cors_1 = __importDefault(require("cors"));
+admin.initializeApp();
+// ✅ 全オリジン許可（localhost:5173などOK）
+const corsHandler = (0, cors_1.default)({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+});
+// ✅ createBattle
+exports.createBattle = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        try {
+            res.set("Access-Control-Allow-Origin", "*");
+            res.status(200).json({ ok: true, msg: "createBattle success (CORS OK)" });
+        }
+        catch (err) {
+            console.error("createBattle error:", err);
+            res.status(500).json({ error: err.message });
+        }
+    });
+});
+// ✅ commitRound
+exports.commitRound = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        res.json({ ok: true, msg: "commitRound OK" });
+    });
+});
+// ✅ finishBattle
+exports.finishBattle = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        res.json({ ok: true, msg: "finishBattle OK" });
+    });
+});

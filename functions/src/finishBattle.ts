@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// functions/src/finishBattle.ts（最終安定安定版 / JSON安全対応）
+// functions/src/finishBattle.ts（DP対応・PW完全削除）
 // ------------------------------------------------------
 import * as admin from "firebase-admin";
 import { onRequest } from "firebase-functions/v2/https";
@@ -8,17 +8,11 @@ import { Timestamp } from "firebase-admin/firestore";
 
 if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
-
-// ✅ CORSハンドラ
-const corsHandler = cors({
-  origin: true,
-  methods: ["GET", "POST", "OPTIONS"],
-});
+const corsHandler = cors({ origin: true, methods: ["GET", "POST", "OPTIONS"] });
 
 export const finishBattle = onRequest((req, res) => {
   corsHandler(req, res, async () => {
     try {
-      // ✅ OPTIONS（プリフライト）
       if (req.method === "OPTIONS") {
         res.set("Access-Control-Allow-Origin", "*");
         res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -28,56 +22,36 @@ export const finishBattle = onRequest((req, res) => {
 
       console.log("🏁 finishBattle 呼び出し開始");
 
-      // ✅ JSONボディ対策（Emulatorでreq.bodyが文字列になることがある）
-      const body =
-        typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-      const { battleId, result } = body;
-
+      const { battleId, result, userId } = req.body || {};
       if (!battleId) throw new Error("battleId が未指定です");
+      if (!userId) throw new Error("userId が未指定です");
 
-      const ref = db.collection("battles").doc(battleId);
-      const snap = await ref.get();
-
-      // ✅ Emulator 判定（確実・安全版）
-      const isLocal =
-        !!process.env.FUNCTIONS_EMULATOR ||
-        !!process.env.FIREBASE_AUTH_EMULATOR_HOST ||
-        !!process.env.FIRESTORE_EMULATOR_HOST ||
-        !!process.env.FIREBASE_EMULATOR_HUB ||
-        (process.env.GCLOUD_PROJECT?.includes("demo") ?? false);
-
-      console.log("🔍 Emulator判定:", {
-        FUNCTIONS_EMULATOR: process.env.FUNCTIONS_EMULATOR,
-        FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST,
-        GCLOUD_PROJECT: process.env.GCLOUD_PROJECT,
-        isLocal,
+      // ✅ バトル結果を更新
+      const battleRef = db.collection("battles").doc(battleId);
+      await battleRef.update({
+        result: result || "unknown",
+        finishedAt: Timestamp.now(),
       });
 
-      // ✅ ドキュメント存在チェック
-      if (!snap.exists) {
-        if (isLocal) {
-          console.warn("⚠️ 該当Battleが存在しません → Emulatorなので自動作成します");
-          await ref.set({
-            result: result || "unknown",
-            finishedAt: Timestamp.now(),
-            autoCreated: true,
-          });
-        } else {
-          throw new Error(`Battle (${battleId}) が存在しません`);
-        }
-      } else {
-        await ref.update({
-          result: result || "unknown",
-          finishedAt: Timestamp.now(),
-        });
-      }
+      // ✅ DP（ドレミポイント）加算
+      const userRef = db.collection("users").doc(userId);
+      const userSnap = await userRef.get();
+      const currentDP = userSnap.exists ? userSnap.data()?.doremiPoints || 0 : 0;
+      const addDP = result === "win" ? 10 : 5;
+      const newDP = currentDP + addDP;
 
-      // ✅ レスポンス返却
+      await userRef.set(
+        { doremiPoints: newDP, updatedAt: Timestamp.now() },
+        { merge: true }
+      );
+
+      console.log(`🎵 DP更新完了: ${currentDP} → ${newDP}`);
+
       res.set("Access-Control-Allow-Origin", "*");
       res.status(200).json({
-        message: "Battle finished ✅",
+        message: `Battle finished ✅ (+${addDP} DP)`,
         battleId,
-        mode: isLocal ? "local-auto" : "production-safe",
+        doremiPoints: newDP,
       });
     } catch (err: any) {
       console.error("🔥 finishBattle Error:", err);

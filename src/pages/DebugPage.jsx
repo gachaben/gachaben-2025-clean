@@ -1,11 +1,12 @@
 // ------------------------------------------------------
-// src/pages/DebugPage.jsx（修正版 / 動的 battleId 連携）
+// src/pages/DebugPage.jsx（v1.7b デバッグ）
+// Firebase Functions（createBattle / commitRound / finishBattle）
 // ------------------------------------------------------
 import React, { useState } from "react";
 
 export default function DebugPage() {
   const [result, setResult] = useState("結果がここに表示されます");
-  const [battleId, setBattleId] = useState(""); // ✅ createBattleで取得したIDを保存
+  const [battleId, setBattleId] = useState("");
 
   // ✅ 共通 fetch ヘルパー
   const callFunction = async (name, payload) => {
@@ -20,12 +21,7 @@ export default function DebugPage() {
       );
       const data = await res.json();
       setResult(JSON.stringify(data, null, 2));
-
-      // ✅ createBattle 実行時のみ ID を保存
-      if (name === "createBattle" && data.battleId) {
-        setBattleId(data.battleId);
-        console.log("🆔 battleId 保存:", data.battleId);
-      }
+      if (data.battleId) setBattleId(data.battleId);
     } catch (err) {
       console.error(err);
       setResult(err.message);
@@ -35,6 +31,17 @@ export default function DebugPage() {
   return (
     <div style={{ padding: 24 }}>
       <h1>⚙️ Debug Dashboard</h1>
+
+      <p style={{ marginTop: 8 }}>
+        現在の battleId：{" "}
+        {battleId ? (
+          <a href="#" onClick={(e) => e.preventDefault()}>
+            {battleId}
+          </a>
+        ) : (
+          "—"
+        )}
+      </p>
 
       <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
         {/* ✅ createBattle */}
@@ -54,7 +61,7 @@ export default function DebugPage() {
         <button
           onClick={() =>
             callFunction("commitRound", {
-              battleId: battleId || "未設定",
+              battleId,
               round: 1,
               correct: true,
             })
@@ -65,6 +72,7 @@ export default function DebugPage() {
             padding: "8px 16px",
             borderRadius: 6,
           }}
+          disabled={!battleId}
         >
           🌀 commitRound 実行
         </button>
@@ -73,8 +81,9 @@ export default function DebugPage() {
         <button
           onClick={() =>
             callFunction("finishBattle", {
-              battleId: battleId || "未設定",
+              battleId,
               result: "win",
+              userId: "demo-user-001", // ✅ DP加算のために送信
             })
           }
           style={{
@@ -83,16 +92,10 @@ export default function DebugPage() {
             padding: "8px 16px",
             borderRadius: 6,
           }}
+          disabled={!battleId}
         >
           🔥 finishBattle 実行
         </button>
-      </div>
-
-      <div style={{ marginTop: 16, fontWeight: "bold" }}>
-        現在の battleId：{" "}
-        <span style={{ color: battleId ? "#007bff" : "gray" }}>
-          {battleId || "（未設定）"}
-        </span>
       </div>
 
       <pre

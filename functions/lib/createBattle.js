@@ -32,54 +32,56 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createBattle = void 0;
 // ------------------------------------------------------
-// createBattle.ts（CORS + Emulator 完全安定版）
+// functions/src/createBattle.ts（v1.7b最終版）
 // ------------------------------------------------------
 const admin = __importStar(require("firebase-admin"));
 const https_1 = require("firebase-functions/v2/https");
+const cors_1 = __importDefault(require("cors"));
 const firestore_1 = require("firebase-admin/firestore");
-if (!admin.apps.length) {
+if (!admin.apps.length)
     admin.initializeApp();
-    console.log("🔥 Firebase Admin initialized");
-}
 const db = admin.firestore();
-exports.createBattle = (0, https_1.onRequest)({ region: "us-central1" }, async (req, res) => {
-    // ✅ 明示的 CORS 設定
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    // ✅ OPTIONS 対応（プリフライト処理）
-    if (req.method === "OPTIONS") {
-        console.log("🟢 Preflight OK");
-        res.status(204).send("");
-        return;
-    }
-    try {
-        console.log("🧩 createBattle 呼び出し開始");
-        console.log("📦 req.body:", req.body);
-        const uid = req.body?.uid || "demo-user-001";
-        const { opponentId = "cpu-normal", cpuLevel = "N", startPw = 1000 } = req.body || {};
-        // ✅ Firestore 書き込み
-        const battleRef = await db.collection("battles").add({
-            userId: uid,
-            opponentId,
-            cpuLevel,
-            startPw,
-            createdAt: firestore_1.Timestamp.now(),
-        });
-        console.log("✅ Battle created:", battleRef.id);
-        // ✅ レスポンスにも CORS を明示
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.status(200).json({
-            battleId: battleRef.id,
-            message: "Battle created ✅",
-        });
-    }
-    catch (err) {
-        console.error("🔥 createBattle Error:", err);
-        res.setHeader("Access-Control-Allow-Origin", "*");
-        res.status(500).json({ error: err.message });
-    }
+const corsHandler = (0, cors_1.default)({ origin: true, methods: ["GET", "POST", "OPTIONS"] });
+exports.createBattle = (0, https_1.onRequest)((req, res) => {
+    corsHandler(req, res, async () => {
+        try {
+            if (req.method === "OPTIONS") {
+                res.set("Access-Control-Allow-Origin", "*");
+                res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                res.set("Access-Control-Allow-Headers", "Content-Type");
+                return res.status(204).send("");
+            }
+            console.log("🎯 createBattle 呼び出し");
+            const { uid } = req.body || {};
+            if (!uid)
+                throw new Error("uid が未指定です");
+            const ref = await db.collection("battles").add({
+                userId: uid,
+                opponentId: "cpu-normal",
+                cpuLevel: "N",
+                result: "pending",
+                createdAt: firestore_1.Timestamp.now(),
+            });
+            console.log("✅ Battle created:", ref.id);
+            res.set("Access-Control-Allow-Origin", "*");
+            res.status(200).json({
+                message: "Battle created ✅",
+                battleId: ref.id,
+            });
+        }
+        catch (err) {
+            console.error("🔥 createBattle Error:", err);
+            res.set("Access-Control-Allow-Origin", "*");
+            res.status(500).json({
+                error: err.message,
+                stack: err.stack,
+            });
+        }
+    });
 });

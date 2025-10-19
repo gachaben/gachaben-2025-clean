@@ -38,7 +38,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.commitRound = void 0;
 // ------------------------------------------------------
-// commitRound.ts（完全修正版 / CORS対応）
+// functions/src/commitRound.ts（v1.7b対応・PW撤廃）
 // ------------------------------------------------------
 const admin = __importStar(require("firebase-admin"));
 const https_1 = require("firebase-functions/v2/https");
@@ -47,35 +47,42 @@ const firestore_1 = require("firebase-admin/firestore");
 if (!admin.apps.length)
     admin.initializeApp();
 const db = admin.firestore();
-const corsHandler = (0, cors_1.default)({ origin: true, methods: ["GET", "POST", "OPTIONS"] });
+const corsHandler = (0, cors_1.default)({ origin: true, methods: ["POST", "OPTIONS"] });
 exports.commitRound = (0, https_1.onRequest)((req, res) => {
     corsHandler(req, res, async () => {
         try {
             if (req.method === "OPTIONS") {
                 res.set("Access-Control-Allow-Origin", "*");
-                res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-                res.set("Access-Control-Allow-Headers", "Content-Type");
                 return res.status(204).send("");
             }
-            console.log("🎯 commitRound 呼び出し開始");
-            const { battleId, roundData } = req.body || {};
+            const { battleId, round, correct, time } = req.body || {};
             if (!battleId)
                 throw new Error("battleId が未指定です");
-            await db
-                .collection("battles")
-                .doc(battleId)
-                .collection("rounds")
-                .add({
-                ...roundData,
-                committedAt: firestore_1.Timestamp.now(),
+            const ref = db.collection("battles").doc(battleId);
+            const snap = await ref.get();
+            if (!snap.exists)
+                throw new Error("該当バトルが存在しません");
+            const data = snap.data() || {};
+            const newNoteProgress = (data.noteProgress || 0) + (correct ? 1 : 0);
+            await ref.update({
+                rounds: admin.firestore.FieldValue.arrayUnion({
+                    round,
+                    correct: !!correct,
+                    time: time ?? null,
+                }),
+                noteProgress: newNoteProgress,
+                updatedAt: firestore_1.Timestamp.now(),
             });
             res.set("Access-Control-Allow-Origin", "*");
-            res.status(200).json({ message: "Round committed ✅" });
+            res.status(200).json({
+                message: "Round committed ✅",
+                newNoteProgress,
+            });
         }
         catch (err) {
             console.error("🔥 commitRound Error:", err);
             res.set("Access-Control-Allow-Origin", "*");
-            res.status(500).json({ error: err.message, stack: err.stack });
+            res.status(500).json({ error: err.message });
         }
     });
 });

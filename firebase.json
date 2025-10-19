@@ -1,24 +1,20 @@
 {
-  "functions": {
-    "source": "functions"
-  },
+  "functions": { "source": "functions" },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "storage": {
-    "rules": "storage.rules"
-  },
+  "storage": { "rules": "storage.rules" },
   "emulators": {
     "functions": { "port": 5002 },
     "auth": { "port": 9099 },
     "firestore": { "port": 8089 },
     "storage": { "port": 9199 },
-    "ui": { "enabled": true, "port": 4000 },
-    "singleProjectMode": true
+    "ui": { "enabled": true, "port": 4001 }
   },
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"]
-  }
+  },
+  "project": "gachaben-2025-clean"
 }

@@ -1,98 +1,110 @@
 // ------------------------------------------------------
-// Firebase Functions デバッグ用（CORS対応・Emulator接続版）
+// src/pages/DebugPage.jsx（修正版 / 動的 battleId 連携）
 // ------------------------------------------------------
 import React, { useState } from "react";
 
 export default function DebugPage() {
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState("結果がここに表示されます");
+  const [battleId, setBattleId] = useState(""); // ✅ createBattleで取得したIDを保存
 
-  // ✅ createBattle 呼び出し
-  const handleCreateBattle = async () => {
+  // ✅ 共通 fetch ヘルパー
+  const callFunction = async (name, payload) => {
     try {
-      console.log("▶ createBattle 呼び出し開始");
-
       const res = await fetch(
-        "http://localhost:5002/gachaben-2025/us-central1/createBattle",
+        `http://127.0.0.1:5002/gachaben-2025-clean/us-central1/${name}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            opponentId: "cpu-normal",
-            cpuLevel: "N",
-            startPw: 1000,
-          }),
+          body: JSON.stringify(payload),
         }
       );
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      setResult(JSON.stringify(data, null, 2));
 
-      console.log("✅ createBattle result:", data);
-      alert(`バトル作成OK!\nID: ${data.battleId}`);
-      setResult(data);
+      // ✅ createBattle 実行時のみ ID を保存
+      if (name === "createBattle" && data.battleId) {
+        setBattleId(data.battleId);
+        console.log("🆔 battleId 保存:", data.battleId);
+      }
     } catch (err) {
-      console.error("❌ createBattle エラー:", err);
-      alert("createBattle に失敗しました");
-    }
-  };
-
-  // ✅ commitRound 呼び出し
-  const handleCommitRound = async () => {
-    try {
-      console.log("▶ commitRound 呼び出し開始");
-
-      const res = await fetch(
-        "http://localhost:5002/gachaben-2025/us-central1/commitRound",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            battleId: "rD0qIHpw4kDmIlnoruWE", // ← 直前のバトルIDを使用
-            round: 1,
-            userAnswer: "A",
-            cpuAnswer: "B",
-            winner: "user",
-          }),
-        }
-      );
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-
-      console.log("✅ commitRound result:", data);
-      alert(`ラウンド保存OK!\nID: ${data.roundId}`);
-      setResult(data);
-    } catch (err) {
-      console.error("❌ commitRound エラー:", err);
-      alert("commitRound に失敗しました");
+      console.error(err);
+      setResult(err.message);
     }
   };
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg font-bold mb-3">⚙ Debug Dashboard</h2>
+    <div style={{ padding: 24 }}>
+      <h1>⚙️ Debug Dashboard</h1>
 
-      <div className="space-x-3">
+      <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+        {/* ✅ createBattle */}
         <button
-          onClick={handleCreateBattle}
-          className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600"
+          onClick={() => callFunction("createBattle", { uid: "demo-user-001" })}
+          style={{
+            background: "#4ea5ff",
+            color: "#fff",
+            padding: "8px 16px",
+            borderRadius: 6,
+          }}
         >
           ▶ createBattle 実行
         </button>
 
+        {/* ✅ commitRound */}
         <button
-          onClick={handleCommitRound}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+          onClick={() =>
+            callFunction("commitRound", {
+              battleId: battleId || "未設定",
+              round: 1,
+              correct: true,
+            })
+          }
+          style={{
+            background: "#4caf50",
+            color: "#fff",
+            padding: "8px 16px",
+            borderRadius: 6,
+          }}
         >
-          ▶ commitRound 実行
+          🌀 commitRound 実行
+        </button>
+
+        {/* ✅ finishBattle */}
+        <button
+          onClick={() =>
+            callFunction("finishBattle", {
+              battleId: battleId || "未設定",
+              result: "win",
+            })
+          }
+          style={{
+            background: "#e53935",
+            color: "#fff",
+            padding: "8px 16px",
+            borderRadius: 6,
+          }}
+        >
+          🔥 finishBattle 実行
         </button>
       </div>
 
-      {result && (
-        <pre className="mt-4 p-2 bg-gray-100 rounded text-sm">
-          {JSON.stringify(result, null, 2)}
-        </pre>
-      )}
+      <div style={{ marginTop: 16, fontWeight: "bold" }}>
+        現在の battleId：{" "}
+        <span style={{ color: battleId ? "#007bff" : "gray" }}>
+          {battleId || "（未設定）"}
+        </span>
+      </div>
+
+      <pre
+        style={{
+          background: "#fafafa",
+          marginTop: 20,
+          padding: 12,
+          borderRadius: 8,
+        }}
+      >
+        {result}
+      </pre>
     </div>
   );
 }

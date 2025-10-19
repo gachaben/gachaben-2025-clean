@@ -1,7 +1,5 @@
 {
   "projects": {
-    "default": "gachaben-2025"
-  },
-  "targets": {},
-  "etags": {}
+    "default": "gachaben-2025-clean"
+  }
 }

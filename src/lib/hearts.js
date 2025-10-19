@@ -1,13 +1,15 @@
-// src/lib/hearts.js
+// ------------------------------------------------------
+// src/lib/hearts.js（2025対応版・Firebase SDK v9）
+// ❤ ハート管理ユーティリティ（Emulator対応OK）
+// ------------------------------------------------------
 import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
-import { getFirestoreDb } from "@/fbkit";
+import { db } from "@/fbkit";
 
 export const MAX_HEARTS = 5;
 
 /** 広告視聴などで ❤ を満タンにする */
 export async function fullRecoverHearts(uid, { reason = "ad" } = {}) {
   if (!uid) throw new Error("uid is required");
-  const db = getFirestoreDb();
   const ref = doc(db, "users", uid);
 
   await runTransaction(db, async (tx) => {
@@ -39,13 +41,12 @@ export async function fullRecoverHearts(uid, { reason = "ad" } = {}) {
 /** n個消費（0未満にならない） */
 export async function spendHearts(uid, n = 1) {
   if (!uid) throw new Error("uid is required");
-  const db = getFirestoreDb();
   const ref = doc(db, "users", uid);
 
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const cur = (snap.data()?.hearts ?? 0) | 0;
-    const next = Math.max(0, cur - Math.max(0, n|0));
+    const next = Math.max(0, cur - Math.max(0, n | 0));
     tx.set(
       ref,
       { hearts: next, updatedAt: serverTimestamp() },
@@ -57,13 +58,12 @@ export async function spendHearts(uid, n = 1) {
 /** n個回復（MAX_HEARTSを超えない） */
 export async function addHearts(uid, n = 1) {
   if (!uid) throw new Error("uid is required");
-  const db = getFirestoreDb();
   const ref = doc(db, "users", uid);
 
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const cur = (snap.data()?.hearts ?? 0) | 0;
-    const next = Math.min(MAX_HEARTS, cur + Math.max(0, n|0));
+    const next = Math.min(MAX_HEARTS, cur + Math.max(0, n | 0));
     tx.set(
       ref,
       { hearts: next, updatedAt: serverTimestamp() },
@@ -76,7 +76,6 @@ export async function addHearts(uid, n = 1) {
 export async function setHearts(uid, value) {
   if (!uid) throw new Error("uid is required");
   const v = Math.max(0, Math.min(MAX_HEARTS, Number(value) || 0));
-  const db = getFirestoreDb();
   const ref = doc(db, "users", uid);
 
   await runTransaction(db, async (tx) => {

@@ -32,54 +32,46 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.finishBattle = void 0;
 // ------------------------------------------------------
-// functions/src/finishBattle.ts
-// Firebase Cloud Functions: 勝敗集計＆結果保存
+// finishBattle.ts（完全修正版 / CORS対応）
 // ------------------------------------------------------
-const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
+const https_1 = require("firebase-functions/v2/https");
+const cors_1 = __importDefault(require("cors"));
+const firestore_1 = require("firebase-admin/firestore");
+if (!admin.apps.length)
+    admin.initializeApp();
 const db = admin.firestore();
-exports.finishBattle = functions.https.onCall(async (data, context) => {
-    try {
-        // ✅ dataの型を明示
-        const { battleId, userId } = data;
-        if (!battleId || !userId) {
-            throw new functions.https.HttpsError("invalid-argument", "battleId and userId are required");
+const corsHandler = (0, cors_1.default)({ origin: true, methods: ["GET", "POST", "OPTIONS"] });
+exports.finishBattle = (0, https_1.onRequest)((req, res) => {
+    corsHandler(req, res, async () => {
+        try {
+            if (req.method === "OPTIONS") {
+                res.set("Access-Control-Allow-Origin", "*");
+                res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                res.set("Access-Control-Allow-Headers", "Content-Type");
+                return res.status(204).send("");
+            }
+            console.log("🏁 finishBattle 呼び出し開始");
+            const { battleId, result } = req.body || {};
+            if (!battleId)
+                throw new Error("battleId が未指定です");
+            await db.collection("battles").doc(battleId).update({
+                result: result || "unknown",
+                finishedAt: firestore_1.Timestamp.now(),
+            });
+            res.set("Access-Control-Allow-Origin", "*");
+            res.status(200).json({ message: "Battle finished ✅" });
         }
-        const battleRef = db.collection("battles").doc(battleId);
-        const roundsSnap = await battleRef.collection("rounds").get();
-        let userScore = 0;
-        let cpuScore = 0;
-        roundsSnap.forEach((r) => {
-            const d = r.data();
-            if (d.winner === "user")
-                userScore++;
-            if (d.winner === "cpu")
-                cpuScore++;
-        });
-        const result = userScore > cpuScore
-            ? "userWin"
-            : userScore < cpuScore
-                ? "cpuWin"
-                : "draw";
-        await battleRef.update({
-            result,
-            finishedAt: admin.firestore.FieldValue.serverTimestamp(),
-            userScore,
-            cpuScore,
-        });
-        await db.collection("results").add({
-            battleId,
-            userId,
-            result,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        });
-        return { status: "ok", result };
-    }
-    catch (error) {
-        console.error("finishBattle error:", error);
-        throw new functions.https.HttpsError("internal", "finishBattle failed");
-    }
+        catch (err) {
+            console.error("🔥 finishBattle Error:", err);
+            res.set("Access-Control-Allow-Origin", "*");
+            res.status(500).json({ error: err.message, stack: err.stack });
+        }
+    });
 });

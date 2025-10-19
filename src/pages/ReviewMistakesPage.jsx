@@ -1,60 +1,59 @@
-// src/pages/ReviewMistakesPage.jsx
+// ------------------------------------------------------
+// src/pages/ReviewMistakesPage.jsx（2025対応版・Firebase v9統一）
+// ------------------------------------------------------
 import React, { useEffect, useState } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
-import { getFirestoreDb } from "@/fbkit";
-const db = getFirestoreDb();
-
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
+import { db } from "@/fbkit"; // ✅ ここで統一
 import { Link } from "react-router-dom";
 
 export default function ReviewMistakesPage() {
   const [mistakes, setMistakes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const [uid, setUid] = useState(null);
 
   useEffect(() => {
-    const unsubAuth = onAuthStateChanged(getAuth(), (u) => setUser(u));
-    return () => unsubAuth();
+    const auth = getAuth();
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setUid(user ? user.uid : null);
+    });
+    return () => unsub();
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!uid) return;
     const q = query(
       collection(db, "mistakes"),
-      where("uid", "==", user.uid),
+      where("uid", "==", uid),
       orderBy("createdAt", "desc")
     );
+
     const unsub = onSnapshot(q, (snap) => {
       setMistakes(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setLoading(false);
     });
-    return () => unsub();
-  }, [user]);
 
-  if (loading) return <div className="p-4">読み込み中…</div>;
-  if (!mistakes.length) return <div className="p-4">間違い記録はまだありません。</div>;
+    return () => unsub();
+  }, [uid]);
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-3">❌ 間違い一覧</h2>
-      <ul className="space-y-2">
-        {mistakes.map((m) => (
-          <li
-            key={m.id}
-            className="border rounded-lg p-3 bg-white shadow-sm hover:bg-blue-50 transition"
-          >
-            <div className="text-sm text-gray-600">{m.subject}・{m.grade}</div>
-            <div className="font-semibold">{m.question}</div>
-            <div className="text-xs text-gray-400">{m.createdAt?.toDate?.().toLocaleString?.()}</div>
-            <Link
-              to={`/review/play/${m.id}`}
-              className="inline-block mt-2 text-blue-500 underline text-sm"
-            >
-              ▶ この問題を復習
-            </Link>
-          </li>
-        ))}
-      </ul>
+    <div style={{ padding: 16 }}>
+      <h1 className="text-xl font-bold mb-2">間違い問題リスト</h1>
+      {mistakes.length === 0 ? (
+        <div>間違い問題はまだありません 🎉</div>
+      ) : (
+        <ul>
+          {mistakes.map((m) => (
+            <li key={m.id} style={{ marginBottom: 8 }}>
+              <Link to={`/review/play/${m.id}`}>{m.text}</Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

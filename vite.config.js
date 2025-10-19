@@ -10,4 +10,7 @@ export default defineConfig({
       '@/fbkit': fileURLToPath(new URL('./src/fbkit', import.meta.url)),
     },
   },
+  server: {
+    host: '127.0.0.1', // ✅ ←ここで固定
+  },
 })

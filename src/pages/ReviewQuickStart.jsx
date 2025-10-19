@@ -1,7 +1,9 @@
-// src/pages/ReviewQuickStart.jsx
+// ------------------------------------------------------
+// src/pages/ReviewQuickStart.jsx（修正版・Firebase v9統一版）
+// ------------------------------------------------------
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getFirebaseAuth, getFirestoreDb } from "@/fbkit";
+import { auth, db } from "@/fbkit"; // ✅ ← ここで統一！
 import {
   collection,
   query,
@@ -42,8 +44,6 @@ function formatMMSS(ms) {
 /* -------------------- Main Component -------------------- */
 export default function ReviewQuickStart() {
   const navigate = useNavigate();
-  const auth = getFirebaseAuth();
-  const db = getFirestoreDb();
 
   const [uid, setUid] = useState(auth.currentUser?.uid ?? null);
   const [user, setUser] = useState(null);
@@ -56,7 +56,7 @@ export default function ReviewQuickStart() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => setUid(u?.uid ?? null));
     return () => unsub();
-  }, [auth]);
+  }, []);
 
   // ユーザーデータ購読
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function ReviewQuickStart() {
       setUser(snap.exists() ? { id: snap.id, ...snap.data() } : null);
     });
     return () => un && un();
-  }, [uid, db]);
+  }, [uid]);
 
   // 時間カウント（毎秒）
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function ReviewQuickStart() {
       }
     );
     return () => unsub();
-  }, [db, uid]);
+  }, [uid]);
 
   const fmt = useMemo(() => {
     try {
@@ -292,9 +292,7 @@ export default function ReviewQuickStart() {
           <div>
             lastAdHeartsAt:{" "}
             <code>
-              {lastAdAtMs
-                ? new Date(lastAdAtMs).toLocaleString()
-                : "-"}
+              {lastAdAtMs ? new Date(lastAdAtMs).toLocaleString() : "-"}
             </code>
           </div>
         </div>

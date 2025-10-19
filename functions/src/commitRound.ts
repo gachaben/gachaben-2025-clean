@@ -1,53 +1,45 @@
 // ------------------------------------------------------
-// commitRound.ts（バトル中のラウンド結果保存 / Emulator完全対応）
+// commitRound.ts（完全修正版 / CORS対応）
 // ------------------------------------------------------
 import * as admin from "firebase-admin";
 import { onRequest } from "firebase-functions/v2/https";
-import { Timestamp } from "firebase-admin/firestore";
 import cors from "cors";
+import { Timestamp } from "firebase-admin/firestore";
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+if (!admin.apps.length) admin.initializeApp();
 const db = admin.firestore();
-const corsHandler = cors({ origin: true });
+const corsHandler = cors({ origin: true, methods: ["GET", "POST", "OPTIONS"] });
 
 export const commitRound = onRequest((req, res) => {
   corsHandler(req, res, async () => {
     try {
+      if (req.method === "OPTIONS") {
+        res.set("Access-Control-Allow-Origin", "*");
+        res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        res.set("Access-Control-Allow-Headers", "Content-Type");
+        return res.status(204).send("");
+      }
+
       console.log("🎯 commitRound 呼び出し開始");
-      console.log("🧩 受信データ:", req.body);
+      const { battleId, roundData } = req.body || {};
 
-      const body = req.body || {};
-      const { battleId, round, userAnswer, cpuAnswer, winner } = body;
+      if (!battleId) throw new Error("battleId が未指定です");
 
-      if (!battleId) throw new Error("❌ battleId is required");
-
-      const createdAt = Timestamp.now();
-
-      const roundRef = await db
+      await db
         .collection("battles")
         .doc(battleId)
         .collection("rounds")
         .add({
-          round: round ?? 0,
-          userAnswer: userAnswer ?? null,
-          cpuAnswer: cpuAnswer ?? null,
-          winner: winner ?? "none",
-          createdAt,
+          ...roundData,
+          committedAt: Timestamp.now(),
         });
 
-      console.log("✅ Round saved:", roundRef.id);
-      res.status(200).json({
-        message: "Round committed ✅",
-        roundId: roundRef.id,
-      });
+      res.set("Access-Control-Allow-Origin", "*");
+      res.status(200).json({ message: "Round committed ✅" });
     } catch (err: any) {
-      console.error("🔥 commitRound Error:", err.message);
-      res.status(500).json({
-        error: err.message,
-        stack: err.stack,
-      });
+      console.error("🔥 commitRound Error:", err);
+      res.set("Access-Control-Allow-Origin", "*");
+      res.status(500).json({ error: err.message, stack: err.stack });
     }
   });
 });

@@ -1,13 +1,13 @@
 // ------------------------------------------------------
 // src/fbkit/auth.ts
-// Firebase 認証ユーティリティ
+// Firebase 認証ユーティリティ（Emulator対応・安定版）
 // ------------------------------------------------------
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
-import { getFirebaseApp } from "./app";
+import { app } from "@/fbkit/app";
 
-// ✅ サインイン確認関数（エクスポートが必要）
+// ✅ サインイン確認関数
 export async function ensureSignedIn(): Promise<User | null> {
-  const auth = getAuth(getFirebaseApp());
+  const auth = getAuth(app);
   return new Promise((resolve, reject) => {
     const unsub = onAuthStateChanged(
       auth,
@@ -20,9 +20,9 @@ export async function ensureSignedIn(): Promise<User | null> {
   });
 }
 
-// ✅ 現在のユーザーを返す補助関数
+// ✅ 現在のユーザーを返す関数
 export function getCurrentUser() {
-  const auth = getAuth(getFirebaseApp());
+  const auth = getAuth(app);
   return auth.currentUser;
 }
 

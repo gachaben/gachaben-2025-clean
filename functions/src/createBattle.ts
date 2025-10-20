@@ -1,51 +1,51 @@
 // ------------------------------------------------------
-// functions/src/createBattle.ts（v1.7b最終版）
+// functions/src/createBattle.ts（Firestore Emulator接続版・型エラー完全回避版）
 // ------------------------------------------------------
 import * as admin from "firebase-admin";
-import { onRequest } from "firebase-functions/v2/https";
-import cors from "cors";
+import * as functions from "firebase-functions";
 import { Timestamp } from "firebase-admin/firestore";
+// ✅ 型の衝突を避けるため require() を使用
+const cors = require("cors");
 
-if (!admin.apps.length) admin.initializeApp();
+if (!admin.apps.length) {
+  admin.initializeApp({
+    projectId: "gachaben-2025-clean", // ← 重要（必ず残す）
+  });
+}
+
 const db = admin.firestore();
-const corsHandler = cors({ origin: true, methods: ["GET", "POST", "OPTIONS"] });
 
-export const createBattle = onRequest((req, res) => {
+// ✅ CORS ハンドラー（localhost許可）
+const corsHandler = cors({
+  origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+});
+
+// ✅ createBattle 関数
+export const createBattle = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
     try {
-      if (req.method === "OPTIONS") {
-        res.set("Access-Control-Allow-Origin", "*");
-        res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.set("Access-Control-Allow-Headers", "Content-Type");
-        return res.status(204).send("");
-      }
+      const userId = "test-user"; // 仮のユーザーID
+      const battleRef = db.collection("battles").doc();
 
-      console.log("🎯 createBattle 呼び出し");
-
-      const { uid } = req.body || {};
-      if (!uid) throw new Error("uid が未指定です");
-
-      const ref = await db.collection("battles").add({
-        userId: uid,
+      await battleRef.set({
+        userId,
         opponentId: "cpu-normal",
         cpuLevel: "N",
         result: "pending",
         createdAt: Timestamp.now(),
       });
 
-      console.log("✅ Battle created:", ref.id);
-
-      res.set("Access-Control-Allow-Origin", "*");
       res.status(200).json({
-        message: "Battle created ✅",
-        battleId: ref.id,
+        ok: true,
+        msg: "Battle created ✅",
+        battleId: battleRef.id,
       });
-    } catch (err: any) {
-      console.error("🔥 createBattle Error:", err);
-      res.set("Access-Control-Allow-Origin", "*");
+    } catch (error: any) {
       res.status(500).json({
-        error: err.message,
-        stack: err.stack,
+        error: error.message,
+        stack: error.stack,
       });
     }
   });

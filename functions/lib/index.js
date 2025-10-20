@@ -32,48 +32,28 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.finishBattle = exports.commitRound = exports.createBattle = void 0;
+exports.pingFn = exports.finishBattleFn = exports.commitRoundFn = exports.createBattleFn = void 0;
 // ------------------------------------------------------
-// functions/src/index.ts
-// Emulator CORS対応 完全版（最終）
+// functions/src/index.ts（2025安定版）
 // ------------------------------------------------------
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
-const cors_1 = __importDefault(require("cors"));
-admin.initializeApp();
-// ✅ 全オリジン許可（localhost:5173などOK）
-const corsHandler = (0, cors_1.default)({
-    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
+const createBattle_1 = require("./createBattle");
+const commitRound_1 = require("./commitRound");
+const finishBattle_1 = require("./finishBattle");
+// ✅ Firebase Admin SDK 初期化
+if (!admin.apps.length) {
+    admin.initializeApp();
+    console.log("✅ Firebase Admin initialized");
+}
+const cors_1 = require("./cors");
+// ✅ 各エンドポイント登録
+exports.createBattleFn = functions.https.onRequest((0, cors_1.allowCORS)(createBattle_1.createBattle));
+exports.commitRoundFn = functions.https.onRequest((0, cors_1.allowCORS)(commitRound_1.commitRound));
+exports.finishBattleFn = functions.https.onRequest((0, cors_1.allowCORS)(finishBattle_1.finishBattle));
+// ✅ 動作確認用 ping 関数
+exports.pingFn = functions.https.onRequest((req, res) => {
+    res.status(200).json({ ok: true, when: Date.now() });
 });
-// ✅ createBattle
-exports.createBattle = functions.https.onRequest((req, res) => {
-    corsHandler(req, res, async () => {
-        try {
-            res.set("Access-Control-Allow-Origin", "*");
-            res.status(200).json({ ok: true, msg: "createBattle success (CORS OK)" });
-        }
-        catch (err) {
-            console.error("createBattle error:", err);
-            res.status(500).json({ error: err.message });
-        }
-    });
-});
-// ✅ commitRound
-exports.commitRound = functions.https.onRequest((req, res) => {
-    corsHandler(req, res, async () => {
-        res.json({ ok: true, msg: "commitRound OK" });
-    });
-});
-// ✅ finishBattle
-exports.finishBattle = functions.https.onRequest((req, res) => {
-    corsHandler(req, res, async () => {
-        res.json({ ok: true, msg: "finishBattle OK" });
-    });
-});
+console.log("[FUNCTIONS] index.ts initialized (v1 / admin + CORS)");

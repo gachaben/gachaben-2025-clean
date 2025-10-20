@@ -32,55 +32,51 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createBattle = void 0;
 // ------------------------------------------------------
-// functions/src/createBattle.ts（v1.7b最終版）
+// functions/src/createBattle.ts（Firestore Emulator接続版・型エラー完全回避版）
 // ------------------------------------------------------
 const admin = __importStar(require("firebase-admin"));
-const https_1 = require("firebase-functions/v2/https");
-const cors_1 = __importDefault(require("cors"));
+const functions = __importStar(require("firebase-functions"));
 const firestore_1 = require("firebase-admin/firestore");
-if (!admin.apps.length)
-    admin.initializeApp();
+// ✅ 型の衝突を避けるため require() を使用
+const cors = require("cors");
+if (!admin.apps.length) {
+    admin.initializeApp({
+        projectId: "gachaben-2025-clean", // ← 重要（必ず残す）
+    });
+}
 const db = admin.firestore();
-const corsHandler = (0, cors_1.default)({ origin: true, methods: ["GET", "POST", "OPTIONS"] });
-exports.createBattle = (0, https_1.onRequest)((req, res) => {
+// ✅ CORS ハンドラー（localhost許可）
+const corsHandler = cors({
+    origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+});
+// ✅ createBattle 関数
+exports.createBattle = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
         try {
-            if (req.method === "OPTIONS") {
-                res.set("Access-Control-Allow-Origin", "*");
-                res.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-                res.set("Access-Control-Allow-Headers", "Content-Type");
-                return res.status(204).send("");
-            }
-            console.log("🎯 createBattle 呼び出し");
-            const { uid } = req.body || {};
-            if (!uid)
-                throw new Error("uid が未指定です");
-            const ref = await db.collection("battles").add({
-                userId: uid,
+            const userId = "test-user"; // 仮のユーザーID
+            const battleRef = db.collection("battles").doc();
+            await battleRef.set({
+                userId,
                 opponentId: "cpu-normal",
                 cpuLevel: "N",
                 result: "pending",
                 createdAt: firestore_1.Timestamp.now(),
             });
-            console.log("✅ Battle created:", ref.id);
-            res.set("Access-Control-Allow-Origin", "*");
             res.status(200).json({
-                message: "Battle created ✅",
-                battleId: ref.id,
+                ok: true,
+                msg: "Battle created ✅",
+                battleId: battleRef.id,
             });
         }
-        catch (err) {
-            console.error("🔥 createBattle Error:", err);
-            res.set("Access-Control-Allow-Origin", "*");
+        catch (error) {
             res.status(500).json({
-                error: err.message,
-                stack: err.stack,
+                error: error.message,
+                stack: error.stack,
             });
         }
     });

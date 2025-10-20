@@ -32,57 +32,46 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.commitRound = void 0;
 // ------------------------------------------------------
-// functions/src/commitRound.ts（v1.7b対応・PW撤廃）
+// functions/src/commitRound.ts（Firestore Emulator完全対応版）
 // ------------------------------------------------------
 const admin = __importStar(require("firebase-admin"));
-const https_1 = require("firebase-functions/v2/https");
-const cors_1 = __importDefault(require("cors"));
-const firestore_1 = require("firebase-admin/firestore");
-if (!admin.apps.length)
-    admin.initializeApp();
-const db = admin.firestore();
-const corsHandler = (0, cors_1.default)({ origin: true, methods: ["POST", "OPTIONS"] });
-exports.commitRound = (0, https_1.onRequest)((req, res) => {
-    corsHandler(req, res, async () => {
-        try {
-            if (req.method === "OPTIONS") {
-                res.set("Access-Control-Allow-Origin", "*");
-                return res.status(204).send("");
-            }
-            const { battleId, round, correct, time } = req.body || {};
-            if (!battleId)
-                throw new Error("battleId が未指定です");
-            const ref = db.collection("battles").doc(battleId);
-            const snap = await ref.get();
-            if (!snap.exists)
-                throw new Error("該当バトルが存在しません");
-            const data = snap.data() || {};
-            const newNoteProgress = (data.noteProgress || 0) + (correct ? 1 : 0);
-            await ref.update({
-                rounds: admin.firestore.FieldValue.arrayUnion({
-                    round,
-                    correct: !!correct,
-                    time: time ?? null,
-                }),
-                noteProgress: newNoteProgress,
-                updatedAt: firestore_1.Timestamp.now(),
-            });
-            res.set("Access-Control-Allow-Origin", "*");
-            res.status(200).json({
-                message: "Round committed ✅",
-                newNoteProgress,
-            });
-        }
-        catch (err) {
-            console.error("🔥 commitRound Error:", err);
-            res.set("Access-Control-Allow-Origin", "*");
-            res.status(500).json({ error: err.message });
-        }
+const functions = __importStar(require("firebase-functions"));
+const firestore_1 = require("firebase-admin/firestore"); // ✅ ← ここ重要
+if (!admin.apps.length) {
+    admin.initializeApp({
+        projectId: "gachaben-2025-clean",
     });
+}
+const db = admin.firestore();
+// ✅ commitRound 関数
+exports.commitRound = functions.https.onRequest(async (req, res) => {
+    try {
+        const { battleId, roundData } = req.body;
+        if (!battleId)
+            throw new Error("battleId が未指定です");
+        const battleRef = db.collection("battles").doc(battleId);
+        const snap = await battleRef.get();
+        if (!snap.exists)
+            throw new Error("指定されたバトルが存在しません");
+        // ✅ arrayUnion を直接 import から呼ぶ（admin.firestore 経由だと undefined になることがある）
+        await battleRef.update({
+            rounds: firestore_1.FieldValue.arrayUnion(roundData || { result: "test" }),
+            updatedAt: firestore_1.Timestamp.now(),
+        });
+        res.status(200).json({
+            ok: true,
+            msg: "Round committed ✅",
+            battleId,
+        });
+    }
+    catch (error) {
+        console.error("commitRound error:", error);
+        res.status(500).json({
+            error: error.message,
+            stack: error.stack,
+        });
+    }
 });

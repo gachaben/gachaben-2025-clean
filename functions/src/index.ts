@@ -1,45 +1,28 @@
 // ------------------------------------------------------
-// functions/src/index.ts
-// Emulator CORS対応 完全版（最終）
+// functions/src/index.ts（2025安定版）
 // ------------------------------------------------------
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import cors from "cors";
+import { createBattle } from "./createBattle";
+import { commitRound } from "./commitRound";
+import { finishBattle } from "./finishBattle";
 
-admin.initializeApp();
+// ✅ Firebase Admin SDK 初期化
+if (!admin.apps.length) {
+  admin.initializeApp();
+  console.log("✅ Firebase Admin initialized");
+}
 
-// ✅ 全オリジン許可（localhost:5173などOK）
-const corsHandler = cors({
-  origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
+import { allowCORS } from "./cors";
+
+// ✅ 各エンドポイント登録
+export const createBattleFn = functions.https.onRequest(allowCORS(createBattle));
+export const commitRoundFn = functions.https.onRequest(allowCORS(commitRound));
+export const finishBattleFn = functions.https.onRequest(allowCORS(finishBattle));
+
+// ✅ 動作確認用 ping 関数
+export const pingFn = functions.https.onRequest((req, res) => {
+  res.status(200).json({ ok: true, when: Date.now() });
 });
 
-// ✅ createBattle
-export const createBattle = functions.https.onRequest((req, res) => {
-  corsHandler(req, res, async () => {
-    try {
-      res.set("Access-Control-Allow-Origin", "*");
-  
-      res.status(200).json({ ok: true, msg: "createBattle success (CORS OK)" });
-    } catch (err: any) {
-      console.error("createBattle error:", err);
-      res.status(500).json({ error: err.message });
-    }
-  });
-});
-
-// ✅ commitRound
-export const commitRound = functions.https.onRequest((req, res) => {
-  corsHandler(req, res, async () => {
-    res.json({ ok: true, msg: "commitRound OK" });
-  });
-});
-
-// ✅ finishBattle
-export const finishBattle = functions.https.onRequest((req, res) => {
-  corsHandler(req, res, async () => {
-    res.json({ ok: true, msg: "finishBattle OK" });
-  });
-});
+console.log("[FUNCTIONS] index.ts initialized (v1 / admin + CORS)");

@@ -9,20 +9,12 @@
   "storage": {
     "rules": "storage.rules"
   },
-  "hosting": {
-    "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ]
-  },
   "emulators": {
     "functions": {
       "port": 5002
     },
     "firestore": {
-      "port": 8088
+      "port": 8089
     },
     "auth": {
       "port": 9099
@@ -35,6 +27,5 @@
       "port": 4001
     },
     "singleProjectMode": true
-  },
-  "project": "gachaben-2025-clean"
+  }
 }

@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db } from "@/fbkit"; // ✅ 新版の fbkit を使う
 import AdRewardModal from "../components/ui/AdRewardModal";
 import { motion } from "framer-motion";
 

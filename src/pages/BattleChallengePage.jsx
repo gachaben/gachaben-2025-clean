@@ -1,6 +1,7 @@
 // ------------------------------------------------------
-// 🎵 BattleChallengePage.jsx（v3.1：バトル券制＋問題ごとのDP加算を廃止）
-// DPは結果画面でのみ付与（勝10/負5）
+// 🎵 BattleChallengePage.jsx（v4.0：Firebase連携版）
+// ✅ createBattle / commitRound / finishBattle 統合
+// ✅ バトル券チェック後 → Firestore記録付きバトル開始
 // ------------------------------------------------------
 
 import React, { useState, useEffect, useRef } from "react";
@@ -16,7 +17,22 @@ import NoteBurst from "@/components/ui/NoteBurst";
 import NoteTrackBattle from "@/components/ui/NoteTrackBattle";
 import useCardManager from "@/hooks/useCardManager";
 import RankUpModal from "@/components/ui/RankUpModal";
-import { consumeTicket } from "@/utils/useTickets"; // 🎫
+import { consumeTicket } from "@/utils/useTickets";
+
+import { app } from "@/fbkit/app";
+import {
+  getFunctions,
+  httpsCallable,
+  connectFunctionsEmulator,
+} from "firebase/functions";
+
+// ✅ Emulator接続（5002）
+const functions = getFunctions(app);
+connectFunctionsEmulator(functions, "localhost", 5002);
+
+const createBattleFn = httpsCallable(functions, "createBattleFn");
+const commitRoundFn = httpsCallable(functions, "commitRoundFn");
+const finishBattleFn = httpsCallable(functions, "finishBattleFn");
 
 export default function BattleChallengePage({ user }) {
   const auth = getAuth();
@@ -33,6 +49,7 @@ export default function BattleChallengePage({ user }) {
   const { cards, useCard, applyEffect, resetCards } = useCardManager();
 
   const startedRef = useRef(false);
+  const [battleId, setBattleId] = useState(null);
 
   // 🧠 Firestore 出題
   const fetchQuestion = async (lv) => {
@@ -65,7 +82,7 @@ export default function BattleChallengePage({ user }) {
     }
   };
 
-  // 🎮 入場時：バトル券消費
+  // 🎮 入場時：バトル券チェック＋Firebaseバトル作成
   useEffect(() => {
     const startBattle = async () => {
       if (startedRef.current) return;
@@ -78,15 +95,33 @@ export default function BattleChallengePage({ user }) {
         return;
       }
 
-      console.log("🎫 バトル券消費完了 → 出題開始");
-      fetchQuestion(level);
+      try {
+        // ✅ Firebaseでバトル作成
+        const res = await createBattleFn({});
+        console.log("🎯 createBattle:", res.data);
+        setBattleId(res.data.battleId);
+        console.log("🎫 バトル券消費完了 → 出題開始");
+        fetchQuestion(level);
+      } catch (err) {
+        console.error("❌ createBattleFn失敗:", err);
+        alert("バトル開始時にエラーが発生しました。");
+      }
     };
     startBattle();
   }, []);
 
-  // 🎯 回答処理（※ここではDPを付与しない）
+  // 🎯 回答処理（commitRoundFn 連携）
   const handleAnswer = async (isCorrect, lv) => {
     try {
+      if (battleId) {
+        await commitRoundFn({
+          battleId,
+          round: progress + 1,
+          result: isCorrect ? "correct" : "wrong",
+        });
+        console.log(`✅ commitRoundFn: Round ${progress + 1}`, isCorrect);
+      }
+
       if (isCorrect) {
         const add = (lv === 1 ? 1 : lv === 2 ? 2 : 3) + bonus;
         setBonus(0);
@@ -103,14 +138,24 @@ export default function BattleChallengePage({ user }) {
     }
   };
 
-  // 🎵 7音達成時 → 結果画面
+  // 🎵 7音達成時 → 結果画面＋finishBattleFn
   useEffect(() => {
-    if (progress >= 7) {
-      resetCards();
-      console.log("🎯 バトルクリア → 結果画面へ遷移します");
-      setTimeout(() => {
-        navigate(`/battle/result?result=win&score=${progress}`);
-      }, 1000);
+    if (progress >= 7 && battleId) {
+      const finish = async () => {
+        try {
+          await finishBattleFn({ battleId });
+          console.log("🏁 finishBattleFn 完了:", battleId);
+        } catch (err) {
+          console.error("❌ finishBattleFn失敗:", err);
+        } finally {
+          resetCards();
+          console.log("🎯 バトルクリア → 結果画面へ遷移します");
+          setTimeout(() => {
+            navigate(`/battle/result?result=win&score=${progress}`);
+          }, 1000);
+        }
+      };
+      finish();
     }
   }, [progress]);
 
@@ -125,9 +170,13 @@ export default function BattleChallengePage({ user }) {
 
   const closeRankModal = () => setModal({ show: false, old: "", new: "" });
 
+  // 🖼️ UI部
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-gradient-to-b from-indigo-50 to-white relative pt-10 pb-[240px]">
-      <div className="fixed left-0 w-full flex justify-center z-[100000]" style={{ bottom: "40px" }}>
+      <div
+        className="fixed left-0 w-full flex justify-center z-[100000]"
+        style={{ bottom: "40px" }}
+      >
         <NoteTrackBattle progress={progress} />
       </div>
 
@@ -148,23 +197,24 @@ export default function BattleChallengePage({ user }) {
       )}
 
       {!showRevive && (
-        <div className="fixed left-0 w-full flex justify-center z=[9999]" style={{ bottom: "160px" }}>
+        <div
+          className="fixed left-0 w-full flex justify-center z=[9999]"
+          style={{ bottom: "160px" }}
+        >
           <CardBar cards={cards} onUse={handleUseCard} />
         </div>
       )}
 
       {showRevive && (
         <ReviveModal
-  onRevive={() => setShowRevive(false)} // ❤️ 復活カードで続行
-  onClose={() => {
-    // ❌ 復活カードなし or やめる → 負け確定
-    setShowRevive(false);
-    setProgress(0);
-    navigate(`/battle/result?result=lose`);
-  }}
-  hasReviveCard={cards.some((c) => c.id === "revive" && !c.used)}
-/>
-
+          onRevive={() => setShowRevive(false)} // ❤️ 復活カードで続行
+          onClose={() => {
+            setShowRevive(false);
+            setProgress(0);
+            navigate(`/battle/result?result=lose`);
+          }}
+          hasReviveCard={cards.some((c) => c.id === "revive" && !c.used)}
+        />
       )}
 
       <RankUpModal

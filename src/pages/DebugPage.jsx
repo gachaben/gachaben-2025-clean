@@ -1,109 +1,72 @@
 // ------------------------------------------------------
-// src/pages/DebugPage.jsx（v1.7b デバッグ）
-// Firebase Functions（createBattle / commitRound / finishBattle）
+// src/pages/DebugPage.jsx（commit / finish対応・完全動作版）
 // ------------------------------------------------------
 import React, { useState } from "react";
 
 export default function DebugPage() {
-  const [result, setResult] = useState("結果がここに表示されます");
-  const [battleId, setBattleId] = useState("");
+  const [battleId, setBattleId] = useState(null);
+  const [result, setResult] = useState("");
 
-  // ✅ 共通 fetch ヘルパー
-  const callFunction = async (name, payload) => {
+  // ✅ テスト用固定UID（Auth Emulator用）
+  const TEST_UID = "test-user";
+
+  const baseURL = "http://localhost:5002/gachaben-2025/us-central1";
+
+  // 共通Fetch関数
+  const callFunction = async (endpoint, body = {}) => {
     try {
-      const res = await fetch(
-        `http://127.0.0.1:5002/gachaben-2025-clean/us-central1/${name}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
+      const res = await fetch(`${baseURL}/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: TEST_UID, battleId, ...body }), // ← battleIdも常に送る！
+      });
       const data = await res.json();
+      console.log(`[${endpoint}]`, data);
       setResult(JSON.stringify(data, null, 2));
-      if (data.battleId) setBattleId(data.battleId);
+
+      // ✅ createBattle 成功時 → battleIdを保存
+      if (endpoint === "createBattleFn" && data.battleId) {
+        setBattleId(data.battleId);
+      }
     } catch (err) {
-      console.error(err);
-      setResult(err.message);
+      setResult(JSON.stringify({ error: err.message }));
     }
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1>⚙️ Debug Dashboard</h1>
+    <div style={{ padding: "2rem" }}>
+      <h2>🧩 Debug Dashboard</h2>
+      <p>現在の battleId：{battleId ?? "ー"}</p>
 
-      <p style={{ marginTop: 8 }}>
-        現在の battleId：{" "}
-        {battleId ? (
-          <a href="#" onClick={(e) => e.preventDefault()}>
-            {battleId}
-          </a>
-        ) : (
-          "—"
-        )}
-      </p>
-
-      <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
-        {/* ✅ createBattle */}
+      <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
         <button
-          onClick={() => callFunction("createBattle", { uid: "demo-user-001" })}
-          style={{
-            background: "#4ea5ff",
-            color: "#fff",
-            padding: "8px 16px",
-            borderRadius: 6,
-          }}
+          style={{ background: "#3b82f6", color: "white", padding: "1rem" }}
+          onClick={() => callFunction("createBattleFn")}
         >
-          ▶ createBattle 実行
+          🌀 createBattle 実行
         </button>
 
-        {/* ✅ commitRound */}
         <button
-          onClick={() =>
-            callFunction("commitRound", {
-              battleId,
-              round: 1,
-              correct: true,
-            })
-          }
-          style={{
-            background: "#4caf50",
-            color: "#fff",
-            padding: "8px 16px",
-            borderRadius: 6,
-          }}
-          disabled={!battleId}
+          style={{ background: "#10b981", color: "white", padding: "1rem" }}
+          onClick={() => callFunction("commitRoundFn")}
         >
-          🌀 commitRound 実行
+          🔵 commitRound 実行
         </button>
 
-        {/* ✅ finishBattle */}
         <button
-          onClick={() =>
-            callFunction("finishBattle", {
-              battleId,
-              result: "win",
-              userId: "demo-user-001", // ✅ DP加算のために送信
-            })
-          }
-          style={{
-            background: "#e53935",
-            color: "#fff",
-            padding: "8px 16px",
-            borderRadius: 6,
-          }}
-          disabled={!battleId}
+          style={{ background: "#ef4444", color: "white", padding: "1rem" }}
+          onClick={() => callFunction("finishBattleFn")}
         >
-          🔥 finishBattle 実行
+          🔴 finishBattle 実行
         </button>
       </div>
 
       <pre
         style={{
-          background: "#fafafa",
-          marginTop: 20,
-          padding: 12,
-          borderRadius: 8,
+          marginTop: "1rem",
+          background: "#111",
+          color: "#0f0",
+          padding: "1rem",
         }}
       >
         {result}

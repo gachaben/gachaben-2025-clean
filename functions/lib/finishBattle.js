@@ -34,30 +34,34 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.finishBattle = void 0;
-// ------------------------------------------------------
-// functions/src/finishBattle.ts（2025安定版）
-// ------------------------------------------------------
+const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
-// ✅ Firestore インスタンス
+if (!admin.apps.length)
+    admin.initializeApp();
 const db = admin.firestore();
-const finishBattle = async (req, res) => {
+exports.finishBattle = functions.https.onRequest(async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+        res.status(204).end();
+        return;
+    }
     try {
-        const { battleId } = req.body;
-        if (!battleId)
-            throw new Error("battleId が未指定です");
-        await db.collection("battles").doc(battleId).update({
-            result: "finished",
-            finishedAt: new Date().toISOString(),
-        });
+        console.log("[finishBattle] received:", req.body);
         res.status(200).json({
             ok: true,
-            msg: "Battle finished",
-            battleId,
+            msg: "finishBattle OK (placeholder)",
+            received: req.body,
+            time: Date.now(),
         });
     }
-    catch (error) {
-        console.error("🔥 finishBattle error:", error);
-        res.status(500).json({ error: error.message, stack: error.stack });
+    catch (err) {
+        console.error("[finishBattle] Error:", err);
+        res.status(500).json({
+            ok: false,
+            msg: "Internal Server Error",
+            error: err instanceof Error ? err.message : String(err),
+        });
     }
-};
-exports.finishBattle = finishBattle;
+});

@@ -1,52 +1,42 @@
-// ------------------------------------------------------
-// functions/src/createBattle.ts（Firestore Emulator接続版・型エラー完全回避版）
-// ------------------------------------------------------
 import * as admin from "firebase-admin";
-import * as functions from "firebase-functions";
-import { Timestamp } from "firebase-admin/firestore";
-// ✅ 型の衝突を避けるため require() を使用
-const cors = require("cors");
+import { Request, Response } from "express";
 
 if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: "gachaben-2025-clean", // ← 重要（必ず残す）
-  });
+  admin.initializeApp();
 }
-
 const db = admin.firestore();
 
-// ✅ CORS ハンドラー（localhost許可）
-const corsHandler = cors({
-  origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-});
-
-// ✅ createBattle 関数
-export const createBattle = functions.https.onRequest((req, res) => {
-  corsHandler(req, res, async () => {
-    try {
-      const userId = "test-user"; // 仮のユーザーID
-      const battleRef = db.collection("battles").doc();
-
-      await battleRef.set({
-        userId,
-        opponentId: "cpu-normal",
-        cpuLevel: "N",
-        result: "pending",
-        createdAt: Timestamp.now(),
-      });
-
-      res.status(200).json({
-        ok: true,
-        msg: "Battle created ✅",
-        battleId: battleRef.id,
-      });
-    } catch (error: any) {
-      res.status(500).json({
-        error: error.message,
-        stack: error.stack,
-      });
+export const createBattle = async (req: Request, res: Response) => {
+  try {
+    const { uid } = req.body;
+    if (!uid) {
+      res.status(400).json({ ok: false, msg: "uid missing" });
+      return;
     }
-  });
-});
+
+    // ✅ Timestampを確実に取得
+    const battleRef = db.collection("battles").doc();
+    const battleData = {
+      battleId: battleRef.id,
+      uid,
+      createdAt: new Date(), // ← ← ← 一旦これでOK！（Timestamp.now()の代替）
+      status: "waiting",
+    };
+
+    await battleRef.set(battleData);
+
+    res.status(200).json({
+      ok: true,
+      msg: "createBattle OK",
+      battleId: battleRef.id,
+      time: Date.now(),
+    });
+  } catch (err) {
+    console.error("[createBattleFn] Error:", err);
+    res.status(500).json({
+      ok: false,
+      msg: "Internal Server Error",
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+};

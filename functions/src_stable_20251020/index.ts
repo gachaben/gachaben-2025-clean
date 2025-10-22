@@ -12,10 +12,11 @@ if (!admin.apps.length) {
   admin.initializeApp();
   console.log("✅ Firebase Admin initialized");
 }
+import { allowCORS } from "../src/corsHelper";
 
-import { allowCORS } from "./cors";
 
-// ✅ 各エンドポイント登録
+
+
 export const createBattleFn = functions.https.onRequest(allowCORS(createBattle));
 export const commitRoundFn = functions.https.onRequest(allowCORS(commitRound));
 export const finishBattleFn = functions.https.onRequest(allowCORS(finishBattle));

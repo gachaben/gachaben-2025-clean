@@ -35,25 +35,50 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.pingFn = exports.finishBattleFn = exports.commitRoundFn = exports.createBattleFn = void 0;
 // ------------------------------------------------------
-// functions/src/index.ts（2025安定版）
+// functions/src/index.ts（CORS完全動作版）
 // ------------------------------------------------------
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const createBattle_1 = require("./createBattle");
 const commitRound_1 = require("./commitRound");
 const finishBattle_1 = require("./finishBattle");
-// ✅ Firebase Admin SDK 初期化
 if (!admin.apps.length) {
     admin.initializeApp();
     console.log("✅ Firebase Admin initialized");
 }
-const cors_1 = require("./cors");
-// ✅ 各エンドポイント登録
-exports.createBattleFn = functions.https.onRequest((0, cors_1.allowCORS)(createBattle_1.createBattle));
-exports.commitRoundFn = functions.https.onRequest((0, cors_1.allowCORS)(commitRound_1.commitRound));
-exports.finishBattleFn = functions.https.onRequest((0, cors_1.allowCORS)(finishBattle_1.finishBattle));
-// ✅ 動作確認用 ping 関数
-exports.pingFn = functions.https.onRequest((req, res) => {
-    res.status(200).json({ ok: true, when: Date.now() });
+// ✅ 共通CORS処理関数
+function handleCORS(req, res) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+        res.status(204).end();
+        return true;
+    }
+    return false;
+}
+// ✅ createBattleFn
+exports.createBattleFn = functions.https.onRequest((req, res) => {
+    if (handleCORS(req, res))
+        return;
+    return (0, createBattle_1.createBattle)(req, res);
 });
-console.log("[FUNCTIONS] index.ts initialized (v1 / admin + CORS)");
+// ✅ commitRoundFn
+exports.commitRoundFn = functions.https.onRequest((req, res) => {
+    if (handleCORS(req, res))
+        return;
+    return (0, commitRound_1.commitRound)(req, res);
+});
+// ✅ finishBattleFn
+exports.finishBattleFn = functions.https.onRequest((req, res) => {
+    if (handleCORS(req, res))
+        return;
+    return (0, finishBattle_1.finishBattle)(req, res);
+});
+// ✅ pingFn
+exports.pingFn = functions.https.onRequest((req, res) => {
+    if (handleCORS(req, res))
+        return;
+    res.status(200).json({ ok: true, msg: "pong", time: Date.now() });
+});
+console.log("[FUNCTIONS] index.ts initialized (CORS OK)");

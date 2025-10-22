@@ -1,11 +1,15 @@
+// ------------------------------------------------------
+// ⚔️ BattlePage_stable_20251020.jsx（旧バトル画面・保存版）
+// ------------------------------------------------------
+
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ItemCard from "../components/ItemCard";
 
-const BattlePage = () => {
+const BattlePageStable = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { enemy, questionCount } = state || {};
+  const { enemy = "CPU", questionCount = 3 } = state || {};
 
   const [selectedItem, setSelectedItem] = useState(null);
   const [currentRound, setCurrentRound] = useState(1);
@@ -15,10 +19,9 @@ const BattlePage = () => {
   const [battleLog, setBattleLog] = useState([]);
   const [question, setQuestion] = useState(null);
 
-  // ✁EselectedItem めEstate からマ�Eジして保持
+  // ✅ selectedItem マージ処理
   useEffect(() => {
     if (!state?.selectedItem) return;
-
     const raw = state.selectedItem;
     const merged = {
       ...raw,
@@ -26,30 +29,26 @@ const BattlePage = () => {
       cpt: raw.cpt ?? 0,
       bpt: raw.bpt ?? 0,
     };
-
     setSelectedItem(merged);
-
-    console.log("selectedItemの中身�E�EattlePage�E�E", merged);
-    console.log("攻撁E�� (cpt)�E�E, merged.cpt || 0);
-    console.log("防御劁E(bpt)�E�E, merged.bpt || 0);
+    console.log("[BattlePage] selectedItem:", merged);
   }, [state]);
 
-  // ✁E問題データ�E�例！E
+  // ✅ サンプル問題
   const allQuestions = [
     {
-      text: "カブトムシの幼虫が食べるものは�E�E,
-      options: ["木の葁E, "腐葉圁E, "果物"],
-      answer: "腐葉圁E,
+      text: "カブトムシの幼虫が食べるものは？",
+      options: ["木の皮", "腐葉土", "果物"],
+      answer: "腐葉土",
     },
     {
-      text: "セミ�E鳴き声は�E�E,
-      options: ["ミ�Eンミ�Eン", "チュンチュン", "ケロケロ"],
-      answer: "ミ�Eンミ�Eン",
+      text: "セミの鳴き声は？",
+      options: ["ミーンミーン", "チュンチュン", "ケロケロ"],
+      answer: "ミーンミーン",
     },
     {
-      text: "トンボ�E羽はぁE��つ�E�E,
-      options: ["2极E, "4极E, "6极E],
-      answer: "4极E,
+      text: "トンボの羽は何枚？",
+      options: ["2枚", "4枚", "6枚"],
+      answer: "4枚",
     },
   ];
 
@@ -57,19 +56,19 @@ const BattlePage = () => {
     setQuestion(allQuestions[(currentRound - 1) % allQuestions.length]);
   }, [currentRound]);
 
+  // ✅ 回答処理
   const handleAnswer = (option) => {
     if (!selectedPw || !question) return;
-
     const correct = option === question.answer;
     const log = correct
-      ? `✁E正解�E�E{selectedPw}PW刁E相手にダメージ�E�`
-      : `❁E不正解…攻撁E��きなかった`;
+      ? `✅ 正解！${selectedPw}PWで相手にダメージ！`
+      : `❌ 不正解…攻撃できなかった`;
 
     if (correct) {
       setEnemyTotalPw((prev) => Math.max(prev - selectedPw, 0));
     }
 
-    setBattleLog((prev) => [...prev, `Round ${currentRound}�E�E{log}`]);
+    setBattleLog((prev) => [...prev, `Round ${currentRound}: ${log}`]);
 
     if (currentRound < questionCount) {
       setCurrentRound((prev) => prev + 1);
@@ -77,10 +76,7 @@ const BattlePage = () => {
     } else {
       setTimeout(() => {
         navigate("/battle/result", {
-          state: {
-            myTotalPw,
-            enemyTotalPw,
-          },
+          state: { myTotalPw, enemyTotalPw },
         });
       }, 1000);
     }
@@ -90,7 +86,7 @@ const BattlePage = () => {
     return (
       <div className="min-h-screen bg-yellow-100 flex flex-col items-center justify-center p-4">
         <p className="text-xl font-bold text-red-600 mb-4">
-          ⚠�E�Eキャラが選ばれてぁE��せん
+          ⚠️ キャラが選ばれていません
         </p>
         <button
           className="px-4 py-2 bg-blue-500 text-white rounded shadow"
@@ -122,32 +118,30 @@ const BattlePage = () => {
       </h1>
 
       <p className="text-center text-lg mb-2">
-        🧁EあなぁEvs 👑 {enemy}
+        🧁 あなた vs 👑 {enemy}
       </p>
 
       <div className="flex justify-center items-center mb-4 gap-4 flex-wrap">
-        {renderGauge("🧁EあなぁE, myTotalPw, 500, "bg-blue-400")}
+        {renderGauge("🧁 あなた", myTotalPw, 500, "bg-blue-400")}
         <span className="font-bold">VS</span>
         {renderGauge(`👑 ${enemy}`, enemyTotalPw, 500, "bg-purple-400")}
       </div>
 
-      {/* アイチE��カード表示 */}
       <div className="flex justify-center my-4">
         <ItemCard item={selectedItem} owned={true} />
       </div>
 
       <div className="text-center text-sm text-gray-700 mb-4">
         <p>
-          🥁E<span className="font-bold text-red-500">攻撁E���E�E/span>{selectedItem.cpt ?? 0}　
-          💪 <span className="font-bold text-blue-500">防御力！E/span>{selectedItem.bpt ?? 0}
+          🥊 攻撃力: <span className="font-bold text-red-500">{selectedItem.cpt ?? 0}</span>　
+          💪 防御力: <span className="font-bold text-blue-500">{selectedItem.bpt ?? 0}</span>
         </p>
       </div>
 
-      {/* ✁EPW選択�Eタン�E�questionがなくても表示 */}
       {!selectedPw && (
         <>
           <p className="text-center text-blue-800 font-bold mb-2">
-            あなた�Eターン�E�まぁEPW を選んでください
+            あなたのターン！PWを選んでください
           </p>
           <div className="flex justify-center mb-4 flex-wrap gap-2">
             {[100, 200, 300, 400, 500].map((pw) => (
@@ -167,7 +161,6 @@ const BattlePage = () => {
         </>
       )}
 
-      {/* ✁E問題と選択肢�E�EW選択後に表示�E�E*/}
       {selectedPw && question && (
         <div className="text-center mb-4">
           <p className="text-lg font-semibold mb-2">{question.text}</p>
@@ -186,7 +179,7 @@ const BattlePage = () => {
       )}
 
       <div className="mt-6 bg-white rounded p-4 shadow">
-        <h2 className="font-bold mb-2">📜 バトルログ�E�E/h2>
+        <h2 className="font-bold mb-2">📜 バトルログ</h2>
         {battleLog.map((log, idx) => (
           <p key={idx} className="text-sm">
             {log}
@@ -197,4 +190,4 @@ const BattlePage = () => {
   );
 };
 
-export default BattlePage;
+export default BattlePageStable;

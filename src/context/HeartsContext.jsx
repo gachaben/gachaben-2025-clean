@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// 💖 HeartsContext.jsx（v3.1 認証完了後購読＋安全ガード）
+// 💖 HeartsContext.jsx（v3.2-dev 認証完了後購読＋デバッグスキップ対応）
 // ------------------------------------------------------
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { doc, onSnapshot, updateDoc, increment, setDoc } from "firebase/firestore";
@@ -7,6 +7,9 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "@/fbkit";
 
 const HeartsContext = createContext();
+
+// 🔧 デバッグモード：trueならハートチェックをスキップ
+const DEBUG_MODE = true;
 
 export function HeartsProvider({ children }) {
   const [hearts, setHearts] = useState(null); // null = 未ロード
@@ -54,6 +57,12 @@ export function HeartsProvider({ children }) {
 
   // ❤️ ハート消費
   const consumeHeart = async () => {
+    // 🔧 デバッグモードなら常に成功扱い
+    if (DEBUG_MODE) {
+      console.log("🧩 DEBUG_MODE: ハートチェックをスキップ（常にOK）");
+      return true;
+    }
+
     if (!uid || hearts === null) return false;
     const ref = doc(db, "users", uid);
 

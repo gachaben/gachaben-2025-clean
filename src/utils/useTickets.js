@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// 🎫 useTickets.js（v1.6 構想準拠）
+// 🎫 useTickets.js（v1.7-dev デバッグモード対応版）
 // バトル券の取得・消費・付与ユーティリティ
 // Firestore: users/{uid}/tickets
 // ------------------------------------------------------
@@ -7,6 +7,9 @@
 import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "@/fbkit";
 import { getAuth } from "firebase/auth";
+
+// 🔧 デバッグモード：true ならバトル券チェックをスキップ
+const DEBUG_MODE = true;
 
 // 🎫 現在のバトル券枚数を取得
 export async function getTickets(uid) {
@@ -27,6 +30,12 @@ export async function getTickets(uid) {
 // 🎫 バトル券を1枚消費（入場時）
 export async function consumeTicket() {
   try {
+    // 🧩 デバッグモードでスキップ
+    if (DEBUG_MODE) {
+      console.log("🧩 DEBUG_MODE: バトル券チェックをスキップ（常にOK）");
+      return true;
+    }
+
     const auth = getAuth();
     const user = auth.currentUser;
     if (!user) return false;

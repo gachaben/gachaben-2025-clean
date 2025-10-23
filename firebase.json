@@ -27,5 +27,14 @@
       "port": 4001
     },
     "singleProjectMode": true
-  }
+  },
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  },
+  "project": "gachaben-2025"
 }

@@ -3,7 +3,7 @@ const handleCreateBattle = async () => {
 
   try {
     const res = await fetch(
-      "http://127.0.0.1:5002/gachaben-2025-clean/us-central1/createBattle",
+        "http://127.0.0.1:5002/us-central1/createBattle",
       {
         method: "POST",
         headers: {

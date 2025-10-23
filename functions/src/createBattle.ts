@@ -1,46 +1,53 @@
 // ------------------------------------------------------
-// functions/src/commitRound.ts（Firestore更新テスト版 / 型エラー修正版）
+// functions/src/createBattle.ts（完全安定版 / Timestamp修正）
 // ------------------------------------------------------
-import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
+import { Request, Response } from "express";
 
-if (!admin.apps.length) admin.initializeApp();
+// ✅ Firebase Admin 初期化
+if (!admin.apps.length) {
+  admin.initializeApp();
+  console.log("✅ Admin initialized (createBattle)");
+}
+
 const db = admin.firestore();
 
-export const commitRoundFn = functions.https.onRequest(async (req, res): Promise<void> => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return;
-  }
+// ✅ Timestamp を確実に取得
+const Timestamp = admin.firestore?.Timestamp || {
+  now: () => new Date(),
+};
 
+export const createBattle = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { battleId } = req.body;
-    if (!battleId) throw new Error("Missing battleId");
+    const { uid } = req.body;
+    if (!uid) throw new Error("Missing uid");
 
-    const ref = db.collection("battles").doc(battleId);
+    const ref = db.collection("battles").doc();
+    const battleId = ref.id;
 
-    // ✅ Firestore のドキュメントを更新
-    await ref.update({
-      status: "round-updated",
-      lastCommit: admin.firestore.Timestamp.now(),
-      updatedAt: admin.firestore.Timestamp.now(),
+    // ✅ now() が存在しない場合にも fallback する
+    const now = typeof Timestamp.now === "function" ? Timestamp.now() : new Date();
+
+    await ref.set({
+      battleId,
+      uid,
+      status: "waiting",
+      createdAt: now,
+      updatedAt: now,
+      lastCommit: now,
     });
 
-    // ✅ res.json() は戻り値ではなく “呼び出して終わり”
     res.status(200).json({
       ok: true,
-      msg: "commitRoundFn → Firestore更新成功",
+      msg: "createBattle OK",
       battleId,
     });
   } catch (err) {
-    console.error("[commitRoundFn Error]", err);
+    console.error("[createBattle Error]", err);
     res.status(500).json({
       ok: false,
-      msg: "Firestore更新失敗",
+      msg: "Firestore create failed",
       error: err instanceof Error ? err.message : String(err),
     });
   }
-});
+};

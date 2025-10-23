@@ -34,39 +34,48 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createBattle = void 0;
+// ------------------------------------------------------
+// functions/src/createBattle.ts（完全安定版 / Timestamp修正）
+// ------------------------------------------------------
 const admin = __importStar(require("firebase-admin"));
+// ✅ Firebase Admin 初期化
 if (!admin.apps.length) {
     admin.initializeApp();
+    console.log("✅ Admin initialized (createBattle)");
 }
 const db = admin.firestore();
+// ✅ Timestamp を確実に取得
+const Timestamp = admin.firestore?.Timestamp || {
+    now: () => new Date(),
+};
 const createBattle = async (req, res) => {
     try {
         const { uid } = req.body;
-        if (!uid) {
-            res.status(400).json({ ok: false, msg: "uid missing" });
-            return;
-        }
-        // ✅ Timestampを確実に取得
-        const battleRef = db.collection("battles").doc();
-        const battleData = {
-            battleId: battleRef.id,
+        if (!uid)
+            throw new Error("Missing uid");
+        const ref = db.collection("battles").doc();
+        const battleId = ref.id;
+        // ✅ now() が存在しない場合にも fallback する
+        const now = typeof Timestamp.now === "function" ? Timestamp.now() : new Date();
+        await ref.set({
+            battleId,
             uid,
-            createdAt: new Date(), // ← ← ← 一旦これでOK！（Timestamp.now()の代替）
             status: "waiting",
-        };
-        await battleRef.set(battleData);
+            createdAt: now,
+            updatedAt: now,
+            lastCommit: now,
+        });
         res.status(200).json({
             ok: true,
             msg: "createBattle OK",
-            battleId: battleRef.id,
-            time: Date.now(),
+            battleId,
         });
     }
     catch (err) {
-        console.error("[createBattleFn] Error:", err);
+        console.error("[createBattle Error]", err);
         res.status(500).json({
             ok: false,
-            msg: "Internal Server Error",
+            msg: "Firestore create failed",
             error: err instanceof Error ? err.message : String(err),
         });
     }

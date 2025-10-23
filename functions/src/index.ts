@@ -1,9 +1,9 @@
 // ------------------------------------------------------
-// functions/src/index.ts（CORS完全動作版）
+// functions/src/index.ts（完全統一版 / commitRound接続修正版）
 // ------------------------------------------------------
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import { Response } from "express";
+import { Request, Response } from "express";
 import { createBattle } from "./createBattle";
 import { commitRound } from "./commitRound";
 import { finishBattle } from "./finishBattle";
@@ -13,11 +13,17 @@ if (!admin.apps.length) {
   console.log("✅ Firebase Admin initialized");
 }
 
-// ✅ 共通CORS処理関数
-function handleCORS(req: functions.https.Request, res: Response) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// ✅ CORS設定
+function handleCORS(req: Request, res: Response): boolean {
+  const allowedOrigins = ["http://127.0.0.1:5173", "http://localhost:5173"];
+  const origin = req.headers.origin || "http://127.0.0.1:5173";
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    allowedOrigins.includes(origin) ? origin : "*"
+  );
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
 
   if (req.method === "OPTIONS") {
     res.status(204).end();
@@ -32,7 +38,7 @@ export const createBattleFn = functions.https.onRequest((req, res) => {
   return createBattle(req, res);
 });
 
-// ✅ commitRoundFn
+// ✅ commitRoundFn（← ここが最新 commitRound を呼ぶ）
 export const commitRoundFn = functions.https.onRequest((req, res) => {
   if (handleCORS(req, res)) return;
   return commitRound(req, res);
@@ -44,10 +50,8 @@ export const finishBattleFn = functions.https.onRequest((req, res) => {
   return finishBattle(req, res);
 });
 
-// ✅ pingFn
+// ✅ ping
 export const pingFn = functions.https.onRequest((req, res) => {
   if (handleCORS(req, res)) return;
   res.status(200).json({ ok: true, msg: "pong", time: Date.now() });
 });
-
-console.log("[FUNCTIONS] index.ts initialized (CORS OK)");

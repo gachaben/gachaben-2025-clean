@@ -34,39 +34,42 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.commitRound = void 0;
-// ------------------------------------------------------
-// functions/src/commitRound.ts（FieldValue安全版）
-// ------------------------------------------------------
 const admin = __importStar(require("firebase-admin"));
 if (!admin.apps.length)
     admin.initializeApp();
 const db = admin.firestore();
+// ✅ Timestamp 安全取得
+const Timestamp = admin.firestore?.Timestamp || { now: () => new Date() };
 const commitRound = async (req, res) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    if (req.method === "OPTIONS") {
+        res.status(204).end();
+        return;
+    }
     try {
-        const { battleId, uid } = req.body;
-        if (!battleId || !uid) {
-            res.status(400).json({ ok: false, msg: "battleId or uid missing" });
-            return;
-        }
-        const battleRef = db.collection("battles").doc(battleId);
-        // ✅ FieldValue が undefined の場合も安全に fallback
-        const fieldValue = admin.firestore?.FieldValue?.serverTimestamp?.() ?? new Date();
-        await battleRef.update({
-            lastCommit: new Date(),
-            updatedAt: fieldValue,
+        const { battleId } = req.body;
+        if (!battleId)
+            throw new Error("Missing battleId");
+        const ref = db.collection("battles").doc(battleId);
+        const now = typeof Timestamp.now === "function" ? Timestamp.now() : new Date();
+        await ref.update({
+            status: "round-updated",
+            lastCommit: now,
+            updatedAt: now,
         });
         res.status(200).json({
             ok: true,
-            msg: "commitRound OK",
+            msg: "Firestore update success",
             battleId,
-            time: Date.now(),
         });
     }
     catch (err) {
-        console.error("[commitRoundFn] Error:", err);
+        console.error("[commitRound Error]", err);
         res.status(500).json({
             ok: false,
-            msg: "Internal Server Error",
+            msg: "Firestore update failed",
             error: err instanceof Error ? err.message : String(err),
         });
     }

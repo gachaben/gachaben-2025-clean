@@ -35,7 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.pingFn = exports.finishBattleFn = exports.commitRoundFn = exports.createBattleFn = void 0;
 // ------------------------------------------------------
-// functions/src/index.ts（CORS完全動作版）
+// functions/src/index.ts（完全統一版 / commitRound接続修正版）
 // ------------------------------------------------------
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
@@ -46,11 +46,14 @@ if (!admin.apps.length) {
     admin.initializeApp();
     console.log("✅ Firebase Admin initialized");
 }
-// ✅ 共通CORS処理関数
+// ✅ CORS設定
 function handleCORS(req, res) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const allowedOrigins = ["http://127.0.0.1:5173", "http://localhost:5173"];
+    const origin = req.headers.origin || "http://127.0.0.1:5173";
+    res.setHeader("Access-Control-Allow-Origin", allowedOrigins.includes(origin) ? origin : "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
     if (req.method === "OPTIONS") {
         res.status(204).end();
         return true;
@@ -63,7 +66,7 @@ exports.createBattleFn = functions.https.onRequest((req, res) => {
         return;
     return (0, createBattle_1.createBattle)(req, res);
 });
-// ✅ commitRoundFn
+// ✅ commitRoundFn（← ここが最新 commitRound を呼ぶ）
 exports.commitRoundFn = functions.https.onRequest((req, res) => {
     if (handleCORS(req, res))
         return;
@@ -75,10 +78,9 @@ exports.finishBattleFn = functions.https.onRequest((req, res) => {
         return;
     return (0, finishBattle_1.finishBattle)(req, res);
 });
-// ✅ pingFn
+// ✅ ping
 exports.pingFn = functions.https.onRequest((req, res) => {
     if (handleCORS(req, res))
         return;
     res.status(200).json({ ok: true, msg: "pong", time: Date.now() });
 });
-console.log("[FUNCTIONS] index.ts initialized (CORS OK)");

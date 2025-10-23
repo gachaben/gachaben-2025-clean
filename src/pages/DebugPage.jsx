@@ -10,28 +10,36 @@ export default function DebugPage() {
   // ✅ テスト用固定UID（Auth Emulator用）
   const TEST_UID = "test-user";
 
-  const baseURL = "http://localhost:5002/gachaben-2025/us-central1";
-
+ const baseURL = "http://127.0.0.1:5002/gachaben-2025/us-central1";
   // 共通Fetch関数
-  const callFunction = async (endpoint, body = {}) => {
-    try {
-      const res = await fetch(`${baseURL}/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ uid: TEST_UID, battleId, ...body }), // ← battleIdも常に送る！
-      });
-      const data = await res.json();
-      console.log(`[${endpoint}]`, data);
-      setResult(JSON.stringify(data, null, 2));
+  // ✅ 共通Fetch関数
+const callFunction = async (endpoint, body = {}) => {
+  try {
+    console.log("[callFunction]", endpoint, { uid: TEST_UID, battleId, ...body }); // ← デバッグログ追加
 
-      // ✅ createBattle 成功時 → battleIdを保存
-      if (endpoint === "createBattleFn" && data.battleId) {
-        setBattleId(data.battleId);
-      }
-    } catch (err) {
-      setResult(JSON.stringify({ error: err.message }));
+    const res = await fetch(`${baseURL}/${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        uid: TEST_UID,
+        battleId, // ← battleId を常に送る
+        ...body,
+      }),
+    });
+
+    const data = await res.json();
+    console.log(`[${endpoint}]`, data);
+    setResult(JSON.stringify(data, null, 2));
+
+    // ✅ createBattle 成功時 → battleIdを保存
+    if (endpoint === "createBattleFn" && data.battleId) {
+      setBattleId(data.battleId);
     }
-  };
+  } catch (err) {
+    setResult(JSON.stringify({ error: err.message }));
+  }
+};
+
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -48,7 +56,8 @@ export default function DebugPage() {
 
         <button
           style={{ background: "#10b981", color: "white", padding: "1rem" }}
-          onClick={() => callFunction("commitRoundFn")}
+         onClick={() => callFunction("commitRoundFn")}
+
         >
           🔵 commitRound 実行
         </button>

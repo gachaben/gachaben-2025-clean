@@ -1,28 +1,53 @@
-// src/components/AdHeartModal.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
-export default function AdHeartModal({ open, onWatch, onClose }) {
-  if (!open) return null;
+export default function AdRewardModal({ show, onClose, onAdComplete }) {
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    if (show) {
+      // モーダルが開かれたら動画再生をシミュレーション
+      setTimeout(() => {
+        setPlaying(true);
+        console.log("🎥 Ad started");
+        // 3秒後に広告完了としてコールバック
+        setTimeout(() => {
+          console.log("✅ Ad complete");
+          setPlaying(false);
+          onAdComplete && onAdComplete();
+          onClose && onClose();
+        }, 3000);
+      }, 800);
+    }
+  }, [show]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-2xl shadow-xl p-6 w-[90%] max-w-md text-center">
-        <div className="text-2xl mb-2">💔 ハートが足りません</div>
-        <p className="text-gray-600 mb-5">広告を見るとハートが全回復（5）します。</p>
-        <div className="flex justify-center gap-3">
-          <button
-            onClick={onWatch}
-            className="px-5 py-3 rounded-lg font-bold bg-yellow-300 hover:bg-yellow-400 shadow"
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          key="ad-modal"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 flex items-center justify-center bg-black/60 z-[2000]"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white rounded-2xl shadow-xl p-6 w-[90%] max-w-sm text-center"
           >
-            🎬 広告を見て回復
-          </button>
-          <button
-            onClick={onClose}
-            className="px-5 py-3 rounded-lg bg-gray-200 hover:bg-gray-300"
-          >
-            閉じる
-          </button>
-        </div>
-      </div>
-    </div>
+            <h2 className="text-xl font-bold mb-4">🎥 広告視聴中...</h2>
+            {playing ? (
+              <div className="animate-pulse text-blue-500 font-semibold">
+                広告再生中（3秒）...
+              </div>
+            ) : (
+              <div className="text-gray-400 italic">準備中...</div>
+            )}
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

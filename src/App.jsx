@@ -75,6 +75,7 @@ function Nav() {
       <Link to="/doremi">🎵 DoReMi</Link>
       <Link to="/debug">🧭 Debug</Link>
       <Link to="/opening">🌅 Opening</Link>
+      <Link to="/mission-gacha">🎰 Mission</Link>
     </nav>
   );
 }

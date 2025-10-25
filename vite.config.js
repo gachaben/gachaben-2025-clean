@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
   plugins: [react()],
@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   server: {
-    host: '127.0.0.1', // ✅ ←ここで固定
+    host: '127.0.0.1', // ✅ ローカル固定（localhost ではなく IP 固定）
   },
-})
+});
+console.log("✅ Vite config loaded. Alias @ = /src");

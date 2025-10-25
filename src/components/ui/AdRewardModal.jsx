@@ -1,8 +1,15 @@
+// ------------------------------------------------------
+// 🎥 AdRewardModal.jsx（最終安定版）
+// ------------------------------------------------------
+
 import React, { useEffect, useRef, useState } from "react";
-import { useRewardFx } from "@/context/RewardFxContext";
+
+// ※ useRewardFx は未定義エラー防止のため一時無効化
+// import { useRewardFx } from "@/hooks/useRewardFx";
 
 export default function AdRewardModal({ open, onClose, onReward }) {
-  const { triggerHeart } = useRewardFx();
+  // const { triggerHeart } = useRewardFx(); // ← 将来のハート演出用
+  const triggerHeart = () => console.log("💖 ハート演出（ダミー）");
 
   const [countdown, setCountdown] = useState(3);
   const [phase, setPhase] = useState("playing");
@@ -11,6 +18,7 @@ export default function AdRewardModal({ open, onClose, onReward }) {
   // ✅ モーダル開いた時の初期化
   useEffect(() => {
     if (!open) return;
+    console.log("🎥 Ad started");
     setPhase("playing");
     setCountdown(3);
     rewardedRef.current = false;
@@ -33,7 +41,7 @@ export default function AdRewardModal({ open, onClose, onReward }) {
       onReward?.();
       setTimeout(() => setPhase("done-hold"), 2500);
     }
-  }, [open, phase, countdown, onReward, triggerHeart]);
+  }, [open, phase, countdown, onReward]);
 
   // ✅ 開いていない時は描画しない
   if (!open) return null;
@@ -42,7 +50,7 @@ export default function AdRewardModal({ open, onClose, onReward }) {
   return (
     <div
       className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/70"
-      style={{ pointerEvents: "auto" }} // ← 🔥これが重要！全層クリック可能に戻す
+      style={{ pointerEvents: "auto" }}
     >
       <div
         className="relative bg-white rounded-2xl shadow-xl w-[320px] p-5 text-center"

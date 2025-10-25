@@ -1,17 +1,18 @@
 // ------------------------------------------------------
-// 🎰 MissionGachaPage.jsx（完全動作テスト保証版）
+// 🎰 MissionGachaPage.jsx（AdRewardModal 動作保証＋デバッグ付き）
 // ------------------------------------------------------
 
 import React, { useState, useEffect } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
+import AdRewardModal from "@/components/ui/AdRewardModal.jsx"; // ✅ 修正パス
 
-// ✅ メイン関数
 export default function MissionGachaPage() {
   // 🔹 状態管理
   const auth = getAuth();
   const [user, setUser] = useState(null);
   const [showAdModal, setShowAdModal] = useState(false);
+  const [spinning, setSpinning] = useState(false);
 
   // ✅ 認証監視
   useEffect(() => {
@@ -34,11 +35,25 @@ export default function MissionGachaPage() {
     setTimeout(removeBlockers, 1000);
   }, []);
 
-  // ✅ クリックテスト
+  // ✅ デバッグ追跡コード（showAdModal 変化監視）
+  useEffect(() => {
+    console.log("👀 現在 showAdModal:", showAdModal);
+  }, [showAdModal]);
+
+  // ✅ 広告ボタン押下
   const handleClick = () => {
-    alert("✅ onClick 発火しました！");
-    console.log("🔥 onClick 動作確認OK (MissionGachaPage)");
-    setShowAdModal(true);
+    console.log("🎥 Ad ボタン押下");
+    setShowAdModal(true); // ← モーダル表示
+  };
+
+  // ✅ 広告完了後
+  const handleAdReward = () => {
+    console.log("🎁 広告完了 → ガチャ演出開始");
+    setSpinning(true);
+    setTimeout(() => {
+      alert("🎉 ガチャ演出スタート！（デバッグ用）");
+      setSpinning(false);
+    }, 1000);
   };
 
   // ✅ UI本体
@@ -62,13 +77,10 @@ export default function MissionGachaPage() {
         </AnimatePresence>
       </div>
 
-      {/* ✅ デバッグボタン */}
+      {/* ✅ 広告視聴ボタン */}
       <button
         id="debug-btn"
-        onClick={() => {
-          console.log("🎯 CLICK TRIGGERED (raw)");
-          handleClick();
-        }}
+        onClick={handleClick}
         className="mt-8 px-8 py-3 bg-pink-500 text-white rounded-2xl shadow-lg transition transform hover:scale-105 active:scale-95 hover:bg-pink-600"
         style={{
           zIndex: 999999,
@@ -77,26 +89,15 @@ export default function MissionGachaPage() {
           pointerEvents: "auto",
         }}
       >
-        🎥 広告を見てガチャを回す！（再生成テスト）
+        🎥 広告を見てガチャを回す！
       </button>
 
-      {/* ✅ モーダル */}
-      {showAdModal && (
-        <div
-          id="modal-root"
-          className="fixed inset-0 z-[2147483647] bg-black/50 flex items-center justify-center"
-        >
-          <div className="bg-white p-8 rounded-2xl shadow-xl text-lg">
-            🎁 モーダルテスト表示成功！
-            <button
-              onClick={() => setShowAdModal(false)}
-              className="block mt-4 mx-auto bg-pink-500 text-white px-6 py-2 rounded-lg"
-            >
-              閉じる
-            </button>
-          </div>
-        </div>
-      )}
+      {/* ✅ AdRewardModal（モーダル呼び出し） */}
+      <AdRewardModal
+        open={showAdModal}
+        onClose={() => setShowAdModal(false)}
+        onReward={handleAdReward}
+      />
 
       {/* 🚫 全レイヤー強制解除CSS */}
       <style>{`

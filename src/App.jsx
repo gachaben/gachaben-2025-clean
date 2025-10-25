@@ -1,6 +1,7 @@
 // ------------------------------------------------------
-// 🚀 src/App.jsx（v2.7 修正版）
+// 🚀 src/App.jsx（v2.9 完全修正版 / AppOpeningScene 対応版）
 // ------------------------------------------------------
+
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
@@ -17,6 +18,9 @@ import DebugPage from "@/pages/DebugPage.jsx";
 import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
 import StudyPage from "./pages/StudyPage";
 import MissionGachaPage from "./pages/MissionGachaPage";
+
+// ==== 起動画面 ==== //
+import AppOpeningScene from "@/pages/AppOpeningScene.jsx";
 
 // ==== バトル関連 ==== //
 import BattleChallengePage from "@/pages/BattleChallengePage.jsx";
@@ -70,12 +74,13 @@ function Nav() {
       <Link to="/battle">🥊 Battle</Link>
       <Link to="/doremi">🎵 DoReMi</Link>
       <Link to="/debug">🧭 Debug</Link>
+      <Link to="/opening">🌅 Opening</Link>
     </nav>
   );
 }
 
 // ------------------------------------------------------
-// 🚀 ルーティング本体
+// 🚀 アプリ本体
 // ------------------------------------------------------
 export default function App() {
   const { user, loading } = useAuthState();
@@ -100,16 +105,18 @@ export default function App() {
           <Route path="/active-test" element={<ActiveTimeTestPage />} />
           <Route path="/study" element={<StudyPage />} />
 
-          {/* ✅ 修正ポイント：userを渡す */}
+          {/* ✅ ミッションガチャ */}
           <Route
-  path="/mission-gacha"
-  element={
-    <RequireAuth>
-      <MissionGachaPage />
-    </RequireAuth>
-  }
-/>
+            path="/mission-gacha"
+            element={
+              <RequireAuth>
+                <MissionGachaPage />
+              </RequireAuth>
+            }
+          />
 
+          {/* 🌅 起動画面 */}
+          <Route path="/opening" element={<AppOpeningScene />} />
 
           {/* ==== バトル関連 ==== */}
           <Route
@@ -157,6 +164,23 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
+
+      {/* 🚀 MissionGacha用クリックブロック除去スクリプト */}
+      {typeof window !== "undefined" && (
+        <script>
+          {`
+            setTimeout(() => {
+              const blockers = document.querySelectorAll(
+                '.pointer-events-none.fixed.inset-0, .absolute.inset-0.pointer-events-none'
+              );
+              blockers.forEach(el => {
+                el.remove();
+                console.log('🧹 削除完了: pointer-events-none.inset-0');
+              });
+            }, 800);
+          `}
+        </script>
+      )}
     </HeartsProvider>
   );
 }

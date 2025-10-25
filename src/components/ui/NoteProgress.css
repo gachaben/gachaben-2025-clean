@@ -1,0 +1,19 @@
+/* 🌈 全音点灯時の虹色アニメーション */
+.note-rainbow span {
+  animation: rainbowPulse 3s linear infinite;
+}
+
+@keyframes rainbowPulse {
+  0% {
+    filter: hue-rotate(0deg);
+    transform: scale(1.1);
+  }
+  50% {
+    filter: hue-rotate(180deg);
+    transform: scale(1.25);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+    transform: scale(1.1);
+  }
+}

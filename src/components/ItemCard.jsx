@@ -1,36 +1,59 @@
+// ------------------------------------------------------
+// 🎴 ItemCard.jsx（v4.0 図鑑用・バトル要素削除＋プレミアム対応）
+// ------------------------------------------------------
 import React from "react";
+import { motion } from "framer-motion";
 import { itemNames } from "../data/itemNames.js";
 
-export default function ItemCard({ item, owned, pwMode, onClick }) {
+export default function ItemCard({ item, owned = false }) {
   if (!item) return null;
 
-  const { imageName = "", name = "", pw = 0, cpt = 0, bpt = 0, stage } = item;
+  const {
+    imageName = "",
+    name = "",
+    rank = "",
+    seriesId = "2508",
+    stage = 1,
+  } = item;
 
-  // 画像パス & ベ�Eス名！Epng を除去�E�E
+  // ===== 🔍 画像パス =====
   const base = String(imageName).replace(/\.png$/i, "");
   const fileBase = base.replace(/^\d{4}_/, "");
-  const stageNum = stage ?? Number(base.match(/_stage(\d+)/)?.[1] ?? 1);
-  const imagePath = `/images/2508/stage${stageNum}/${fileBase}.png`;
+  const imagePath = `/images/${seriesId}/stage${stage}/${fileBase}.png`;
 
-  // ランク & エフェクチE
-  const isS = base.includes("_S_");
-  const isA = base.includes("_A_");
-  const isB = base.includes("_B_");
-  const rank = isS ? "S" : isA ? "A" : isB ? "B" : "";
-  const rankColor = isS ? "#fde047" : isA ? "#e9d5ff" : isB ? "#d1d5db" : "#ffffff";
-  const fx = isS ? "S_spark.mp4" : isA ? "A_spark.mp4" : isB ? "B_spark.mp4" : null;
+  // ===== 🏅 ランク別設定 =====
+  const isS = rank === "S";
+  const isA = rank === "A";
+  const isB = rank === "B";
+  const isPremium = rank === "PREMIUM";
 
-  // レベル
-  const lvl = (x) => (x >= 250 ? 5 : x >= 200 ? 4 : x >= 150 ? 3 : x >= 100 ? 2 : x >= 50 ? 1 : 0);
-  const cptLv = lvl(cpt);
-  const bptLv = lvl(bpt);
+  // ===== 🎨 色設定 =====
+  const borderColor = isPremium
+    ? "#facc15"
+    : isS
+    ? "#fde047"
+    : isA
+    ? "#f87171"
+    : isB
+    ? "#60a5fa"
+    : "#d1d5db";
 
-  // ===== 名前解決�E�優先頁E��Ename ↁEitemNames[base] ↁEbase =====
-  const resolvedName = (name && name.trim()) || itemNames[base] || base;
+  const effectVideo = isPremium
+    ? null
+    : isS
+    ? "S_spark.mp4"
+    : isA
+    ? "A_spark.mp4"
+    : isB
+    ? "B_spark.mp4"
+    : null;
 
-  // 2行化�E��Eラクレスは手動、他�E中央で二�E�E�E
+  // ===== 📛 名前解決 =====
+  const resolvedName =
+    (name && name.trim()) || itemNames[base] || base || "？？？";
+
+  // 長い名前の2行化
   const nameLines = (() => {
-    if (resolvedName === "ヘラクレスオオカブト") return ["ヘラクレス", "オオカブト"];
     if (resolvedName.length > 8) {
       const mid = Math.ceil(resolvedName.length / 2);
       return [resolvedName.slice(0, mid), resolvedName.slice(mid)];
@@ -39,26 +62,21 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
   })();
 
   return (
-    <div
-      onClick={pwMode ? onClick : undefined}
-      className={`${owned ? "" : "opacity-60 grayscale"}`}
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      className={`relative w-36 h-48 rounded-xl overflow-hidden shadow-md ${
+        owned ? "" : "opacity-50 grayscale"
+      }`}
       style={{
-        position: "relative",
-        isolation: "isolate",
-        width: 150,
-        height: 220,
-        margin: 8,
-        borderRadius: 12,
-        overflow: "hidden",
-        boxShadow: "0 6px 18px rgba(0,0,0,.25)",
         background: "transparent",
-        cursor: pwMode ? "pointer" : "default",
+        border: `3px solid ${borderColor}`,
+        boxShadow: `0 0 12px ${borderColor}40`,
       }}
     >
-      {/* 背景エフェクト（�Eだけ加算！E*/}
-      {fx && (
+      {/* 🔆 背景動画（S/A/Bランク用） */}
+      {effectVideo && (
         <video
-          src={`/images/effects/${fx}`}
+          src={`/images/effects/${effectVideo}`}
           autoPlay
           loop
           muted
@@ -69,99 +87,69 @@ export default function ItemCard({ item, owned, pwMode, onClick }) {
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            zIndex: 0,
             mixBlendMode: "plus-lighter",
-            pointerEvents: "none",
-            background: "transparent",
+            zIndex: 0,
           }}
         />
       )}
 
-      {/* アイチE��画像（中央�E�E*/}
+      {/* ✨ プレミアム専用光反射 */}
+      {isPremium && (
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent animate-shine" />
+        </div>
+      )}
+
+      {/* 🖼️ 画像 */}
       <img
         src={imagePath}
         alt={resolvedName}
         draggable={false}
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: "52%",
-          transform: "translate(-50%, -50%)",
-          maxWidth: "92%",
-          maxHeight: "62%",
-          objectFit: "contain",
-          zIndex: 10,
-          background: "transparent",
-        }}
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-[90%] max-h-[70%] object-contain z-10"
       />
 
-      {/* ランク�E�右上！E*/}
+      {/* 📛 名前 */}
+      <div className="absolute top-2 w-full text-center text-[12px] font-bold text-white drop-shadow-[0_0_4px_black]">
+        {nameLines.join("\n")}
+      </div>
+
+      {/* 🏷️ ランク表示 */}
       <div
+        className="absolute top-1 right-2 text-lg font-extrabold"
         style={{
-          position: "absolute",
-          right: 6,
-          top: 4,
-          zIndex: 50,
-          fontFamily: "serif",
-          fontWeight: 800,
-          fontSize: 28,
-          color: rankColor,
-          textShadow: "0 0 4px #000,0 0 8px #000",
-          pointerEvents: "none",
+          color: borderColor,
+          textShadow: "0 0 4px #000, 0 0 8px #000",
         }}
       >
         {rank}
       </div>
 
-      {/* 名前�E�中央上！E行対応！E*/}
-      <div
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: 6,
-          transform: "translateX(-50%)",
-          zIndex: 60,
-          color: "#fff",
-          textAlign: "center",
-          lineHeight: 1.05,
-          fontWeight: 700,
-          fontSize: 12,
-          whiteSpace: "pre-line",
-          textShadow: "0 0 4px #000, 0 0 10px #000",
-          background: "transparent",
-          maxWidth: "90%",
-          pointerEvents: "none",
-        }}
-      >
-        {nameLines.join("\n")}
-      </div>
+      {/* 🌟 プレミアムラベル */}
+      {isPremium && (
+        <div className="absolute top-1 left-1 bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full shadow-md">
+          ✨PREMIUM
+        </div>
+      )}
 
-      {/* PW�E�攻撁E��防御�E�下�E透�E背景�E�E*/}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 6,
-          zIndex: 30,
-          display: "grid",
-          gap: 4,
-          justifyItems: "center",
-          color: "#fff",
-        }}
-      >
-        <div style={{ fontSize: 12, textShadow: "0 0 3px #000,0 0 6px #000" }}>{pw} PW</div>
-        <div style={{ fontSize: 11, lineHeight: 1, textShadow: "0 0 3px #000,0 0 6px #000" }}>
-          攻撁E���E�{Array.from({ length: cptLv }).map((_, i) => (
-            <span key={i}>🥁E/span>
-          ))}
+      {/* 🔒 未所持マスク */}
+      {!owned && (
+        <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px] flex items-center justify-center text-white text-xs">
+          未入手
         </div>
-        <div style={{ fontSize: 11, lineHeight: 1, textShadow: "0 0 3px #000,0 0 6px #000" }}>
-          防御力：{Array.from({ length: bptLv }).map((_, i) => (
-            <span key={i}>💪</span>
-          ))}
-        </div>
-      </div>
-    </div>
+      )}
+
+      {/* ✨ 光アニメーション */}
+      <style>{`
+        @keyframes shine {
+          0% { transform: translateX(-100%); opacity: 0; }
+          40% { opacity: 0.7; }
+          100% { transform: translateX(100%); opacity: 0; }
+        }
+        .animate-shine {
+          animation: shine 3.5s linear infinite;
+          mix-blend-mode: overlay;
+        }
+      `}</style>
+    </motion.div>
   );
 }

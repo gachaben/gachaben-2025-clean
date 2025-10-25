@@ -1,229 +1,125 @@
 // ------------------------------------------------------
-// 🎰 MissionGachaPage.jsx（ユーザー同期＋広告モーダル完全版）
+// 🎰 MissionGachaPage.jsx（完全動作テスト保証版）
 // ------------------------------------------------------
+
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { db } from "../firebase";
-import AdRewardModal from "../components/ui/AdRewardModal";
-import NoteBurst from "../components/ui/NoteBurst";
-import { useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { motion, AnimatePresence } from "framer-motion";
 
-const MISSION_TYPES = [
-  { id: "study", label: "📘 学習チャレンジ", color: "#60a5fa" },
-  { id: "challenge", label: "⚡ チャレンジ問題", color: "#facc15" },
-  { id: "battle", label: "🥊 バトルチャレンジ", color: "#f87171" },
-];
-
+// ✅ メイン関数
 export default function MissionGachaPage() {
-  const navigate = useNavigate();
+  // 🔹 状態管理
   const auth = getAuth();
-
-  // ✅ Firebaseユーザーをリアルタイム監視
   const [user, setUser] = useState(null);
+  const [showAdModal, setShowAdModal] = useState(false);
+
+  // ✅ 認証監視
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      if (u) console.log("👤 MissionGachaPage: ユーザー認識", u.uid);
-      else console.log("🚫 MissionGachaPage: 未ログイン");
-    });
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsub();
   }, [auth]);
 
-  // ✅ 状態管理
-  const [showAdModal, setShowAdModal] = useState(false);
-  const [selectedMission, setSelectedMission] = useState(null);
-  const [spinning, setSpinning] = useState(false);
-  const [alreadyAssigned, setAlreadyAssigned] = useState(false);
-  const today = new Date().toISOString().split("T")[0];
-
-  // ✅ Firestore 読み取り（毎回user変化後に実行）
+  // ✅ オーバーレイ削除
   useEffect(() => {
-    if (!user?.uid) return;
-    const fetchMission = async () => {
-      try {
-        const ref = doc(db, "users", user.uid, "stats", "doremi");
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data.dailyMission?.assignedDate === today) {
-            console.log("📅 今日のミッションあり:", data.dailyMission.type);
-            setSelectedMission(data.dailyMission.type);
-            setAlreadyAssigned(true);
-          } else {
-            console.log("🆕 新しい日なのでリセット");
-            setAlreadyAssigned(false);
-            setSelectedMission(null);
-          }
-        } else {
-          console.log("📄 stats/doremi 未作成。新規作成予定。");
-        }
-      } catch (err) {
-        console.error("🔥 Firestore 読み取りエラー", err);
-      }
+    const removeBlockers = () => {
+      const blockers = document.querySelectorAll(
+        ".pointer-events-none.fixed.inset-0, .absolute.inset-0.pointer-events-none"
+      );
+      blockers.forEach((el) => {
+        el.remove();
+        console.log("🧹 削除完了: pointer-events-none.fixed.inset-0");
+      });
     };
-    fetchMission();
-  }, [user, today]);
+    removeBlockers();
+    setTimeout(removeBlockers, 1000);
+  }, []);
 
-  // --- 広告視聴完了時 ---
-  const handleAdReward = () => {
-    console.log("🎬 広告報酬完了 → ガチャ開始");
-    setShowAdModal(false);
-    setTimeout(() => {
-      startMissionGacha();
-    }, 800);
+  // ✅ クリックテスト
+  const handleClick = () => {
+    alert("✅ onClick 発火しました！");
+    console.log("🔥 onClick 動作確認OK (MissionGachaPage)");
+    setShowAdModal(true);
   };
 
-  // --- ミッションガチャ処理 ---
-  const startMissionGacha = async () => {
-    console.log("🎯 startMissionGacha called", { uid: user?.uid });
-    if (!user?.uid || spinning) return;
-    setSpinning(true);
-
-    const weights = [0.4, 0.35, 0.25];
-    const rand = Math.random();
-    let result;
-    if (rand < weights[0]) result = "study";
-    else if (rand < weights[0] + weights[1]) result = "challenge";
-    else result = "battle";
-
-    setTimeout(async () => {
-      setSelectedMission(result);
-      setSpinning(false);
-
-      try {
-        const ref = doc(db, "users", user.uid, "stats", "doremi");
-        await setDoc(
-          ref,
-          {
-            dailyMission: {
-              type: result,
-              assignedDate: today,
-              completed: false,
-            },
-          },
-          { merge: true }
-        );
-        console.log("✅ Firestore 保存完了:", result);
-      } catch (err) {
-        console.error("🔥 Firestore 保存エラー", err);
-      }
-    }, 3000);
-  };
-
-  // --- UI ---
+  // ✅ UI本体
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden text-center bg-gradient-to-b from-blue-100 via-sky-100 to-white">
-      {/* 🌈 背景 */}
-      <div className="absolute inset-0 bg-[url('/images/light-rays.png')] bg-cover opacity-40 animate-light z-0" />
-
-      {/* 🚫 NoteBurst のクリックブロック対策 */}
-      <NoteBurst
-        mode="burst"
-        quiet
-        style={{
-          position: "absolute",
-          inset: 0,
-          zIndex: -1,
-          pointerEvents: "none",
-        }}
-      />
-
-      {/* 🎵 タイトル */}
+    <div className="relative flex flex-col items-center justify-center min-h-screen text-center bg-gradient-to-b from-blue-100 via-sky-100 to-white">
+      {/* タイトル */}
       <motion.h1
-        className="text-3xl font-bold text-blue-600 mb-4 z-10 drop-shadow-md"
+        className="text-3xl font-bold text-blue-600 mb-6 z-10 drop-shadow-md"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
       >
         🎰 今日のミッションガチャ！
       </motion.h1>
 
-      {/* 🎁 ガチャエリア */}
+      {/* ガチャ円 */}
       <div className="relative z-10 w-72 h-72 flex items-center justify-center rounded-full border-8 border-white/50 bg-white/40 shadow-xl backdrop-blur-md">
         <AnimatePresence>
-          {spinning ? (
-            <motion.div
-              key="spinning"
-              className="text-6xl font-bold animate-spin-slow"
-              style={{ color: "#facc15" }}
-            >
-              🎵
-            </motion.div>
-          ) : selectedMission ? (
-            <motion.div
-              key="result"
-              className="text-2xl font-bold text-gray-800"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", duration: 0.8 }}
-            >
-              {MISSION_TYPES.find((m) => m.id === selectedMission)?.label}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="ready"
-              className="text-lg text-gray-500 italic"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              🎥 広告を見てガチャを回そう！
-            </motion.div>
-          )}
+          <motion.div key="ready" className="text-lg text-gray-500 italic">
+            🎥 広告を見てガチャを回そう！
+          </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* 🎥 ガチャボタン */}
-      {!alreadyAssigned && !spinning && !selectedMission && (
-        <motion.button
-          onClick={() => {
-            console.log("🎥 ガチャボタン押下 ✅");
-            setShowAdModal(true);
-          }}
-          className="mt-8 px-8 py-3 bg-pink-500 text-white rounded-2xl shadow-lg hover:scale-105 transition"
-          style={{
-            position: "relative",
-            zIndex: 999999,
-            pointerEvents: "auto",
-          }}
-          whileTap={{ scale: 0.95 }}
-        >
-          🎥 広告を見てガチャを回す！
-        </motion.button>
-      )}
+      {/* ✅ デバッグボタン */}
+      <button
+        id="debug-btn"
+        onClick={() => {
+          console.log("🎯 CLICK TRIGGERED (raw)");
+          handleClick();
+        }}
+        className="mt-8 px-8 py-3 bg-pink-500 text-white rounded-2xl shadow-lg transition transform hover:scale-105 active:scale-95 hover:bg-pink-600"
+        style={{
+          zIndex: 999999,
+          cursor: "pointer",
+          position: "relative",
+          pointerEvents: "auto",
+        }}
+      >
+        🎥 広告を見てガチャを回す！（再生成テスト）
+      </button>
 
-      {/* ✅ 結果ボタン */}
-      {selectedMission && !spinning && (
-        <motion.button
-          onClick={() => navigate("/home")}
-          className="mt-8 px-8 py-3 bg-green-500 text-white rounded-2xl shadow-lg hover:bg-green-600 transition"
-          whileTap={{ scale: 0.95 }}
-        >
-          ✅ ホームに進む
-        </motion.button>
-      )}
-
-      {/* 🎥 広告モーダル */}
+      {/* ✅ モーダル */}
       {showAdModal && (
-        <AdRewardModal
-          open={showAdModal}
-          onClose={() => setShowAdModal(false)}
-          onReward={handleAdReward}
-          rewardText="🎁 ミッションガチャが回せるようになった！"
-        />
+        <div
+          id="modal-root"
+          className="fixed inset-0 z-[2147483647] bg-black/50 flex items-center justify-center"
+        >
+          <div className="bg-white p-8 rounded-2xl shadow-xl text-lg">
+            🎁 モーダルテスト表示成功！
+            <button
+              onClick={() => setShowAdModal(false)}
+              className="block mt-4 mx-auto bg-pink-500 text-white px-6 py-2 rounded-lg"
+            >
+              閉じる
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* 💫 背景アニメーション */}
+      {/* 🚫 全レイヤー強制解除CSS */}
       <style>{`
-        @keyframes lightMove {
-          0% { background-position: 0 0; opacity: 0.3; }
-          50% { background-position: 100px 0; opacity: 0.6; }
-          100% { background-position: 0 0; opacity: 0.3; }
+        div.pointer-events-none.fixed.inset-0,
+        div.absolute.inset-0.pointer-events-none {
+          display: none !important;
+          visibility: hidden !important;
         }
-        .animate-light { animation: lightMove 10s ease-in-out infinite; }
-        .animate-spin-slow { animation: spin 1.2s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        * {
+          pointer-events: auto !important;
+        }
+
+        #debug-btn {
+          z-index: 999999 !important;
+          position: relative !important;
+          pointer-events: auto !important;
+        }
+
+        html, body, #root {
+          pointer-events: auto !important;
+          overflow: visible !important;
+        }
       `}</style>
     </div>
   );

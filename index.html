@@ -8,7 +8,31 @@
     <link rel="icon" href="/favicon.ico?v=2" />
   </head>
   <body>
+    <!-- ✅ Reactアプリの描画領域 -->
     <div id="root"></div>
+
+    <!-- ✅ Reactアプリを読み込む -->
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- ✅ Firebase Emulator 警告DOMの完全削除（iframe含む） -->
+    <script>
+      const removeAllWarnings = () => {
+        // Firebase の赤帯を削除
+        document.querySelectorAll(".firebase-emulator-warning").forEach(el => el.remove());
+        // iframe 内にも赤帯があれば削除
+        document.querySelectorAll("iframe").forEach(frame => {
+          try {
+            const inner = frame.contentDocument || frame.contentWindow?.document;
+            if (inner) {
+              inner.querySelectorAll(".firebase-emulator-warning").forEach(el => el.remove());
+            }
+          } catch {}
+        });
+      };
+      removeAllWarnings();
+      const obs = new MutationObserver(removeAllWarnings);
+      obs.observe(document.documentElement, { childList: true, subtree: true });
+      console.log("🔥 Emulator warning removal active (iframe-safe)");
+    </script>
   </body>
 </html>

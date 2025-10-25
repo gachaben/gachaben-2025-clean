@@ -1,0 +1,81 @@
+/* ------------------------------------------------------
+   NoteProgress.css
+   7音ゲージ + 虹波アニメーション
+------------------------------------------------------ */
+.note-progress {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.note {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #d1d5db; /* gray-300 */
+  transition: all 0.3s ease;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.1);
+}
+
+.note.active {
+  color: #ff69b4; /* pink */
+  transform: scale(1.15);
+  text-shadow: 0 0 10px rgba(255, 105, 180, 0.6);
+}
+
+/* 🌈 全点灯時の虹グラデーション */
+.note.rainbow {
+  background: linear-gradient(
+    90deg,
+    #ff4d4d,
+    #ffa64d,
+    #ffff4d,
+    #4dff4d,
+    #4dffff,
+    #4d4dff,
+    #ff4dff
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rainbowWave 2s ease-in-out infinite;
+}
+
+/* 🌊 波打ちアニメーション */
+@keyframes rainbowWave {
+  0% {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+  50% {
+    filter: brightness(1.3);
+    transform: scale(1.2);
+  }
+  100% {
+    filter: brightness(1);
+    transform: scale(1);
+  }
+}
+
+/* 🌟 全体が波打つ */
+.note-progress.wave .note {
+  animation: waveFlow 2s ease-in-out infinite;
+}
+
+@keyframes waveFlow {
+  0% {
+    transform: translateY(0);
+  }
+  25% {
+    transform: translateY(-6px);
+  }
+  50% {
+    transform: translateY(0);
+  }
+  75% {
+    transform: translateY(6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}

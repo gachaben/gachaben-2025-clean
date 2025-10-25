@@ -1,8 +1,8 @@
 // ------------------------------------------------------
-// 🎵 NoteBurst.jsx（v1.3.4 再発火対応版）
+// 🎵 NoteBurst.jsx（v1.3.5 安定版）
 // ------------------------------------------------------
-// - "burst" : 音符が舞う
-// - "sequence" : 順次点灯 → 全点灯で波 → 初期化ループ（確実に再発火）
+// - "burst" : 音符が舞う（勝利・全点灯時）
+// - "sequence" : 順次点灯 → 波アニメ → 自動ループ再発火
 // ------------------------------------------------------
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -24,7 +24,9 @@ export default function NoteBurst({
 }) {
   const kind = getNoteKind(type);
 
-  // ========== burst（既存） ==========
+  // ------------------------------------------------------
+  // 💫 burst（舞い散りエフェクト）
+  // ------------------------------------------------------
   const [notes, setNotes] = useState([]);
   useEffect(() => {
     if (mode !== "burst") return;
@@ -32,20 +34,22 @@ export default function NoteBurst({
     const items = Array.from({ length: count }).map((_, i) => ({
       id: i,
       left: Math.random() * 100,
-      delay: Math.random() * 0.5,
+      delay: Math.random() * 0.6,
       duration: 2 + Math.random() * 1.5,
-      size: 16 + Math.random() * 16,
+      size: 18 + Math.random() * 16,
       rotate: Math.random() * 360,
     }));
     setNotes(items);
     return () => setNotes([]);
   }, [type, quiet, mode]);
 
-  // ========== sequence（波演出） ==========
+  // ------------------------------------------------------
+  // 🌈 sequence（順次点灯＋波再発火）
+  // ------------------------------------------------------
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isWave, setIsWave] = useState(false);
   const timers = useRef([]);
-  const waveRef = useRef(null); // ← 波アニメ制御用ref
+  const waveRef = useRef(null);
 
   const clearTimers = () => {
     timers.current.forEach((t) => clearTimeout(t));
@@ -64,28 +68,26 @@ export default function NoteBurst({
     setActiveIndex(-1);
     setIsWave(false);
 
+    // 🔸 各音符を順番に点灯
     labels.forEach((_, idx) => {
-      timers.current.push(
-        setTimeout(() => setActiveIndex(idx), idx * intervalMs)
-      );
+      timers.current.push(setTimeout(() => setActiveIndex(idx), idx * intervalMs));
     });
 
     const allLitAt = (labels.length - 1) * intervalMs;
 
-    // 全点灯後、波開始
+    // 🌊 全点灯後に波エフェクト開始
     timers.current.push(
       setTimeout(() => {
-        // === 🌈 リペイント強制でアニメ再発火 ===
         if (waveRef.current) {
           waveRef.current.style.animation = "none";
-          // eslint-disable-next-line no-unused-expressions
-          waveRef.current.offsetHeight; // ← ここでリセット！
+          // 💡 リペイント強制で確実に再発火
+          void waveRef.current.offsetHeight;
         }
         setIsWave(true);
       }, allLitAt + waveDelayMs)
     );
 
-    // 波終了 → 初期化ループ
+    // 🔁 波終了後、自動リセットしてループ
     const waveTotal = labels.length * waveStepMs + 1000;
     timers.current.push(
       setTimeout(() => {
@@ -97,7 +99,9 @@ export default function NoteBurst({
     return clearTimers;
   }, [mode, type, labels, intervalMs, waveDelayMs, waveStepMs]);
 
-  // ========== スタイル ==========
+  // ------------------------------------------------------
+  // 🎨 色・スタイル
+  // ------------------------------------------------------
   const rainbowStyle = useMemo(
     () => ({
       background:
@@ -111,13 +115,14 @@ export default function NoteBurst({
   const litStyle = kind.gradient ? rainbowStyle : { color: kind.color || "#fff" };
   const dimStyle = { color: "rgba(255,255,255,0.25)" };
 
-  // ========== Render ==========
+  // ------------------------------------------------------
+  // 🧩 sequenceレンダー
+  // ------------------------------------------------------
   if (mode === "sequence") {
     return (
       <div
         ref={waveRef}
-        className="pointer-events-none fixed inset-0 flex items-center justify-center"
-        style={{ zIndex: 9999 }}
+        className="pointer-events-none fixed inset-0 flex items-center justify-center z-[9999]"
       >
         <div className="flex gap-3">
           {labels.map((label, i) => {
@@ -132,7 +137,9 @@ export default function NoteBurst({
                   animation: isWave
                     ? `pulseWave 1.1s ease-in-out ${waveDelay}ms 3 both`
                     : "none",
-                  textShadow: lit ? "0 0 8px rgba(255,255,255,0.75)" : "none",
+                  textShadow: lit
+                    ? "0 0 10px rgba(255,255,255,0.9)"
+                    : "0 0 3px rgba(255,255,255,0.2)",
                   transition: "all 300ms ease",
                   willChange: "transform, filter",
                 }}
@@ -146,7 +153,7 @@ export default function NoteBurst({
         <style>{`
           @keyframes pulseWave {
             0%   { transform: scale(1);   filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
-            40%  { transform: scale(1.25); filter: drop-shadow(0 0 12px rgba(255,255,255,0.9)); }
+            40%  { transform: scale(1.25); filter: drop-shadow(0 0 14px rgba(255,255,255,0.9)); }
             100% { transform: scale(1);   filter: drop-shadow(0 0 0 rgba(255,255,255,0)); }
           }
         `}</style>
@@ -154,9 +161,11 @@ export default function NoteBurst({
     );
   }
 
-  // ========== burst ==========
+  // ------------------------------------------------------
+  // 💨 burstレンダー
+  // ------------------------------------------------------
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-visible">
+    <div className="pointer-events-none absolute inset-0 overflow-visible z-[9999]">
       {notes.map((n) => (
         <span
           key={n.id}
@@ -165,10 +174,11 @@ export default function NoteBurst({
             left: `${n.left}%`,
             bottom: 0,
             fontSize: `${n.size}px`,
-            animation: `floatUp ${n.duration}s ease-out ${n.delay}s forwards`,
             transform: `rotate(${n.rotate}deg)`,
+            animation: `floatUp ${n.duration}s ease-out ${n.delay}s forwards`,
             ...(kind.gradient ? rainbowStyle : { color: kind.color || "#fff" }),
             opacity: 0.9,
+            textShadow: "0 0 10px rgba(255,255,255,0.8)",
           }}
         >
           {kind.glyph}

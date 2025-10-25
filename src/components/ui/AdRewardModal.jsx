@@ -1,6 +1,5 @@
-// src/components/AdRewardModal.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { useRewardFx } from "../../context/RewardFxContext";
+import { useRewardFx } from "@/context/RewardFxContext";
 
 export default function AdRewardModal({ open, onClose, onReward }) {
   const { triggerHeart } = useRewardFx();
@@ -9,7 +8,7 @@ export default function AdRewardModal({ open, onClose, onReward }) {
   const [phase, setPhase] = useState("playing");
   const rewardedRef = useRef(false);
 
-  // モーダル開いた時に初期化
+  // ✅ モーダル開いた時の初期化
   useEffect(() => {
     if (!open) return;
     setPhase("playing");
@@ -17,7 +16,7 @@ export default function AdRewardModal({ open, onClose, onReward }) {
     rewardedRef.current = false;
   }, [open]);
 
-  // カウントダウンと完了処理
+  // ✅ カウントダウン処理
   useEffect(() => {
     if (!open || phase !== "playing") return;
 
@@ -26,26 +25,29 @@ export default function AdRewardModal({ open, onClose, onReward }) {
       return () => clearTimeout(t);
     }
 
+    // ✅ 完了処理
     if (!rewardedRef.current) {
       rewardedRef.current = true;
-
-      // 💖 視聴完了メッセージを少し長く見せたい
       setPhase("done");
-      triggerHeart(); // 💖演出を起動
+      triggerHeart();
       onReward?.();
-
-      // OKボタンが押せるようになるまで 2.5 秒待つ
-      setTimeout(() => {
-        setPhase("done-hold");
-      }, 2500);
+      setTimeout(() => setPhase("done-hold"), 2500);
     }
   }, [open, phase, countdown, onReward, triggerHeart]);
 
+  // ✅ 開いていない時は描画しない
   if (!open) return null;
 
+  // ✅ 表示部（透明ブロック削除済）
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl shadow-xl w-[320px] p-5 text-center relative">
+    <div
+      className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/70"
+      style={{ pointerEvents: "auto" }} // ← 🔥これが重要！全層クリック可能に戻す
+    >
+      <div
+        className="relative bg-white rounded-2xl shadow-xl w-[320px] p-5 text-center"
+        style={{ pointerEvents: "auto", zIndex: 2147483647 }}
+      >
         {phase === "playing" && (
           <>
             <p className="text-lg font-bold mb-2">広告を視聴中…</p>

@@ -1,0 +1,36 @@
+.battle-result-page {
+  text-align: center;
+  padding: 40px 20px;
+  color: #fff;
+  background: linear-gradient(135deg, #89f7fe, #66a6ff);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.result-msg {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+.trophy-section {
+  margin-top: 30px;
+  margin-bottom: 40px;
+}
+
+.back-btn {
+  padding: 12px 30px;
+  background: linear-gradient(145deg, #6dd5fa, #2980b9);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.back-btn:hover {
+  transform: scale(1.05);
+}

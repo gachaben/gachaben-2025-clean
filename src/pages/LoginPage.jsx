@@ -1,31 +1,36 @@
 // ------------------------------------------------------
 // ☀️ LoginPage.jsx（朝フェード明け＋Firebaseログイン対応）
 // ------------------------------------------------------
+// - AppOpeningScene.jsx の後に表示される「朝のログイン画面」
+// - 鳥のさえずり / 光アニメーション / 音符Sequenceで演出
+// - Firebase Auth ログイン処理付き
+// ------------------------------------------------------
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { app } from "@/fbkit/app";
-import NoteBurst from "../components/ui/NoteBurst";
+import NoteBurst from "@/components/ui/NoteBurst"; // ✅ 絶対パスで統一
 import { motion } from "framer-motion";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const auth = getAuth(app);
+
   const [showButton, setShowButton] = useState(false);
   const [audio] = useState(() => new Audio("/sounds/morning_birds.mp3"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  // 🎵 朝フェード演出：鳥の声＋ボタン出現
   useEffect(() => {
-    // 鳥の声再生（フェード後）
     audio.volume = 0.6;
+
     const timer1 = setTimeout(() => {
       audio.play().catch(() => {});
     }, 800);
 
-    // スタートボタン出現
     const timer2 = setTimeout(() => setShowButton(true), 6000);
 
     return () => {
@@ -36,13 +41,13 @@ const LoginPage = () => {
     };
   }, [audio]);
 
-  // 🔐 ログイン処理
+  // 🔐 Firebaseログイン
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
       console.log("[LOGIN] success:", email);
-      navigate("/home");
+      navigate("/home"); // ✅ 成功時にホームへ
     } catch (err) {
       console.error("[LOGIN] failed:", err);
       setError("ログイン失敗：" + err.message);
@@ -53,6 +58,7 @@ const LoginPage = () => {
     <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden text-center bg-gradient-to-b from-orange-100 via-sky-100 to-white">
       {/* ☀️ 朝日（光の流れ） */}
       <div className="absolute inset-0 bg-[url('/images/light-rays.png')] bg-top bg-no-repeat opacity-40 animate-light z-0" />
+
       {/* 🌈 光のグラデーション */}
       <div className="absolute inset-0 bg-gradient-to-r from-yellow-100 via-pink-100 to-sky-100 opacity-30 animate-glow z-0" />
 
@@ -101,6 +107,7 @@ const LoginPage = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="border rounded px-3 py-2 text-gray-700"
+            required
           />
           <input
             type="password"
@@ -108,6 +115,7 @@ const LoginPage = () => {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="border rounded px-3 py-2 text-gray-700"
+            required
           />
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
@@ -119,6 +127,7 @@ const LoginPage = () => {
         </motion.form>
       )}
 
+      {/* ☀️ アニメーション定義 */}
       <style>{`
         @keyframes lightFlow {
           0% { background-position: 0 top; opacity: 0.3; }

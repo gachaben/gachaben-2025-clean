@@ -1,177 +1,317 @@
 // ------------------------------------------------------
-// 🌈 PremiumGachaPage.jsx（プレミアムガチャ / 7回確定当たり）
+// 🌈 PremiumGachaPage.jsx（UI整列＋音符アニメ完全版）
 // ------------------------------------------------------
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/fbkit/app";
 import { getAuth } from "firebase/auth";
-import NoteBurst from "@/components/ui/NoteBurst";
 import { useNavigate } from "react-router-dom";
 
+// 🎁 プレミアム景品リスト（シリーズ2508 / *_premium.png を使用）
 const PREMIUM_ITEMS = [
-  { id: "P001", name: "虹のグランドマイスター", rarity: "LEGEND", color: "#ff9ff3" },
-  { id: "P002", name: "オーロラハーモニー", rarity: "ULTRA", color: "#60a5fa" },
-  { id: "P003", name: "光のシンフォニア", rarity: "ULTRA", color: "#facc15" },
-  { id: "P004", name: "天空ピアニスト", rarity: "SUPER", color: "#34d399" },
-  { id: "P005", name: "ドレミフェニックス", rarity: "LEGEND", color: "#f87171" },
+  {
+    id: "P001",
+    name: "ヘラクレス・オブ・ドレミ",
+    rarity: "LEGEND",
+    color: "#facc15",
+    image: "/images/2508/stage5/001_herakuresu_premium.png",
+  },
+  {
+    id: "P002",
+    name: "アゲハ・ライトウィング",
+    rarity: "ULTRA",
+    color: "#60a5fa",
+    image: "/images/2508/stage5/002_ageha_premium.png",
+  },
+  {
+    id: "P003",
+    name: "ハニー・ハーモニック",
+    rarity: "ULTRA",
+    color: "#34d399",
+    image: "/images/2508/stage5/003_hati_premium.png",
+  },
+  {
+    id: "P004",
+    name: "ホタル・ルミナス",
+    rarity: "SUPER",
+    color: "#a78bfa",
+    image: "/images/2508/stage5/004_hotaru_premium.png",
+  },
+  {
+    id: "P005",
+    name: "カブト・プレミアムX",
+    rarity: "LEGEND",
+    color: "#f87171",
+    image: "/images/2508/stage5/005_kabuto_premium_premium.png",
+  },
+  {
+    id: "P006",
+    name: "モンシロ・セレナーデ",
+    rarity: "SUPER",
+    color: "#fcd34d",
+    image: "/images/2508/stage5/006_monshiro_premium.png",
+  },
+  {
+    id: "P007",
+    name: "セミ・サマーブレイク",
+    rarity: "ULTRA",
+    color: "#f472b6",
+    image: "/images/2508/stage5/007_semi_premium.png",
+  },
+  {
+    id: "P008",
+    name: "テン・ドレミムシ",
+    rarity: "SUPER",
+    color: "#22c55e",
+    image: "/images/2508/stage5/008_tentoumusi_premium.png",
+  },
+  {
+    id: "P009",
+    name: "トンボ・スカイソニック",
+    rarity: "ULTRA",
+    color: "#38bdf8",
+    image: "/images/2508/stage5/009_tombo_premium.png",
+  },
+  {
+    id: "P010",
+    name: "クワガタ・クロノブレード",
+    rarity: "LEGEND",
+    color: "#fb923c",
+    image: "/images/2508/stage5/010_kuwagata_premium.png",
+  },
 ];
+
+// 🔊 レア度別サウンド
+const raritySounds = {
+  LEGEND: "/sounds/effects/se_legend.mp3",
+  ULTRA: "/sounds/effects/se_ultra.mp3",
+  SUPER: "/sounds/effects/se_super.mp3",
+  RAINBOW: "/sounds/effects/se_rainbow.mp3",
+};
+
+// 🧩 Firestore 初期化
+async function initPremiumGacha(uid) {
+  const ref = doc(db, "users", uid, "stats", "premiumGacha");
+  const snap = await getDoc(ref);
+  const today = new Date().toISOString().split("T")[0];
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      freeUsed: false,
+      adUsedCount: 0,
+      noteCount: 0,
+      lastUsedAt: today,
+      totalDraws: 0,
+    });
+    return { freeUsed: false, adUsedCount: 0, noteCount: 0 };
+  }
+  const data = snap.data();
+  if (data.lastUsedAt !== today) {
+    await setDoc(ref, { freeUsed: false, adUsedCount: 0, lastUsedAt: today }, { merge: true });
+    return { ...data, freeUsed: false, adUsedCount: 0 };
+  }
+  return {
+    freeUsed: !!data.freeUsed,
+    adUsedCount: Number(data.adUsedCount || 0),
+    noteCount: Number(data.noteCount || 0),
+  };
+}
 
 export default function PremiumGachaPage() {
   const navigate = useNavigate();
   const auth = getAuth();
   const user = auth.currentUser;
+
+  const [gachaState, setGachaState] = useState(null);
   const [isSpinning, setIsSpinning] = useState(false);
   const [result, setResult] = useState(null);
-  const [count, setCount] = useState(0); // 外れカウント
-  const [sound] = useState(() => new Audio("/sounds/effects/gacha_complete.mp3"));
-  const [rainbowSound] = useState(() => new Audio("/sounds/effects/battle_complete.mp3"));
+  const [showEffect, setShowEffect] = useState(false);
 
-  // ✅ プレミアム抽選
-  const drawPremium = () => {
-    const item = PREMIUM_ITEMS[Math.floor(Math.random() * PREMIUM_ITEMS.length)];
-    return item;
-  };
+  // 🔹 初期化
+  useEffect(() => {
+    if (user) initPremiumGacha(user.uid).then(setGachaState);
+  }, [user]);
 
-  // ✅ ガチャ開始
-  const startGacha = async () => {
-    if (isSpinning) return;
+  // 🎬 ガチャ実行
+  const startGacha = async (mode = "free") => {
+    if (isSpinning || !gachaState) return;
+    const { freeUsed, adUsedCount, noteCount } = gachaState;
+
+    if (mode === "free" && freeUsed) return alert("今日はもう無料ガチャを引きました！");
+    if (mode === "ad" && adUsedCount >= 2) return alert("広告ガチャは1日2回までです！");
+
+    const startSound = new Audio("/sounds/effects/gacha_complete.mp3");
+    startSound.play().catch(() => {});
     setIsSpinning(true);
-    sound.play().catch(() => {});
+    setResult(null);
 
     setTimeout(async () => {
-      let item = null;
-      let newCount = count + 1;
+      const ref = doc(db, "users", user.uid, "stats", "premiumGacha");
+      let item;
+      let newNoteCount = gachaState.noteCount + 1;
+      let guaranteed = false;
 
-      // 🌈 7回目は確定当たり！
-      if (newCount >= 7) {
-        item = drawPremium();
-        rainbowSound.play().catch(() => {});
-        setCount(0); // reset
+      // 🌈 7回目で確定
+      if (newNoteCount >= 7) {
+        item = PREMIUM_ITEMS[Math.floor(Math.random() * PREMIUM_ITEMS.length)];
+        newNoteCount = 0;
+        guaranteed = true;
       } else {
-        // ハズレ演出（今回は表示だけ）
-        item = { id: "NONE", name: "はずれ…", rarity: "NONE", color: "#999" };
+        item =
+          Math.random() < 0.4
+            ? PREMIUM_ITEMS[Math.floor(Math.random() * PREMIUM_ITEMS.length)]
+            : { id: "NONE", name: "はずれ…", rarity: "NONE", color: "#999" };
       }
 
       setResult(item);
       setIsSpinning(false);
 
-      // Firestore 保存
-      if (user && item.id !== "NONE") {
-        const ref = doc(db, "users", user.uid, "inventory", item.id);
-        await setDoc(ref, { ...item, obtainedAt: new Date().toISOString() }, { merge: true });
-        console.log("🌈 プレミアムアイテム保存:", item);
+      // 🎵 効果音
+      if (guaranteed) {
+        const rainbow = new Audio(raritySounds.RAINBOW);
+        rainbow.play();
+        setShowEffect(true);
+        setTimeout(() => setShowEffect(false), 2000);
+      } else if (item.id !== "NONE") {
+        const se = new Audio(raritySounds[item.rarity] || "");
+        se.play();
+        setShowEffect(true);
+        setTimeout(() => setShowEffect(false), 1500);
       }
 
-      // Firestoreにカウント保存（外れ連続数）
-      if (user) {
-        const statRef = doc(db, "users", user.uid, "stats", "premiumGacha");
-        await setDoc(statRef, { missCount: item.id === "NONE" ? newCount : 0 }, { merge: true });
-      }
+      // 🔥 Firestore 更新
+      await setDoc(ref, {
+        noteCount: newNoteCount,
+        freeUsed: mode === "free" ? true : freeUsed,
+        adUsedCount: mode === "ad" ? adUsedCount + 1 : adUsedCount,
+        lastUsedAt: new Date().toISOString().split("T")[0],
+      }, { merge: true });
 
-      setCount(item.id === "NONE" ? newCount : 0);
-    }, 2500);
+      setGachaState((prev) => ({
+        ...prev,
+        noteCount: newNoteCount,
+        freeUsed: mode === "free" ? true : prev.freeUsed,
+        adUsedCount: mode === "ad" ? prev.adUsedCount + 1 : prev.adUsedCount,
+      }));
+    }, 3000);
   };
 
-  // ✅ 開始音・演出
-  useEffect(() => {
-    const introSound = new Audio("/sounds/effects/opening_theme.mp3");
-    introSound.play().catch(() => {});
-  }, []);
+  if (!gachaState)
+    return <div className="p-8 text-gray-500">ガチャデータを読み込み中...</div>;
+
+  // 🎵 音符ゲージ（下にカラフル表示）
+  const noteColors = ["#f87171", "#fbbf24", "#34d399", "#60a5fa", "#a78bfa", "#f472b6", "#facc15"];
+  const notes = Array(7)
+    .fill(null)
+    .map((_, i) => (
+      <motion.span
+        key={i}
+        className="text-4xl mx-1"
+        style={{ color: i < gachaState.noteCount ? noteColors[i] : "#ddd" }}
+        animate={{ scale: i < gachaState.noteCount ? [1, 1.3, 1] : 1 }}
+        transition={{ duration: 0.6 }}
+      >
+        𝄞
+      </motion.span>
+    ));
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen text-center bg-gradient-to-b from-pink-100 via-rose-100 to-white overflow-hidden">
-      {/* 🌈 背景 */}
-      <div className="absolute inset-0 bg-[url('/images/light-rays.png')] bg-cover opacity-40 animate-light" />
 
-      {/* 🎵 虹演出（7回確定で発火） */}
-      {result?.id !== "NONE" && (
-        <NoteBurst mode="sequence" type="study" labels={["ド","レ","ミ","ファ","ソ","ラ","シ","ド"]} />
+      {/* 🌈 光エフェクト */}
+      {showEffect && (
+        <video
+          src="/videos/effect_glow.mp4"
+          autoPlay
+          muted
+          playsInline
+          className="fixed inset-0 w-full h-full object-cover z-[999]"
+        />
       )}
 
-      {/* 🎰 タイトル */}
-      <motion.h1
-        className="text-3xl font-bold text-pink-600 drop-shadow-md mb-6 z-10"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
+      {/* 🌈 タイトル */}
+      <h1 className="text-3xl font-bold text-pink-600 drop-shadow-md mb-4 z-10">
         🌈 プレミアムガチャ！
-      </motion.h1>
+      </h1>
 
-      {/* 🎁 ガチャ筐体 */}
-      <div className="relative z-10 w-72 h-72 flex items-center justify-center rounded-full border-8 border-white/50 bg-white/60 shadow-xl backdrop-blur-md">
+      {/* 🎰 ガチャ円 */}
+      <div className="relative z-10 w-80 h-80 flex items-center justify-center rounded-full border-8 border-white/50 bg-white/70 shadow-xl backdrop-blur-md overflow-hidden">
         <AnimatePresence>
           {isSpinning ? (
-            <motion.div
-              key="spin"
-              className="text-6xl animate-spin-slow"
-              style={{ color: "#ec4899" }}
-            >
-              🎵
-            </motion.div>
-          ) : result ? (
-            <motion.div
-              key="result"
-              className="text-center"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", duration: 0.8 }}
-            >
-              <p
-                className="text-2xl font-bold mb-2"
-                style={{ color: result.color }}
-              >
-                {result.name}
-              </p>
-              <p className="text-lg text-gray-600">
-                {result.id === "NONE" ? "また挑戦しよう！" : `レア度：${result.rarity}`}
-              </p>
-            </motion.div>
+            <video
+              src="/videos/gacha_spin.mp4"
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+            />
           ) : (
-            <motion.div
-              key="ready"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-gray-500 italic"
-            >
-              🎥 広告を見てガチャを回そう！
-            </motion.div>
+            <div className="flex flex-col items-center justify-center text-center relative z-20">
+              {/* 🎨 ガチャマシン or 当選画像 */}
+              {!result && (
+                <img
+                  src="/images/gacha_machine.png"
+                  alt="ガチャマシン"
+                  className="w-40 h-40 object-contain mb-2"
+                />
+              )}
+              {result?.image && result.id !== "NONE" && (
+                <motion.img
+                  src={result.image}
+                  alt={result.name}
+                  className="w-44 h-44 object-contain mb-3 z-30 relative"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6 }}
+                />
+              )}
+              <p className="text-2xl font-bold mb-2" style={{ color: result?.color || "#888" }}>
+                {result ? result.name : "🎵 準備OK！"}
+              </p>
+              <p className="text-lg text-gray-500">
+                {result
+                  ? result.id === "NONE"
+                    ? "また挑戦しよう！"
+                    : `レア度：${result.rarity}`
+                  : ""}
+              </p>
+            </div>
           )}
         </AnimatePresence>
       </div>
 
       {/* 🎬 ボタン */}
-      {!result && !isSpinning && (
-        <motion.button
-          onClick={startGacha}
-          className="mt-8 px-8 py-3 bg-pink-500 text-white rounded-2xl shadow-lg hover:scale-105 transition"
-          whileTap={{ scale: 0.95 }}
-        >
-          🎬 ガチャを回す！
-        </motion.button>
-      )}
+      <div className="flex space-x-4 mb-4 mt-4">
+        {!isSpinning && !gachaState.freeUsed && (
+          <button
+            onClick={() => startGacha("free")}
+            className="px-6 py-3 bg-pink-500 text-white rounded-2xl shadow-md hover:scale-105 transition"
+          >
+            🎁 無料で1回引く
+          </button>
+        )}
+        {!isSpinning && gachaState.freeUsed && gachaState.adUsedCount < 2 && (
+          <button
+            onClick={() => startGacha("ad")}
+            className="px-6 py-3 bg-purple-500 text-white rounded-2xl shadow-md hover:scale-105 transition"
+          >
+            🎥 広告を見てもう1回！
+          </button>
+        )}
+      </div>
 
-      {result && (
+      {/* 🎵 音符ゲージ */}
+      <div className="flex justify-center mb-6">{notes}</div>
+
+      {/* ✅ ホームに戻る */}
+      {result && !isSpinning && (
         <motion.button
           onClick={() => navigate("/home")}
-          className="mt-8 px-8 py-3 bg-green-500 text-white rounded-2xl shadow-lg hover:bg-green-600 transition"
-          whileTap={{ scale: 0.95 }}
+          className="mt-2 px-8 py-3 bg-green-500 text-white rounded-2xl shadow-lg hover:bg-green-600 transition"
         >
           ✅ ホームに戻る
         </motion.button>
       )}
-
-      {/* 背景アニメ */}
-      <style>{`
-        @keyframes lightMove {
-          0% { background-position: 0 0; opacity: 0.3; }
-          50% { background-position: 100px 0; opacity: 0.6; }
-          100% { background-position: 0 0; opacity: 0.3; }
-        }
-        .animate-light { animation: lightMove 10s ease-in-out infinite; }
-        .animate-spin-slow { animation: spin 1.2s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-      `}</style>
     </div>
   );
 }

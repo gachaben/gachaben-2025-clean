@@ -1,33 +1,24 @@
 // ------------------------------------------------------
-// 🚀 src/App.jsx（v2.9 完全修正版 / AppOpeningScene 対応版）
+// 🚀 src/App.jsx（v2.9.1 安定版 / MissionGacha統合修正）
 // ------------------------------------------------------
 
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
 
-// ==== テストページ ==== //
 import ChallengeTestPage from "@/pages/ChallengeTestPage.jsx";
 import LessonTestPage from "@/pages/LessonTestPage.jsx";
 import ActiveTimeTestPage from "@/pages/ActiveTimeTestPage.jsx";
-
-// ==== メインページ ==== //
 import HomePage from "@/pages/HomePage.jsx";
 import LoginPage from "@/pages/LoginPage.jsx";
 import DebugPage from "@/pages/DebugPage.jsx";
 import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
 import StudyPage from "./pages/StudyPage";
 import MissionGachaPage from "./pages/MissionGachaPage";
-
-// ==== 起動画面 ==== //
 import AppOpeningScene from "@/pages/AppOpeningScene.jsx";
-
-// ==== バトル関連 ==== //
 import BattleChallengePage from "@/pages/BattleChallengePage.jsx";
 import BattleResultPage from "@/pages/BattleResultPage.jsx";
 import BattleHistoryPage from "@/pages/BattleHistoryPage.jsx";
-
-// ==== 復習モード ==== //
 import ReviewHomePage from "@/pages/ReviewHomePage.jsx";
 import ReviewQuickStart from "@/pages/ReviewQuickStart.jsx";
 import ReviewMistakesPage from "@/pages/ReviewMistakesPage.jsx";
@@ -35,23 +26,18 @@ import ReviewListPage from "@/pages/ReviewListPage.jsx";
 import ReviewPlayPage from "@/pages/ReviewPlayPage.jsx";
 import ReviewSessionStart from "@/pages/ReviewSessionStart.jsx";
 
-// ==== ハートシステム ==== //
 import { HeartsProvider } from "@/context/HeartsContext";
 import TopBar from "@/components/TopBar";
 
-// ------------------------------------------------------
 // 🔐 認証状態管理
-// ------------------------------------------------------
 function useAuthState() {
   const [state, setState] = React.useState({ user: null, loading: true });
-
   React.useEffect(() => {
     const unsub = onAuthStateChanged(getAuth(), (u) => {
       setState({ user: u, loading: false });
     });
     return () => unsub();
   }, []);
-
   return state;
 }
 
@@ -62,9 +48,7 @@ function RequireAuth({ children }) {
   return children;
 }
 
-// ------------------------------------------------------
 // 🧭 開発用ナビゲーションバー
-// ------------------------------------------------------
 function Nav() {
   return (
     <nav className="p-2 flex flex-wrap gap-3 text-sm bg-gray-50 border-b justify-center">
@@ -80,9 +64,7 @@ function Nav() {
   );
 }
 
-// ------------------------------------------------------
 // 🚀 アプリ本体
-// ------------------------------------------------------
 export default function App() {
   const { user, loading } = useAuthState();
 
@@ -165,23 +147,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
-
-      {/* 🚀 MissionGacha用クリックブロック除去スクリプト */}
-      {typeof window !== "undefined" && (
-        <script>
-          {`
-            setTimeout(() => {
-              const blockers = document.querySelectorAll(
-                '.pointer-events-none.fixed.inset-0, .absolute.inset-0.pointer-events-none'
-              );
-              blockers.forEach(el => {
-                el.remove();
-                console.log('🧹 削除完了: pointer-events-none.inset-0');
-              });
-            }, 800);
-          `}
-        </script>
-      )}
     </HeartsProvider>
   );
 }

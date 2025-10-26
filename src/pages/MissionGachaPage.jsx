@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// 🎰 MissionGachaPage.jsx（AdRewardModal 動作保証＋デバッグ付き）
+// 🎰 MissionGachaPage.jsx（AdRewardModal 動作保証＋デバッグ＋安定化版）
 // ------------------------------------------------------
 
 import React, { useState, useEffect } from "react";
@@ -20,7 +20,7 @@ export default function MissionGachaPage() {
     return () => unsub();
   }, [auth]);
 
-  // ✅ オーバーレイ削除
+  // ✅ オーバーレイ削除（安定化：cleanup付き）
   useEffect(() => {
     const removeBlockers = () => {
       const blockers = document.querySelectorAll(
@@ -32,7 +32,8 @@ export default function MissionGachaPage() {
       });
     };
     removeBlockers();
-    setTimeout(removeBlockers, 1000);
+    const timer = setTimeout(removeBlockers, 1000);
+    return () => clearTimeout(timer); // ✅ cleanupでメモリリーク防止
   }, []);
 
   // ✅ デバッグ追跡コード（showAdModal 変化監視）

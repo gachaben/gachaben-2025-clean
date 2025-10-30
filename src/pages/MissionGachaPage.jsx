@@ -1,127 +1,178 @@
 // ------------------------------------------------------
-// 🎰 MissionGachaPage.jsx（AdRewardModal 動作保証＋デバッグ＋安定化版）
+// 🎰 MissionGachaPage.jsx（ミッションガチャ）
+// ------------------------------------------------------
+// - ログイン後にアクセス
+// - 🎥 広告視聴でガチャ可
+// - 結果は Firestore に保存（1日1回）
 // ------------------------------------------------------
 
 import React, { useState, useEffect } from "react";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
-import AdRewardModal from "@/components/ui/AdRewardModal.jsx"; // ✅ 修正パス
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "@/fbkit/app"; // ← Firebase接続統一構成に合わせて修正
+import AdRewardModal from "@/components/ui/AdRewardModal";
+import NoteBurst from "@/components/ui/NoteBurst";
+import { useNavigate } from "react-router-dom";
 
-export default function MissionGachaPage() {
-  // 🔹 状態管理
-  const auth = getAuth();
-  const [user, setUser] = useState(null);
+const MISSION_TYPES = [
+  { id: "study", label: "📘 学習チャレンジ", color: "#60a5fa" },
+  { id: "challenge", label: "⚡ チャレンジ問題", color: "#facc15" },
+  { id: "battle", label: "🥊 バトルチャレンジ", color: "#f87171" },
+];
+
+export default function MissionGachaPage({ user }) {
+  const navigate = useNavigate();
   const [showAdModal, setShowAdModal] = useState(false);
+  const [selectedMission, setSelectedMission] = useState(null);
   const [spinning, setSpinning] = useState(false);
+  const [alreadyAssigned, setAlreadyAssigned] = useState(false);
 
-  // ✅ 認証監視
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
-    return () => unsub();
-  }, [auth]);
+  const today = new Date().toISOString().split("T")[0];
 
-  // ✅ オーバーレイ削除（安定化：cleanup付き）
+  // --- Firestore確認（すでに今日のミッションがあるか） ---
   useEffect(() => {
-    const removeBlockers = () => {
-      const blockers = document.querySelectorAll(
-        ".pointer-events-none.fixed.inset-0, .absolute.inset-0.pointer-events-none"
-      );
-      blockers.forEach((el) => {
-        el.remove();
-        console.log("🧹 削除完了: pointer-events-none.fixed.inset-0");
-      });
+    if (!user?.uid) return;
+    const fetchMission = async () => {
+      const ref = doc(db, "users", user.uid, "stats", "doremi");
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data.dailyMission?.assignedDate === today) {
+          setSelectedMission(data.dailyMission.type);
+          setAlreadyAssigned(true);
+        }
+      }
     };
-    removeBlockers();
-    const timer = setTimeout(removeBlockers, 1000);
-    return () => clearTimeout(timer); // ✅ cleanupでメモリリーク防止
-  }, []);
+    fetchMission();
+  }, [user, today]);
 
-  // ✅ デバッグ追跡コード（showAdModal 変化監視）
-  useEffect(() => {
-    console.log("👀 現在 showAdModal:", showAdModal);
-  }, [showAdModal]);
-
-  // ✅ 広告ボタン押下
-  const handleClick = () => {
-    console.log("🎥 Ad ボタン押下");
-    setShowAdModal(true); // ← モーダル表示
-  };
-
-  // ✅ 広告完了後
+  // --- 広告視聴完了時：ガチャ開始 ---
   const handleAdReward = () => {
-    console.log("🎁 広告完了 → ガチャ演出開始");
-    setSpinning(true);
-    setTimeout(() => {
-      alert("🎉 ガチャ演出スタート！（デバッグ用）");
-      setSpinning(false);
-    }, 1000);
+    setShowAdModal(false);
+    startMissionGacha();
   };
 
-  // ✅ UI本体
+  // --- ミッションガチャ回転処理 ---
+  const startMissionGacha = async () => {
+    if (!user?.uid || spinning) return;
+    setSpinning(true);
+
+    // ランダム抽選（確率重み付け）
+    const weights = [0.4, 0.35, 0.25]; // study, challenge, battle
+    const rand = Math.random();
+    let result;
+    if (rand < weights[0]) result = "study";
+    else if (rand < weights[0] + weights[1]) result = "challenge";
+    else result = "battle";
+
+    // 回転アニメーション時間
+    setTimeout(async () => {
+      setSelectedMission(result);
+      setSpinning(false);
+
+      // Firestoreに保存
+      const ref = doc(db, "users", user.uid, "stats", "doremi");
+      await updateDoc(ref, {
+        dailyMission: {
+          type: result,
+          assignedDate: today,
+          completed: false,
+        },
+      });
+    }, 3000);
+  };
+
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen text-center bg-gradient-to-b from-blue-100 via-sky-100 to-white">
-      {/* タイトル */}
+    <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden text-center bg-gradient-to-b from-blue-100 via-sky-100 to-white">
+      {/* 🌈 背景 */}
+      <div className="absolute inset-0 bg-[url('/images/light-rays.png')] bg-cover opacity-40 animate-light z-0" />
+      <NoteBurst mode="burst" quiet />
+
+      {/* 🎵 タイトル */}
       <motion.h1
-        className="text-3xl font-bold text-blue-600 mb-6 z-10 drop-shadow-md"
+        className="text-3xl font-bold text-blue-600 mb-4 z-10 drop-shadow-md"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
       >
         🎰 今日のミッションガチャ！
       </motion.h1>
 
-      {/* ガチャ円 */}
+      {/* 🎁 ガチャエリア */}
       <div className="relative z-10 w-72 h-72 flex items-center justify-center rounded-full border-8 border-white/50 bg-white/40 shadow-xl backdrop-blur-md">
         <AnimatePresence>
-          <motion.div key="ready" className="text-lg text-gray-500 italic">
-            🎥 広告を見てガチャを回そう！
-          </motion.div>
+          {spinning ? (
+            <motion.div
+              key="spinning"
+              className="text-6xl font-bold animate-spin-slow"
+              style={{ color: "#facc15" }}
+            >
+              🎵
+            </motion.div>
+          ) : selectedMission ? (
+            <motion.div
+              key="result"
+              className="text-2xl font-bold text-gray-800"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", duration: 0.8 }}
+            >
+              {MISSION_TYPES.find((m) => m.id === selectedMission)?.label}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="ready"
+              className="text-lg text-gray-500 italic"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              🎥 広告を見てガチャを回そう！
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
-      {/* ✅ 広告視聴ボタン */}
-      <button
-        id="debug-btn"
-        onClick={handleClick}
-        className="mt-8 px-8 py-3 bg-pink-500 text-white rounded-2xl shadow-lg transition transform hover:scale-105 active:scale-95 hover:bg-pink-600"
-        style={{
-          zIndex: 999999,
-          cursor: "pointer",
-          position: "relative",
-          pointerEvents: "auto",
-        }}
-      >
-        🎥 広告を見てガチャを回す！
-      </button>
+      {/* 🎥 ガチャボタン */}
+      {!alreadyAssigned && !spinning && !selectedMission && (
+        <motion.button
+          onClick={() => setShowAdModal(true)}
+          className="mt-8 px-8 py-3 bg-pink-500 text-white rounded-2xl shadow-lg hover:scale-105 transition z-10"
+          whileTap={{ scale: 0.95 }}
+        >
+          🎥 広告を見てガチャを回す！
+        </motion.button>
+      )}
 
-      {/* ✅ AdRewardModal（モーダル呼び出し） */}
-      <AdRewardModal
-        open={showAdModal}
-        onClose={() => setShowAdModal(false)}
-        onReward={handleAdReward}
-      />
+      {/* ✅ 結果ボタン */}
+      {selectedMission && !spinning && (
+        <motion.button
+          onClick={() => navigate("/home")}
+          className="mt-8 px-8 py-3 bg-green-500 text-white rounded-2xl shadow-lg hover:bg-green-600 transition"
+          whileTap={{ scale: 0.95 }}
+        >
+          ✅ ホームに進む
+        </motion.button>
+      )}
 
-      {/* 🚫 全レイヤー強制解除CSS */}
+      {/* 🎥 広告モーダル */}
+      {showAdModal && (
+        <AdRewardModal
+          onClose={() => setShowAdModal(false)}
+          onReward={handleAdReward}
+          rewardText="🎁 ミッションガチャが回せるようになった！"
+        />
+      )}
+
+      {/* 💫 背景アニメーション */}
       <style>{`
-        div.pointer-events-none.fixed.inset-0,
-        div.absolute.inset-0.pointer-events-none {
-          display: none !important;
-          visibility: hidden !important;
+        @keyframes lightMove {
+          0% { background-position: 0 0; opacity: 0.3; }
+          50% { background-position: 100px 0; opacity: 0.6; }
+          100% { background-position: 0 0; opacity: 0.3; }
         }
-
-        * {
-          pointer-events: auto !important;
-        }
-
-        #debug-btn {
-          z-index: 999999 !important;
-          position: relative !important;
-          pointer-events: auto !important;
-        }
-
-        html, body, #root {
-          pointer-events: auto !important;
-          overflow: visible !important;
-        }
+        .animate-light { animation: lightMove 10s ease-in-out infinite; }
+        .animate-spin-slow { animation: spin 1.2s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
       `}</style>
     </div>
   );

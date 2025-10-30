@@ -1,84 +1,115 @@
 // ------------------------------------------------------
-// src/pages/DebugPage.jsx（commit / finish対応・完全動作版）
+// src/pages/DebugPage.jsx（create → commit 連動版）
 // ------------------------------------------------------
 import React, { useState } from "react";
 
 export default function DebugPage() {
-  const [battleId, setBattleId] = useState(null);
   const [result, setResult] = useState("");
+  const [battleId, setBattleId] = useState(""); // ← 追加
+  const BASE_URL = "http://127.0.0.1:5002/gachaben-2025/us-central1";
 
-  // ✅ テスト用固定UID（Auth Emulator用）
-  const TEST_UID = "test-user";
-
- const baseURL = "http://127.0.0.1:5002/gachaben-2025/us-central1";
-  // 共通Fetch関数
-  // ✅ 共通Fetch関数
-const callFunction = async (endpoint, body = {}) => {
-  try {
-    console.log("[callFunction]", endpoint, { uid: TEST_UID, battleId, ...body }); // ← デバッグログ追加
-
-    const res = await fetch(`${baseURL}/${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        uid: TEST_UID,
-        battleId, // ← battleId を常に送る
-        ...body,
-      }),
-    });
-
-    const data = await res.json();
-    console.log(`[${endpoint}]`, data);
-    setResult(JSON.stringify(data, null, 2));
-
-    // ✅ createBattle 成功時 → battleIdを保存
-    if (endpoint === "createBattleFn" && data.battleId) {
-      setBattleId(data.battleId);
+  // ✅ createBattleFn 実行
+  const handleCreateBattle = async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/createBattleFn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: "debug-user", cpuLevel: "N" }),
+      });
+      const data = await res.json();
+      console.log("createBattleFn:", data);
+      if (data?.battleId) {
+        setBattleId(data.battleId); // ← IDを保存
+      }
+      setResult(JSON.stringify(data, null, 2));
+    } catch (err) {
+      setResult(JSON.stringify({ error: String(err) }, null, 2));
     }
-  } catch (err) {
-    setResult(JSON.stringify({ error: err.message }));
-  }
-};
+  };
 
+  // ✅ commitRoundFn 実行
+  const handleCommitRound = async () => {
+    if (!battleId) {
+      setResult("❌ 先に createBattle を実行してください。");
+      return;
+    }
+    try {
+      const res = await fetch(`${BASE_URL}/commitRoundFn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          uid: "debug-user",
+          battleId, // ← ここを連動
+          round: 1,
+        }),
+      });
+      const data = await res.json();
+      console.log("commitRoundFn:", data);
+      setResult(JSON.stringify(data, null, 2));
+    } catch (err) {
+      setResult(JSON.stringify({ error: String(err) }, null, 2));
+    }
+  };
 
+  // ✅ finishBattleFn 実行
+  const handleFinishBattle = async () => {
+    if (!battleId) {
+      setResult("❌ 先に createBattle を実行してください。");
+      return;
+    }
+    try {
+      const res = await fetch(`${BASE_URL}/finishBattleFn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uid: "debug-user", battleId }),
+      });
+      const data = await res.json();
+      setResult(JSON.stringify(data, null, 2));
+    } catch (err) {
+      setResult(JSON.stringify({ error: String(err) }, null, 2));
+    }
+  };
+
+  // ✅ pingFn 実行
+  const handlePing = async () => {
+    const res = await fetch(`${BASE_URL}/pingFn`);
+    const data = await res.json();
+    setResult(JSON.stringify(data, null, 2));
+  };
+
+  // ✅ UI
   return (
-    <div style={{ padding: "2rem" }}>
-      <h2>🧩 Debug Dashboard</h2>
-      <p>現在の battleId：{battleId ?? "ー"}</p>
-
-      <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
-        <button
-          style={{ background: "#3b82f6", color: "white", padding: "1rem" }}
-          onClick={() => callFunction("createBattleFn")}
-        >
-          🌀 createBattle 実行
+    <div style={{ padding: "20px" }}>
+      <h2>🐞 Debug Dashboard</h2>
+      <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={handleCreateBattle} style={{ background: "#4CAF50", color: "#fff", padding: "10px" }}>
+          createBattle 実行
         </button>
-
-        <button
-          style={{ background: "#10b981", color: "white", padding: "1rem" }}
-         onClick={() => callFunction("commitRoundFn")}
-
-        >
-          🔵 commitRound 実行
+        <button onClick={handleCommitRound} style={{ background: "#2196F3", color: "#fff", padding: "10px" }}>
+          commitRound 実行
         </button>
-
-        <button
-          style={{ background: "#ef4444", color: "white", padding: "1rem" }}
-          onClick={() => callFunction("finishBattleFn")}
-        >
-          🔴 finishBattle 実行
+        <button onClick={handleFinishBattle} style={{ background: "#f44336", color: "#fff", padding: "10px" }}>
+          finishBattle 実行
+        </button>
+        <button onClick={handlePing} style={{ background: "#9C27B0", color: "#fff", padding: "10px" }}>
+          pingFn 実行
         </button>
       </div>
 
+      <p style={{ fontSize: "14px", color: "#444" }}>
+        現在の battleId: <strong>{battleId || "(未作成)"}</strong>
+      </p>
+
       <pre
         style={{
-          marginTop: "1rem",
-          background: "#111",
+          background: "#000",
           color: "#0f0",
-          padding: "1rem",
+          padding: "10px",
+          borderRadius: "6px",
+          minHeight: "100px",
         }}
       >
-        {result}
+        {result || "-"}
       </pre>
     </div>
   );

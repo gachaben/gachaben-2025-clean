@@ -19,6 +19,6 @@
       "@/fbkit/*": ["fbkit/*"]         // ← 追加（あると便利）
     }
   },
-  "include": ["src"],
+  "include": ["src", "scripts/updateItemNames.js"],
   "exclude": ["dist", "node_modules", "legacy_deprecated"]
 }

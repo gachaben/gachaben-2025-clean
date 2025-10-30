@@ -1,14 +1,15 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "target": "es2020",
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
     "outDir": "lib",
-    "rootDir": "src",
+    "sourceMap": true,
     "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "moduleResolution": "node",
-    "baseUrl": "./src"
+    "target": "es2017"
   },
-  "include": ["src"]
+  "compileOnSave": true,
+  "include": [
+    "src"
+  ]
 }

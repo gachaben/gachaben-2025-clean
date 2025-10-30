@@ -1,228 +1,288 @@
 // ------------------------------------------------------
-// 🎵 BattleChallengePage.jsx（v4.0：Firebase連携版）
-// ✅ createBattle / commitRound / finishBattle 統合
-// ✅ バトル券チェック後 → Firestore記録付きバトル開始
+// ⚔️ BattleChallengePage.jsx（勝利BGM＋黄金波紋演出＋テーマ連動）
+// ------------------------------------------------------
+// ✅ 仕様 v1.7b 対応：7問制 / 4問先取 / DP + battleNotes + premiumTickets
+// ✅ 勝利時：/sounds/{themeName}/battle_win.mp3 再生 ＋ 黄金波紋演出
 // ------------------------------------------------------
 
-import React, { useState, useEffect, useRef } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { db } from "@/fbkit";
+import { useTheme } from "@/context/ThemeContext";
+import NoteTrackBattle from "@/components/battle/NoteTrackBattle";
+import NoteBurstGold from "@/components/effects/NoteBurstGold";
+import { db } from "@/fbkit/app";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
-import QuestionPanel from "@/components/battle/QuestionPanel";
-import CardBar from "@/components/battle/CardBar";
-import ReviveModal from "@/components/battle/ReviveModal";
-import NoteBurst from "@/components/ui/NoteBurst";
-import NoteTrackBattle from "@/components/ui/NoteTrackBattle";
-import useCardManager from "@/hooks/useCardManager";
-import RankUpModal from "@/components/ui/RankUpModal";
-import { consumeTicket } from "@/utils/useTickets";
+// 🔢 仮問題ジェネレータ
+function generateQuestion() {
+  const ops = ["+", "-", "×", "÷"];
+  const op = ops[Math.floor(Math.random() * ops.length)];
+  let a = 1 + Math.floor(Math.random() * 9);
+  let b = 1 + Math.floor(Math.random() * 9);
+  if (op === "÷") {
+    const prod = a * b;
+    [a, b] = [prod, a];
+  }
 
-import { app } from "@/fbkit/app";
-import {
-  getFunctions,
-  httpsCallable,
-  connectFunctionsEmulator,
-} from "firebase/functions";
+  const calc = (x, y, o) =>
+    o === "+"
+      ? x + y
+      : o === "-"
+      ? x - y
+      : o === "×"
+      ? x * y
+      : Math.floor(x / y);
 
-// ✅ Emulator接続（5002）
-const functions = getFunctions(app);
-connectFunctionsEmulator(functions, "localhost", 5002);
+  const answer = calc(a, b, op);
+  const choices = new Set([answer]);
+  while (choices.size < 4) {
+    const delta = Math.floor(Math.random() * 7) - 3;
+    const cand = answer + (delta === 0 ? 4 : delta);
+    choices.add(cand);
+  }
+  const shuffled = Array.from(choices).sort(() => Math.random() - 0.5);
+  return { text: `${a} ${op} ${b} = ?`, answer, choices: shuffled };
+}
 
-const createBattleFn = httpsCallable(functions, "createBattleFn");
-const commitRoundFn = httpsCallable(functions, "commitRoundFn");
-const finishBattleFn = httpsCallable(functions, "finishBattleFn");
-
-export default function BattleChallengePage({ user }) {
-  const auth = getAuth();
+export default function BattleChallengePage() {
   const navigate = useNavigate();
+  const { theme, themeName } = useTheme();
+  const auth = getAuth();
+  const user = auth.currentUser;
 
-  const [level, setLevel] = useState(1);
-  const [question, setQuestion] = useState(null);
+  const [round, setRound] = useState(1);
+  const [myScore, setMyScore] = useState(0);
+  const [cpuScore, setCpuScore] = useState(0);
   const [progress, setProgress] = useState(0);
-  const [bonus, setBonus] = useState(0);
-  const [showRevive, setShowRevive] = useState(false);
-  const [showBurst, setShowBurst] = useState(0);
-  const [modal, setModal] = useState({ show: false, old: "", new: "" });
+  const [q, setQ] = useState(generateQuestion());
+  const [locked, setLocked] = useState(false);
+  const [result, setResult] = useState(null);
+  const [showRipple, setShowRipple] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const { cards, useCard, applyEffect, resetCards } = useCardManager();
-
-  const startedRef = useRef(false);
-  const [battleId, setBattleId] = useState(null);
-
-  // 🧠 Firestore 出題
-  const fetchQuestion = async (lv) => {
-    try {
-      const q = query(
-        collection(db, "problems"),
-        where("grade", "<=", user?.grade || 3),
-        where("level", "==", lv)
-      );
-      const snap = await getDocs(q);
-
-      if (!snap.empty) {
-        const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        const random = docs[Math.floor(Math.random() * docs.length)];
-        setQuestion({
-          id: random.id,
-          text: random.text || random.body?.q || "問題が見つかりません",
-          choices: random.choices || ["6", "8", "9", "12"],
-          answer: random.answer || random.body?.a || "12",
-        });
-      } else {
-        setQuestion({
-          text: "3×4は？",
-          choices: ["6", "8", "9", "12"],
-          answer: "12",
-        });
-      }
-    } catch (e) {
-      console.error("❌ fetchQuestion失敗:", e);
-    }
-  };
-
-  // 🎮 入場時：バトル券チェック＋Firebaseバトル作成
+  // 🪙 バトルチケット消費
   useEffect(() => {
-    const startBattle = async () => {
-      if (startedRef.current) return;
-      startedRef.current = true;
-
-      const ok = await consumeTicket();
-      if (!ok) {
-        alert("🎫 バトル券が足りません。チャレンジ問題か広告で入手してください。");
-        navigate("/");
-        return;
-      }
-
+    if (!user?.uid) return;
+    (async () => {
       try {
-        // ✅ Firebaseでバトル作成
-        const res = await createBattleFn({});
-        console.log("🎯 createBattle:", res.data);
-        setBattleId(res.data.battleId);
-        console.log("🎫 バトル券消費完了 → 出題開始");
-        fetchQuestion(level);
-      } catch (err) {
-        console.error("❌ createBattleFn失敗:", err);
-        alert("バトル開始時にエラーが発生しました。");
-      }
-    };
-    startBattle();
-  }, []);
-
-  // 🎯 回答処理（commitRoundFn 連携）
-  const handleAnswer = async (isCorrect, lv) => {
-    try {
-      if (battleId) {
-        await commitRoundFn({
-          battleId,
-          round: progress + 1,
-          result: isCorrect ? "correct" : "wrong",
-        });
-        console.log(`✅ commitRoundFn: Round ${progress + 1}`, isCorrect);
-      }
-
-      if (isCorrect) {
-        const add = (lv === 1 ? 1 : lv === 2 ? 2 : 3) + bonus;
-        setBonus(0);
-        setProgress((p) => Math.min(p + add, 7));
-        setShowBurst(add);
-        setTimeout(() => setShowBurst(0), 1200);
-        setQuestion(null);
-        setTimeout(() => fetchQuestion(lv), 800);
-      } else {
-        setShowRevive(true);
-      }
-    } catch (e) {
-      console.error("❌ handleAnswer失敗:", e);
-    }
-  };
-
-  // 🎵 7音達成時 → 結果画面＋finishBattleFn
-  useEffect(() => {
-    if (progress >= 7 && battleId) {
-      const finish = async () => {
-        try {
-          await finishBattleFn({ battleId });
-          console.log("🏁 finishBattleFn 完了:", battleId);
-        } catch (err) {
-          console.error("❌ finishBattleFn失敗:", err);
-        } finally {
-          resetCards();
-          console.log("🎯 バトルクリア → 結果画面へ遷移します");
-          setTimeout(() => {
-            navigate(`/battle/result?result=win&score=${progress}`);
-          }, 1000);
+        const ref = doc(db, "users", user.uid);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          const tickets = Number(data?.tickets ?? 0);
+          if (tickets > 0) await updateDoc(ref, { tickets: tickets - 1 });
         }
-      };
-      finish();
-    }
-  }, [progress]);
+      } catch {}
+    })();
+  }, [user]);
 
-  // 🧩 カード使用
-  const handleUseCard = (card) => {
-    const effect = applyEffect(card.id, question, 0);
-    if (effect.question === null) fetchQuestion(level);
-    else setQuestion(effect.question);
-    setBonus(effect.bonus || 0);
-    useCard(card.id);
+  // ✅ 回答処理
+  const answer = (choice) => {
+    if (locked || result) return;
+    setLocked(true);
+
+    const correct = choice === q.answer;
+    const nextMy = correct ? myScore + 1 : myScore;
+    const nextCpu = correct ? cpuScore : cpuScore + 1;
+    const nextProgress = Math.min(progress + 1, 7);
+
+    setTimeout(() => {
+      setMyScore(nextMy);
+      setCpuScore(nextCpu);
+      setProgress(nextProgress);
+
+      const isWin = nextMy >= 4 || (nextProgress >= 7 && nextMy > nextCpu);
+      const isLose =
+        nextCpu >= 4 ||
+        (nextProgress >= 7 && nextCpu >= nextMy && nextCpu !== nextMy);
+
+      if (isWin || isLose) {
+        if (isWin) {
+          // 🎧 勝利サウンド（テーマ連動）
+          const path = `/sounds/${themeName || "normal"}/battle_win.mp3`;
+          const se = new Audio(path);
+          se.volume = 0.8;
+          se.play().catch(() => {});
+
+          // 🌟 黄金波紋＋金色音符演出
+          setShowRipple(true);
+          setTimeout(() => setShowRipple(false), 2200);
+        }
+        setResult(isWin ? "win" : "lose");
+      } else {
+        setQ(generateQuestion());
+        setRound((r) => r + 1);
+        setLocked(false);
+      }
+    }, 400);
   };
 
-  const closeRankModal = () => setModal({ show: false, old: "", new: "" });
+  // ✅ Firestore 保存処理
+  const finishAndSave = async () => {
+    if (!user?.uid || !result || saving) return navigate("/home");
+    setSaving(true);
 
-  // 🖼️ UI部
+    const ref = doc(db, "users", user.uid);
+    try {
+      const snap = await getDoc(ref);
+      const data = snap.exists() ? snap.data() : {};
+      const stats = data.stats || {};
+      const dp = Number(stats.doremiPoints ?? 0);
+      const notes = Number(stats.battleNotes ?? 0);
+      const premium = Number(data.premiumTickets ?? 0);
+      const dpGain = result === "win" ? 10 : 5;
+
+      let newNotes = notes + 1;
+      let premiumGain = 0;
+      if (newNotes >= 7) {
+        premiumGain = 1;
+        newNotes = 0;
+      }
+
+      await setDoc(
+        ref,
+        {
+          premiumTickets: premium + premiumGain,
+          stats: { ...stats, doremiPoints: dp + dpGain, battleNotes: newNotes },
+          lastBattleAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    } catch {}
+    setSaving(false);
+    navigate("/home");
+  };
+
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen bg-gradient-to-b from-indigo-50 to-white relative pt-10 pb-[240px]">
-      <div
-        className="fixed left-0 w-full flex justify-center z-[100000]"
-        style={{ bottom: "40px" }}
+    <div
+      className="relative min-h-screen flex flex-col items-center justify-start pt-10 px-4 overflow-hidden"
+      style={{ background: theme.background, color: theme.textColor }}
+    >
+      {/* 🌟 黄金波紋＋金色音符（勝利演出） */}
+      {showRipple && (
+        <>
+          {/* 黄金波紋 */}
+          <div
+            className="absolute top-1/2 left-1/2 w-[240px] h-[240px] rounded-full pointer-events-none z-[900]"
+            style={{
+              transform: "translate(-50%, -50%)",
+              background:
+                "radial-gradient(circle, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0.1) 70%)",
+              animation: "ripple 2s ease-out forwards",
+              boxShadow:
+                "0 0 30px 10px rgba(255, 215, 0, 0.4), 0 0 80px 20px rgba(255, 215, 0, 0.3)",
+              filter: "blur(1px)",
+            }}
+          />
+
+          {/* 金色音符バースト */}
+          <NoteBurstGold count={7} mode="gold" />
+        </>
+      )}
+
+      <style>{`
+        @keyframes ripple {
+          0% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0.9;
+          }
+          50% {
+            transform: translate(-50%, -50%) scale(1.8);
+            opacity: 0.7;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(3);
+            opacity: 0;
+          }
+        }
+      `}</style>
+
+      {/* タイトル */}
+      <motion.h1
+        className="text-2xl font-bold drop-shadow mb-4"
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
       >
-        <NoteTrackBattle progress={progress} />
+        ⚔️ バトル（7問制 / 4問先取）
+      </motion.h1>
+
+      {/* スコア＆音符ゲージ */}
+      <div className="flex items-center gap-6 mb-4">
+        <div className="px-3 py-2 bg-white/70 rounded-xl shadow">
+          あなた <span className="font-bold text-pink-600">{myScore}</span>
+        </div>
+        <NoteTrackBattle progress={progress} victoryAt={4} />
+        <div className="px-3 py-2 bg-white/70 rounded-xl shadow">
+          CPU <span className="font-bold text-blue-600">{cpuScore}</span>
+        </div>
       </div>
 
-      {showBurst > 0 && (
-        <div className="fixed inset-0 z-[9990] pointer-events-none">
-          <NoteBurst count={showBurst} color="#fb7185" />
+      {/* 問題パネル */}
+      <motion.div
+        className="w-full max-w-md bg-white/80 backdrop-blur rounded-2xl shadow-lg p-5 mb-6"
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="text-sm text-gray-600 mb-1">第 {round} 問 / 全7問</div>
+        <div className="text-3xl font-extrabold text-gray-800 text-center my-4 select-none">
+          {q.text}
         </div>
-      )}
-
-      {question && !showRevive && (
-        <div className="flex flex-col items-center w-full mb-16 mt-10">
-          <QuestionPanel
-            key={question.id || question.text}
-            question={question}
-            onAnswer={(isCorrect) => handleAnswer(isCorrect, level)}
-          />
+        <div className="grid grid-cols-2 gap-3">
+          {q.choices.map((c, i) => (
+            <button
+              key={i}
+              disabled={locked || !!result}
+              onClick={() => answer(c)}
+              className={`px-4 py-3 rounded-xl font-bold shadow transition ${
+                locked ? "opacity-60" : "hover:scale-105"
+              } ${result ? "opacity-60" : ""}`}
+              style={{
+                background: i % 2 === 0 ? theme.accent : "#60a5fa",
+                color: "#fff",
+              }}
+            >
+              {c}
+            </button>
+          ))}
         </div>
-      )}
+      </motion.div>
 
-      {!showRevive && (
-        <div
-          className="fixed left-0 w-full flex justify-center z=[9999]"
-          style={{ bottom: "160px" }}
-        >
-          <CardBar cards={cards} onUse={handleUseCard} />
-        </div>
-      )}
-
-      {showRevive && (
-        <ReviveModal
-          onRevive={() => setShowRevive(false)} // ❤️ 復活カードで続行
-          onClose={() => {
-            setShowRevive(false);
-            setProgress(0);
-            navigate(`/battle/result?result=lose`);
-          }}
-          hasReviveCard={cards.some((c) => c.id === "revive" && !c.used)}
-        />
-      )}
-
-      <RankUpModal
-        show={modal.show}
-        oldRank={modal.old}
-        newRank={modal.new}
-        onClose={closeRankModal}
-      />
+      {/* 結果モーダル */}
+      <AnimatePresence>
+        {result && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <motion.div
+              className="bg-white rounded-2xl p-6 w-full max-w-sm text-center shadow-2xl"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+            >
+              <div className="text-3xl mb-2">
+                {result === "win" ? "🏆 勝利！" : "💧 敗北…"}
+              </div>
+              <div className="mb-4 text-gray-700">
+                {result === "win"
+                  ? "＋10 DP を獲得しました。"
+                  : "＋5 DP が努力として記録されました。"}
+                <br />
+                バトル音符が 1 増加します（7音でプレミアムガチャ券 🎁）
+              </div>
+              <button
+                onClick={finishAndSave}
+                className="mt-2 px-6 py-3 rounded-xl font-bold text-white shadow"
+                style={{ background: theme.accent }}
+              >
+                ✅ ホームへ
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

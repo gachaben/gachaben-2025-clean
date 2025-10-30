@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// 🚀 src/App.jsx（v2.9.1 安定版 / MissionGacha統合修正）
+// 🚀 src/App.jsx（v2.9.2 安定版 / PremiumGacha 認証保護追加）
 // ------------------------------------------------------
 
 import React from "react";
@@ -15,6 +15,7 @@ import DebugPage from "@/pages/DebugPage.jsx";
 import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
 import StudyPage from "./pages/StudyPage";
 import MissionGachaPage from "./pages/MissionGachaPage";
+import PremiumGachaPage from "@/pages/PremiumGachaPage.jsx";
 import AppOpeningScene from "@/pages/AppOpeningScene.jsx";
 import BattleChallengePage from "@/pages/BattleChallengePage.jsx";
 import BattleResultPage from "@/pages/BattleResultPage.jsx";
@@ -25,7 +26,6 @@ import ReviewMistakesPage from "@/pages/ReviewMistakesPage.jsx";
 import ReviewListPage from "@/pages/ReviewListPage.jsx";
 import ReviewPlayPage from "@/pages/ReviewPlayPage.jsx";
 import ReviewSessionStart from "@/pages/ReviewSessionStart.jsx";
-
 import { HeartsProvider } from "@/context/HeartsContext";
 import TopBar from "@/components/TopBar";
 
@@ -60,6 +60,7 @@ function Nav() {
       <Link to="/debug">🧭 Debug</Link>
       <Link to="/opening">🌅 Opening</Link>
       <Link to="/mission-gacha">🎰 Mission</Link>
+      <Link to="/premium-gacha">🌈 Premium</Link>
     </nav>
   );
 }
@@ -94,6 +95,16 @@ export default function App() {
             element={
               <RequireAuth>
                 <MissionGachaPage />
+              </RequireAuth>
+            }
+          />
+
+          {/* 🌈 プレミアムガチャ（認証保護あり） */}
+          <Route
+            path="/premium-gacha"
+            element={
+              <RequireAuth>
+                <PremiumGachaPage />
               </RequireAuth>
             }
           />

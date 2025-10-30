@@ -1,86 +1,17 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+/**
+ * Import function triggers from their respective submodules:
+ *
+ * import {onCall} from "firebase-functions/v2/https";
+ * import {onDocumentWritten} from "firebase-functions/v2/firestore";
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.pingFn = exports.finishBattleFn = exports.commitRoundFn = exports.createBattleFn = void 0;
-// ------------------------------------------------------
-// functions/src/index.ts（完全統一版 / commitRound接続修正版）
-// ------------------------------------------------------
-const functions = __importStar(require("firebase-functions"));
-const admin = __importStar(require("firebase-admin"));
-const createBattle_1 = require("./createBattle");
-const commitRound_1 = require("./commitRound");
-const finishBattle_1 = require("./finishBattle");
-if (!admin.apps.length) {
-    admin.initializeApp();
-    console.log("✅ Firebase Admin initialized");
-}
-// ✅ CORS設定
-function handleCORS(req, res) {
-    const allowedOrigins = ["http://127.0.0.1:5173", "http://localhost:5173"];
-    const origin = req.headers.origin || "http://127.0.0.1:5173";
-    res.setHeader("Access-Control-Allow-Origin", allowedOrigins.includes(origin) ? origin : "*");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    if (req.method === "OPTIONS") {
-        res.status(204).end();
-        return true;
-    }
-    return false;
-}
-// ✅ createBattleFn
-exports.createBattleFn = functions.https.onRequest((req, res) => {
-    if (handleCORS(req, res))
-        return;
-    return (0, createBattle_1.createBattle)(req, res);
-});
-// ✅ commitRoundFn（← ここが最新 commitRound を呼ぶ）
-exports.commitRoundFn = functions.https.onRequest((req, res) => {
-    if (handleCORS(req, res))
-        return;
-    return (0, commitRound_1.commitRound)(req, res);
-});
-// ✅ finishBattleFn
-exports.finishBattleFn = functions.https.onRequest((req, res) => {
-    if (handleCORS(req, res))
-        return;
-    return (0, finishBattle_1.finishBattle)(req, res);
-});
-// ✅ ping
-exports.pingFn = functions.https.onRequest((req, res) => {
-    if (handleCORS(req, res))
-        return;
-    res.status(200).json({ ok: true, msg: "pong", time: Date.now() });
-});
+// Start writing functions
+// https://firebase.google.com/docs/functions/typescript
+// export const helloWorld = onRequest((request, response) => {
+//   logger.info("Hello logs!", {structuredData: true});
+//   response.send("Hello from Firebase!");
+// });
+//# sourceMappingURL=index.js.map

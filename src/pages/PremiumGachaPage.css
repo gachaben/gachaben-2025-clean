@@ -1,0 +1,180 @@
+/* ------------------------------------------------------
+🌈 PremiumGachaPage.css（波紋・音符・流れ星・残光オーラ・統合演出）
+対応ファイル：PremiumGachaPage.jsx
+------------------------------------------------------ */
+
+/* 🌈 ページ全体 */
+.premium-gacha-container {
+  position: relative;
+  overflow: hidden;
+  height: 100vh;
+  background: linear-gradient(to bottom, #ffeef4, #fff);
+  text-align: center;
+  color: #222;
+  font-family: "Noto Sans JP", sans-serif;
+}
+
+/* タイトル */
+.gacha-title {
+  margin-top: 32px;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #ec4899;
+  text-shadow: 0 0 6px white;
+  letter-spacing: 1.5px;
+}
+
+/* 🎰 ガチャ円（中央） */
+.gacha-circle {
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  border: 8px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 30px rgba(255, 200, 220, 0.4);
+  margin: 20px auto;
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 🎵 音符ゲージ */
+.note-gauge {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+.note-gauge span {
+  font-size: 2rem;
+  margin: 0 4px;
+  transition: transform 0.3s ease;
+}
+
+/* 🎵 舞う音符（バックグラウンド演出） */
+.note {
+  position: absolute;
+  bottom: 0;
+  font-size: 1.5rem;
+  opacity: 0.6;
+  animation: floatUp 3s ease-out forwards;
+  transition: opacity 0.8s ease-out;
+  user-select: none;
+}
+
+@keyframes floatUp {
+  to {
+    transform: translateY(-500px);
+    opacity: 0;
+  }
+}
+
+/* 🌠 流れ星の光尾 */
+.star-tail {
+  position: absolute;
+  background: linear-gradient(to right, rgba(255,255,255,0.9), transparent);
+  filter: blur(2px);
+  border-radius: 2px;
+}
+
+/* 🌊 LEGEND波紋（中央から広がる） */
+.ripple {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  background: radial-gradient(
+    circle,
+    rgba(255, 215, 0, 0.7) 0%,
+    rgba(255, 215, 0, 0) 70%
+  );
+  animation: ripple 1.5s ease-out forwards;
+  z-index: 950;
+}
+
+@keyframes ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+/* 🌕 残光オーラ（LEGENDのみ） */
+.aura {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 215, 0, 0.3) 20%,
+    rgba(255, 215, 0, 0.1) 50%,
+    rgba(255, 215, 0, 0) 80%
+  );
+  box-shadow: 0 0 40px 10px rgba(255, 230, 120, 0.3);
+  animation: auraPulse 4s ease-in-out forwards;
+  z-index: 940;
+}
+
+@keyframes auraPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* 🌈 結果テキスト */
+.result-text {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.6rem;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+}
+
+/* 🌟 フェードアウト演出 */
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.animate-fadeOut {
+  animation: fadeOut 3s ease-out forwards;
+}
+
+/* 🎬 ボタン共通 */
+button {
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+}
+button:hover {
+  transform: scale(1.05);
+}

@@ -35,6 +35,5 @@
       "**/.*",
       "**/node_modules/**"
     ]
-  },
-  "project": "gachaben-2025-clean"
+  }
 }

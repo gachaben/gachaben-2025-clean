@@ -1,57 +1,19 @@
-// ------------------------------------------------------
-// functions/src/index.ts（完全統一版 / commitRound接続修正版）
-// ------------------------------------------------------
-import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
-import { Request, Response } from "express";
-import { createBattle } from "./createBattle";
-import { commitRound } from "./commitRound";
-import { finishBattle } from "./finishBattle";
+/**
+ * Import function triggers from their respective submodules:
+ *
+ * import {onCall} from "firebase-functions/v2/https";
+ * import {onDocumentWritten} from "firebase-functions/v2/firestore";
+ *
+ * See a full list of supported triggers at https://firebase.google.com/docs/functions
+ */
 
-if (!admin.apps.length) {
-  admin.initializeApp();
-  console.log("✅ Firebase Admin initialized");
-}
+import {onRequest} from "firebase-functions/v2/https";
+import * as logger from "firebase-functions/logger";
 
-// ✅ CORS設定
-function handleCORS(req: Request, res: Response): boolean {
-  const allowedOrigins = ["http://127.0.0.1:5173", "http://localhost:5173"];
-  const origin = req.headers.origin || "http://127.0.0.1:5173";
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    allowedOrigins.includes(origin) ? origin : "*"
-  );
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Credentials", "true");
+// Start writing functions
+// https://firebase.google.com/docs/functions/typescript
 
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return true;
-  }
-  return false;
-}
-
-// ✅ createBattleFn
-export const createBattleFn = functions.https.onRequest((req, res) => {
-  if (handleCORS(req, res)) return;
-  return createBattle(req, res);
-});
-
-// ✅ commitRoundFn（← ここが最新 commitRound を呼ぶ）
-export const commitRoundFn = functions.https.onRequest((req, res) => {
-  if (handleCORS(req, res)) return;
-  return commitRound(req, res);
-});
-
-// ✅ finishBattleFn
-export const finishBattleFn = functions.https.onRequest((req, res) => {
-  if (handleCORS(req, res)) return;
-  return finishBattle(req, res);
-});
-
-// ✅ ping
-export const pingFn = functions.https.onRequest((req, res) => {
-  if (handleCORS(req, res)) return;
-  res.status(200).json({ ok: true, msg: "pong", time: Date.now() });
-});
+// export const helloWorld = onRequest((request, response) => {
+//   logger.info("Hello logs!", {structuredData: true});
+//   response.send("Hello from Firebase!");
+// });

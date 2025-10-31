@@ -1,57 +1,59 @@
 // ------------------------------------------------------
-// src/pages/DebugPage.jsx（create → commit 連動版）
+// src/pages/DebugPage.jsx（Express API対応 / CORS安定版）
 // ------------------------------------------------------
 import React, { useState } from "react";
 
 export default function DebugPage() {
   const [result, setResult] = useState("");
-  const [battleId, setBattleId] = useState(""); // ← 追加
-  const BASE_URL = "http://127.0.0.1:5002/gachaben-2025/us-central1";
+  const [battleId, setBattleId] = useState("");
+  const BASE_URL = "http://127.0.0.1:5002/gachaben-2025/us-central1/api"; // ← 修正ポイント！
 
-  // ✅ createBattleFn 実行
+  // ✅ createBattle 実行
   const handleCreateBattle = async () => {
     try {
-      const res = await fetch(`${BASE_URL}/createBattleFn`, {
+      const res = await fetch(`${BASE_URL}/createBattle`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uid: "debug-user", cpuLevel: "N" }),
       });
       const data = await res.json();
-      console.log("createBattleFn:", data);
+      console.log("createBattle:", data);
       if (data?.battleId) {
-        setBattleId(data.battleId); // ← IDを保存
+        setBattleId(data.battleId);
       }
       setResult(JSON.stringify(data, null, 2));
     } catch (err) {
+      console.error("createBattle Error:", err);
       setResult(JSON.stringify({ error: String(err) }, null, 2));
     }
   };
 
-  // ✅ commitRoundFn 実行
+  // ✅ commitRound 実行
   const handleCommitRound = async () => {
     if (!battleId) {
       setResult("❌ 先に createBattle を実行してください。");
       return;
     }
     try {
-      const res = await fetch(`${BASE_URL}/commitRoundFn`, {
+      const res = await fetch(`${BASE_URL}/commitRound`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           uid: "debug-user",
-          battleId, // ← ここを連動
+          battleId,
           round: 1,
         }),
       });
       const data = await res.json();
-      console.log("commitRoundFn:", data);
+      console.log("commitRound:", data);
       setResult(JSON.stringify(data, null, 2));
     } catch (err) {
+      console.error("commitRound Error:", err);
       setResult(JSON.stringify({ error: String(err) }, null, 2));
     }
   };
 
-  // ✅ finishBattleFn 実行
+  // ✅ finishBattle 実行
   const handleFinishBattle = async () => {
     if (!battleId) {
       setResult("❌ 先に createBattle を実行してください。");
@@ -64,20 +66,27 @@ export default function DebugPage() {
         body: JSON.stringify({ uid: "debug-user", battleId }),
       });
       const data = await res.json();
+      console.log("finishBattleFn:", data);
       setResult(JSON.stringify(data, null, 2));
     } catch (err) {
+      console.error("finishBattleFn Error:", err);
       setResult(JSON.stringify({ error: String(err) }, null, 2));
     }
   };
 
-  // ✅ pingFn 実行
+  // ✅ ping 実行
   const handlePing = async () => {
-    const res = await fetch(`${BASE_URL}/pingFn`);
-    const data = await res.json();
-    setResult(JSON.stringify(data, null, 2));
+    try {
+      const res = await fetch(`${BASE_URL}/pingFn`);
+      const data = await res.json();
+      setResult(JSON.stringify(data, null, 2));
+    } catch (err) {
+      console.error("pingFn Error:", err);
+      setResult(JSON.stringify({ error: String(err) }, null, 2));
+    }
   };
 
-  // ✅ UI
+  // ✅ UI部分
   return (
     <div style={{ padding: "20px" }}>
       <h2>🐞 Debug Dashboard</h2>

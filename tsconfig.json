@@ -1,24 +1,16 @@
 {
   "compilerOptions": {
-    "noEmit": true,
-    "strict": false,
-    "allowJs": true,
-    "checkJs": false,
-    "jsx": "react-jsx",
-    "module": "ESNext",
     "target": "ES2020",
-    "moduleResolution": "bundler",
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "outDir": "lib",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true,
-    "types": ["node", "react", "react-dom"],
-    "baseUrl": "src",
-    "paths": {
-      "@/*": ["*"],
-      "@/firebase": ["fbkit/index.ts"],
-      "@/fbkit/*": ["fbkit/*"]         // ← 追加（あると便利）
-    }
+    "types": ["node"]
   },
-  "include": ["src", "scripts/updateItemNames.js"],
-  "exclude": ["dist", "node_modules", "legacy_deprecated"]
+  "include": ["src"],
+  "exclude": ["dist", "node_modules"]
 }

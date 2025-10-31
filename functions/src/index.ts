@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// functions/src/index.ts（最終安定版 / DebugPage完全連動）
+// functions/src/index.ts（最終安定版 / DebugPage完全連動 + pingFn対応）
 // ------------------------------------------------------
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
@@ -48,6 +48,12 @@ app.post("/finishBattleFn", async (req: Request, res: Response): Promise<void> =
   console.log("[finishBattleFn] called");
   const { battleId } = req.body || {};
   res.status(200).json({ ok: true, msg: "finishBattleFn OK", received: { battleId } });
+});
+
+// --- pingFn（デバッグ用） ---
+app.get("/pingFn", async (req: Request, res: Response): Promise<void> => {
+  console.log("[pingFn] called");
+  res.status(200).json({ ok: true, msg: "pong 🏓 from pingFn" });
 });
 
 // --- これが超重要！！ ---

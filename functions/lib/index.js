@@ -27,7 +27,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 // ------------------------------------------------------
-// functions/src/index.ts（最終安定版 / DebugPage完全連動）
+// functions/src/index.ts（最終安定版 / DebugPage完全連動 + pingFn対応）
 // ------------------------------------------------------
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
@@ -67,6 +67,11 @@ app.post("/finishBattleFn", async (req, res) => {
     console.log("[finishBattleFn] called");
     const { battleId } = req.body || {};
     res.status(200).json({ ok: true, msg: "finishBattleFn OK", received: { battleId } });
+});
+// --- pingFn（デバッグ用） ---
+app.get("/pingFn", async (req, res) => {
+    console.log("[pingFn] called");
+    res.status(200).json({ ok: true, msg: "pong 🏓 from pingFn" });
 });
 // --- これが超重要！！ ---
 // export のみでOK（importを重複しない！）

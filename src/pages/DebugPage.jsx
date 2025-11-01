@@ -1,12 +1,15 @@
 // ------------------------------------------------------
-// src/pages/DebugPage.jsx（Express API対応 / CORS安定版）
+// src/pages/DebugPage.jsx（Express API対応 / CORS完全安定版）
 // ------------------------------------------------------
 import React, { useState } from "react";
 
 export default function DebugPage() {
   const [result, setResult] = useState("");
   const [battleId, setBattleId] = useState("");
-  const BASE_URL = "http://127.0.0.1:5002/gachaben-2025/us-central1/api"; // ← 修正ポイント！
+
+  // ✅ Firebase Emulator での Functions 実行用URL
+  const BASE_URL = "http://localhost:5003/gachaben-2025/us-central1/api";
+
 
   // ✅ createBattle 実行
   const handleCreateBattle = async () => {
@@ -16,11 +19,11 @@ export default function DebugPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uid: "debug-user", cpuLevel: "N" }),
       });
+
       const data = await res.json();
       console.log("createBattle:", data);
-      if (data?.battleId) {
-        setBattleId(data.battleId);
-      }
+
+      if (data?.battleId) setBattleId(data.battleId);
       setResult(JSON.stringify(data, null, 2));
     } catch (err) {
       console.error("createBattle Error:", err);
@@ -44,6 +47,7 @@ export default function DebugPage() {
           round: 1,
         }),
       });
+
       const data = await res.json();
       console.log("commitRound:", data);
       setResult(JSON.stringify(data, null, 2));
@@ -65,6 +69,7 @@ export default function DebugPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ uid: "debug-user", battleId }),
       });
+
       const data = await res.json();
       console.log("finishBattleFn:", data);
       setResult(JSON.stringify(data, null, 2));
@@ -79,6 +84,7 @@ export default function DebugPage() {
     try {
       const res = await fetch(`${BASE_URL}/pingFn`);
       const data = await res.json();
+      console.log("pingFn:", data);
       setResult(JSON.stringify(data, null, 2));
     } catch (err) {
       console.error("pingFn Error:", err);
@@ -90,17 +96,30 @@ export default function DebugPage() {
   return (
     <div style={{ padding: "20px" }}>
       <h2>🐞 Debug Dashboard</h2>
+
       <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
-        <button onClick={handleCreateBattle} style={{ background: "#4CAF50", color: "#fff", padding: "10px" }}>
+        <button
+          onClick={handleCreateBattle}
+          style={{ background: "#4CAF50", color: "#fff", padding: "10px" }}
+        >
           createBattle 実行
         </button>
-        <button onClick={handleCommitRound} style={{ background: "#2196F3", color: "#fff", padding: "10px" }}>
+        <button
+          onClick={handleCommitRound}
+          style={{ background: "#2196F3", color: "#fff", padding: "10px" }}
+        >
           commitRound 実行
         </button>
-        <button onClick={handleFinishBattle} style={{ background: "#f44336", color: "#fff", padding: "10px" }}>
+        <button
+          onClick={handleFinishBattle}
+          style={{ background: "#f44336", color: "#fff", padding: "10px" }}
+        >
           finishBattle 実行
         </button>
-        <button onClick={handlePing} style={{ background: "#9C27B0", color: "#fff", padding: "10px" }}>
+        <button
+          onClick={handlePing}
+          style={{ background: "#9C27B0", color: "#fff", padding: "10px" }}
+        >
           pingFn 実行
         </button>
       </div>

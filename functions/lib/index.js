@@ -27,20 +27,25 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 // ------------------------------------------------------
-// functions/src/index.ts（最終安定版 / DebugPage完全連動 + pingFn対応）
+// functions/src/index.ts（🔥 Firestore書き込み + Express対応 / 最終安定版）
 // ------------------------------------------------------
 const functions = __importStar(require("firebase-functions"));
 const admin = __importStar(require("firebase-admin"));
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
-// ✅ Admin 初期化
+const firestore_1 = require("firebase-admin/firestore"); // ✅ 新仕様import
+// ✅ Firebase Admin 初期化（Emulator対応）
 if (!admin.apps.length) {
-    admin.initializeApp();
+    admin.initializeApp({
+        projectId: "gachaben-2025",
+    });
     console.log("✅ Admin initialized (index.ts)");
 }
+// ✅ Firestore取得（admin.firestore() は使わない）
+const db = (0, firestore_1.getFirestore)();
 // ✅ Expressアプリ設定
 const app = (0, express_1.default)();
-// ✅ CORS設定（ViteのローカルURLを許可）
+// ✅ CORS設定（ViteローカルURL許可）
 app.use((0, cors_1.default)({
     origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
     methods: ["GET", "POST", "OPTIONS"],
@@ -50,31 +55,106 @@ app.use((0, cors_1.default)({
 // ✅ プリフライト対応
 app.options("*", (0, cors_1.default)());
 app.use(express_1.default.json());
-// --- createBattle ---
+// ------------------------------------------------------
+// 🟢 createBattle
+// ------------------------------------------------------
 app.post("/createBattle", async (req, res) => {
     console.log("[createBattle] called");
-    const battleId = "debug-" + Date.now();
-    res.status(200).json({ ok: true, msg: "createBattle OK", battleId });
+    try {
+        const uid = (req.body && req.body.uid) || "debug-user";
+        const cpuLevel = (req.body && req.body.cpuLevel) || "N";
+        const battleId = "battle-" + Date.now();
+        await db.collection("battles").doc(battleId).set({
+            uid,
+            cpuLevel,
+            battleId,
+            status: "in-progress",
+            rounds: [],
+            createdAt: firestore_1.FieldValue.serverTimestamp(),
+            updatedAt: firestore_1.Timestamp.now(),
+        });
+        console.log(`[createBattle] ✅ created: ${battleId}`);
+        res.status(200).json({
+            ok: true,
+            msg: "createBattle success ✅ (Firestore書き込み済)",
+            battleId,
+        });
+    }
+    catch (err) {
+        console.error("[createBattle] Error:", err);
+        res.status(500).json({
+            ok: false,
+            msg: "createBattle Error",
+            error: err instanceof Error ? err.message : String(err),
+        });
+    }
 });
-// --- commitRound ---
+// ------------------------------------------------------
+// 🟢 commitRound
+// ------------------------------------------------------
 app.post("/commitRound", async (req, res) => {
     console.log("[commitRound] called");
-    const { battleId, round } = req.body || {};
-    res.status(200).json({ ok: true, msg: "commitRound OK", received: { battleId, round } });
+    try {
+        const { battleId, round } = req.body || {};
+        if (!battleId)
+            throw new Error("battleId が未指定です");
+        await db.collection("battles").doc(battleId).update({
+            rounds: firestore_1.FieldValue.arrayUnion(round || { result: "test" }),
+            updatedAt: firestore_1.Timestamp.now(),
+        });
+        res.status(200).json({
+            ok: true,
+            msg: "commitRound OK ✅",
+            battleId,
+        });
+    }
+    catch (err) {
+        console.error("[commitRound] Error:", err);
+        res.status(500).json({
+            ok: false,
+            msg: "commitRound Error",
+            error: err instanceof Error ? err.message : String(err),
+        });
+    }
 });
-// --- finishBattleFn ---
+// ------------------------------------------------------
+// 🟢 finishBattleFn
+// ------------------------------------------------------
 app.post("/finishBattleFn", async (req, res) => {
     console.log("[finishBattleFn] called");
-    const { battleId } = req.body || {};
-    res.status(200).json({ ok: true, msg: "finishBattleFn OK", received: { battleId } });
+    try {
+        const { battleId } = req.body || {};
+        if (!battleId)
+            throw new Error("battleId が未指定です");
+        await db.collection("battles").doc(battleId).update({
+            status: "finished",
+            finishedAt: firestore_1.FieldValue.serverTimestamp(),
+        });
+        res.status(200).json({
+            ok: true,
+            msg: "finishBattleFn OK ✅",
+            battleId,
+        });
+    }
+    catch (err) {
+        console.error("[finishBattleFn] Error:", err);
+        res.status(500).json({
+            ok: false,
+            msg: "finishBattleFn Error",
+            error: err instanceof Error ? err.message : String(err),
+        });
+    }
 });
-// --- pingFn（デバッグ用） ---
-app.get("/pingFn", async (req, res) => {
-    console.log("[pingFn] called");
+// ------------------------------------------------------
+// 🟢 pingFn（接続確認）
+// ------------------------------------------------------
+app.get("/pingFn", async (_req, res) => {
+    console.log("[pingFn] pong 🏓");
     res.status(200).json({ ok: true, msg: "pong 🏓 from pingFn" });
 });
-// --- これが超重要！！ ---
-// export のみでOK（importを重複しない！）
+// ------------------------------------------------------
+// ✅ Firebase Functions へエクスポート
+// ------------------------------------------------------
 exports.api = functions.https.onRequest(app);
-module.exports = { api: exports.api };
+console.log("🚀 Express API registered (/api/*)");
 //# sourceMappingURL=index.js.map

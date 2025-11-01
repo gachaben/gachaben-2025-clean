@@ -1,6 +1,12 @@
 // ------------------------------------------------------
 // src/main.jsx（修正版・Firebase二重初期化防止済み）
 // ------------------------------------------------------
+
+console.log("VITE_USE_EMU:", import.meta.env.VITE_USE_EMU);
+console.log("FIRESTORE_PORT:", import.meta.env.VITE_FIRESTORE_PORT);
+
+
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";

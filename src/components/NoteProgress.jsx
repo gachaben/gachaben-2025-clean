@@ -1,8 +1,8 @@
 // ------------------------------------------------------
-// 🎵 NoteProgress.jsx（7音ゲージ＋虹波アニメ）
+// 🎵 NoteProgress.jsx（クリック透過＋虹波アニメ対応版）
 // ------------------------------------------------------
 import React, { useEffect, useState } from "react";
-import "@/styles/NoteProgress.css"; // 🌈 新規CSS追加（下記参照）
+import "@/styles/NoteProgress.css";
 
 export default function NoteProgress({ current = 0, isRainbow = false }) {
   const notes = ["ド", "レ", "ミ", "ファ", "ソ", "ラ", "シ"];
@@ -18,7 +18,12 @@ export default function NoteProgress({ current = 0, isRainbow = false }) {
   }, [isRainbow, current]);
 
   return (
-    <div className={`note-progress ${wave ? "wave" : ""}`}>
+    <div
+      className={`note-progress ${wave ? "wave" : ""}`}
+      style={{
+        pointerEvents: "none", // ✅ ←これを追加（クリック透過）
+      }}
+    >
       {notes.map((n, i) => (
         <span
           key={i}

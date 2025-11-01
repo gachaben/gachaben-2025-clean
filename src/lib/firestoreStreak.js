@@ -1,10 +1,11 @@
 // ------------------------------------------------------
-// 🎵 firestoreStreak.js（週リズム連続正解システム）
+// 🎯 firestoreStreak.js（デバッグ付き）
 // ------------------------------------------------------
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-// ✅ 週番号キーを算出（例：2025-44）
+console.log("🔥 firestoreStreak loaded");
+
 function getWeekKey() {
   const now = new Date();
   const onejan = new Date(now.getFullYear(), 0, 1);
@@ -12,19 +13,16 @@ function getWeekKey() {
   return `${now.getFullYear()}-${week}`;
 }
 
-/**
- * 🎵 streakDataをFirestoreに保存
- * @param {boolean} isCorrect - 正解ならtrue、不正解ならfalse
- */
 export async function saveUserStreak(isCorrect) {
-  try {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    if (!user) {
-      console.warn("⚠️ saveUserStreak: 未ログインのためスキップ");
-      return;
-    }
+  console.log("🚀 saveUserStreak called:", isCorrect);
+  const auth = getAuth();
+  const user = auth.currentUser;
+  if (!user) {
+    console.warn("⚠️ 未ログインのためスキップ");
+    return;
+  }
 
+  try {
     const db = getFirestore();
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
@@ -38,38 +36,34 @@ export async function saveUserStreak(isCorrect) {
 
     if (snap.exists()) {
       data = snap.data().streakData || data;
+      console.log("📄 Firestoreから既存データ取得:", data);
     }
 
-    // 週が変わっていたらリセット
     if (data.lastWeekKey !== weekKey) {
       data.currentCorrectStreak = 0;
       data.bestCorrectStreak = 0;
       data.lastWeekKey = weekKey;
     }
 
-    // 更新処理
     if (isCorrect) {
       data.currentCorrectStreak++;
-      if (data.currentCorrectStreak > data.bestCorrectStreak) {
-        data.bestCorrectStreak = data.currentCorrectStreak;
-      }
+      data.bestCorrectStreak = Math.max(data.bestCorrectStreak, data.currentCorrectStreak);
     } else {
       data.currentCorrectStreak = 0;
     }
 
-    // Firestore書き込み
     await setDoc(
       ref,
       {
         streakData: {
           ...data,
-          lastStreakUpdate: new Date().toISOString(),
+          lastUpdate: new Date().toISOString(),
         },
       },
       { merge: true }
     );
 
-    console.log("✅ streakData更新:", data);
+    console.log("🔥 streakData更新:", data);
   } catch (err) {
     console.error("❌ saveUserStreak Error:", err);
   }

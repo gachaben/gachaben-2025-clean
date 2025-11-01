@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTheme } from "@/context/ThemeContext"; // ✅ sなしに修正
 import NoteBurst from "@/components/ui/NoteBurst";
+import WeeklyStreakBadge from "@/components/WeeklyStreakBadge";
+
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -76,6 +78,11 @@ export default function HomePage() {
           📚 図鑑
         </motion.button>
       </div>
+
+<div className="min-h-screen bg-gradient-to-b from-blue-50 to-sky-100 flex flex-col items-center">
+      <h1 className="text-2xl font-bold mt-8 mb-4">🏠 ドレスタ ホーム</h1>
+      <WeeklyStreakBadge />
+    </div>
 
       {/* 🪄 テーマ切り替え（開発・確認用） */}
       <div className="absolute bottom-8 flex gap-3 z-10">

@@ -1,10 +1,33 @@
 // ------------------------------------------------------
-// 🥊 BattlePage.jsx（CPU対戦 / 7問中4先取 + タイブレーク遷移）
+// 🥊 BattlePage.jsx（CPU対戦 / 7問中4先取 + 連続正解バナー対応）
 // ------------------------------------------------------
 import React, { useState, useEffect } from "react";
 import NoteProgress from "@/components/ui/NoteProgress";
 import { playNote, playFullScale } from "@/lib/useDoremiSound";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { saveUserStreak } from "@/lib/firestoreStreak";
+
+function CorrectStreakBanner({ streak }) {
+  if (!streak || streak === 0) return null;
+
+  const getStyle = () => {
+    if (streak < 3) return "bg-indigo-200 text-indigo-800";
+    if (streak < 5) return "bg-yellow-200 text-yellow-800";
+    return "bg-pink-200 text-pink-800";
+  };
+
+  return (
+    <motion.div
+      className={`fixed top-0 left-0 w-full py-2 text-center font-bold text-lg ${getStyle()} shadow-md z-50`}
+      initial={{ y: -60, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", stiffness: 100 }}
+    >
+      🎵 {streak}問連続正解中！
+    </motion.div>
+  );
+}
 
 export default function BattlePage() {
   const navigate = useNavigate();
@@ -17,8 +40,8 @@ export default function BattlePage() {
   const [question, setQuestion] = useState(null);
   const [isRainbow, setIsRainbow] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [streak, setStreak] = useState(0);
 
-  // 仮問題セット
   const sampleQuestions = [
     { q: "1 + 2 = ?", a: 3 },
     { q: "3 × 3 = ?", a: 9 },
@@ -31,50 +54,42 @@ export default function BattlePage() {
 
   const noteOrder = ["do", "re", "mi", "fa", "so", "ra", "si"];
 
-  // ✅ ラウンド更新ごとに問題をセット
   useEffect(() => {
-    if (round < totalRounds) {
-      setQuestion(sampleQuestions[round]);
-    }
+    if (round < totalRounds) setQuestion(sampleQuestions[round]);
   }, [round]);
 
-  // ✅ 回答処理
   const handleAnswer = (isCorrect) => {
     if (finished) return;
 
     let nextUser = userCorrect;
     let nextCpu = cpuCorrect;
 
-    // 自分の正答処理
     if (isCorrect) {
       nextUser++;
       setUserCorrect(nextUser);
+      const newStreak = streak + 1;
+      setStreak(newStreak);
+      saveUserStreak(true);
       playNote(noteOrder[nextUser - 1]);
+    } else {
+      setStreak(0);
+      saveUserStreak(false);
     }
 
-    // CPUの正答率（60%）
     const cpuAnswer = Math.random() < 0.6;
-    if (cpuAnswer) {
-      nextCpu++;
-      setCpuCorrect(nextCpu);
-    }
+    if (cpuAnswer) nextCpu++;
+    setCpuCorrect(nextCpu);
 
-    // 勝敗チェック
     if (nextUser >= winThreshold || nextCpu >= winThreshold || round + 1 >= totalRounds) {
       const userWin = nextUser > nextCpu;
       const isDraw = nextUser === nextCpu;
-
       setFinished(true);
 
       if (isDraw) {
-        // ⚡ 同点 → タイブレークへ
-        setTimeout(() => {
-          navigate("/battle/timebreak");
-        }, 1200);
+        setTimeout(() => navigate("/battle/timebreak"), 1200);
         return;
       }
 
-      // 🌈 勝利時演出
       if (userWin) {
         setTimeout(() => {
           playFullScale();
@@ -82,14 +97,12 @@ export default function BattlePage() {
         }, 600);
       }
 
-      // 🔁 結果画面へ遷移
       setTimeout(() => {
         navigate("/battle/result", {
           state: { isWin: userWin, totalWins: userWin ? 1 : 0 },
         });
       }, 3000);
     } else {
-      // 次ラウンドへ
       setRound((prev) => prev + 1);
     }
   };
@@ -97,17 +110,17 @@ export default function BattlePage() {
   const currentQ = sampleQuestions[round];
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-indigo-50 to-blue-100">
-      <h2 className="text-2xl font-bold mb-4">🥊 ドレミバトル</h2>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-indigo-50 to-blue-100 relative overflow-hidden">
+      <CorrectStreakBanner streak={streak} />
+
+      <h2 className="text-2xl font-bold mb-4 mt-10">🥊 ドレミバトル</h2>
       <p className="mb-2 text-lg">{`第 ${round + 1} 問 / ${totalRounds}`}</p>
 
-      {/* スコア表示 */}
       <div className="flex gap-12 mb-6 text-lg font-semibold">
         <div className="text-pink-600">あなた：{userCorrect}問</div>
         <div className="text-blue-600">CPU：{cpuCorrect}問</div>
       </div>
 
-      {/* 問題カード */}
       {!finished && (
         <div className="bg-white rounded-3xl shadow-lg px-8 py-6 mb-6 text-center">
           <p className="text-xl font-semibold mb-4">{currentQ?.q}</p>
@@ -127,10 +140,8 @@ export default function BattlePage() {
         </div>
       )}
 
-      {/* 🎵 ドレミゲージ */}
       <NoteProgress current={userCorrect} isRainbow={isRainbow} />
 
-      {/* 🌈 結果メッセージ */}
       {finished && (
         <div className="mt-6 text-center">
           {userCorrect > cpuCorrect ? (
@@ -138,9 +149,7 @@ export default function BattlePage() {
               🌈 勝利！ドレミが響いた！
             </p>
           ) : userCorrect === cpuCorrect ? (
-            <p className="text-lg text-gray-600 animate-pulse">
-              ⏱️ 同点！タイブレークへ突入！
-            </p>
+            <p className="text-lg text-gray-600 animate-pulse">⏱️ 同点！タイブレークへ突入！</p>
           ) : (
             <p className="text-lg text-gray-600">CPUの勝利…！</p>
           )}

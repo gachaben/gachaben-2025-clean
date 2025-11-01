@@ -1,15 +1,25 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
+    /* ✅ 基本設定 */
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "lib": ["DOM", "ESNext"],
+    "jsx": "react-jsx",
+
+    /* ✅ Vite環境変数用（import.meta.env 対応） */
+    "types": ["vite/client"],
+
+    /* ✅ 安定動作のための推奨設定 */
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
     "forceConsistentCasingInFileNames": true,
-    "outDir": "lib",
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "types": ["node"]
+
+    /* ✅ 出力先（ビルド時） */
+    "outDir": "lib"
   },
   "include": ["src"],
   "exclude": ["dist", "node_modules"]

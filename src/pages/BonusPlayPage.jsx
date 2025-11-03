@@ -1,47 +1,40 @@
 // ------------------------------------------------------
-// ⚔️ BattleChallengePage.jsx（Doresta EX Final）
+// 🎯 BonusPlayPage.jsx（延長3問ボーナス / Doresta EX Final）
 // ------------------------------------------------------
-// ✅ 対応構成：7問制 / DP報酬 / ボーナス分岐 / ナビ連動
-// ✅ 長期運用対応：AdExtendModal / AdPerfectModal / BonusPlayPage 分離
+// ✅ 構成：3問制 / 各問1DP / 正解数に応じてDP加算
+// ✅ 終了後：Firestore保存＋結果演出＋ホーム遷移
+// ✅ ナビキャラ：ドレミノ吹き出しで誘導
 // ------------------------------------------------------
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { getAuth } from "firebase/auth";
 import { db } from "@/fbkit/app";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import { useTheme } from "@/context/ThemeContext";
 
-import NoteTrackBattle from "@/components/battle/NoteTrackBattle";
-import NoteBurstGold from "@/components/effects/NoteBurstGold";
-import AdExtendModal from "@/components/modals/AdExtendModal";
-import AdPerfectModal from "@/components/modals/AdPerfectModal";
 import NaviBubble from "@/components/NaviBubble";
+import NoteBurstGold from "@/components/effects/NoteBurstGold";
+import NoteTrackBattle from "@/components/battle/NoteTrackBattle";
 
 // 🎲 簡易問題生成（算数Ver）
 function generateQuestion() {
-  const ops = ["+", "-", "×", "÷"];
+  const ops = ["+", "-", "×"];
   const op = ops[Math.floor(Math.random() * ops.length)];
-  let a = 1 + Math.floor(Math.random() * 9);
-  let b = 1 + Math.floor(Math.random() * 9);
-  if (op === "÷") {
-    const prod = a * b;
-    [a, b] = [prod, a];
-  }
-
+  const a = 1 + Math.floor(Math.random() * 9);
+  const b = 1 + Math.floor(Math.random() * 9);
   const calc = (x, y, o) =>
-    o === "+" ? x + y : o === "-" ? x - y : o === "×" ? x * y : Math.floor(x / y);
-
+    o === "+" ? x + y : o === "-" ? x - y : x * y;
   const answer = calc(a, b, op);
   const choices = new Set([answer]);
   while (choices.size < 4) choices.add(answer + (Math.floor(Math.random() * 6) - 3));
   return { text: `${a} ${op} ${b} = ?`, answer, choices: Array.from(choices).sort(() => Math.random() - 0.5) };
 }
 
-export default function BattleChallengePage() {
-  const navigate = useNavigate();
+export default function BonusPlayPage() {
   const { theme, themeName } = useTheme();
+  const navigate = useNavigate();
   const auth = getAuth();
   const user = auth.currentUser;
 
@@ -50,24 +43,21 @@ export default function BattleChallengePage() {
   const [progress, setProgress] = useState(0);
   const [q, setQ] = useState(generateQuestion());
   const [locked, setLocked] = useState(false);
-  const [result, setResult] = useState(null);
-  const [showRipple, setShowRipple] = useState(false);
+  const [finished, setFinished] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [showAdExtend, setShowAdExtend] = useState(false);
-  const [showAdPerfect, setShowAdPerfect] = useState(false);
+  const [showRipple, setShowRipple] = useState(false);
 
   // ✅ 回答処理
   const answer = (choice) => {
-    if (locked || result) return;
+    if (locked || finished) return;
     setLocked(true);
-
     const correct = choice === q.answer;
     if (correct) setCorrectCount((v) => v + 1);
     setProgress((v) => v + 1);
 
     setTimeout(() => {
-      if (progress + 1 >= 7) {
-        setResult("finished");
+      if (progress + 1 >= 3) {
+        setFinished(true);
       } else {
         setQ(generateQuestion());
         setRound((r) => r + 1);
@@ -76,18 +66,8 @@ export default function BattleChallengePage() {
     }, 400);
   };
 
-  // ✅ DP計算ロジック
-  const calcBaseDP = (count) => {
-    let dp = count; // 基本DP（1問=1DP）
-    if (count === 4) dp += 1;
-    if (count === 5) dp += 2;
-    if (count === 6) dp += 3;
-    if (count === 7) dp += 5;
-    return dp;
-  };
-
-  // ✅ Firestore 保存処理
-  const saveBattleResult = async (dpGain, premiumGain = 0) => {
+  // ✅ Firestore保存
+  const saveBonusResult = async (dpGain) => {
     if (!user?.uid || saving) return;
     setSaving(true);
 
@@ -99,46 +79,30 @@ export default function BattleChallengePage() {
 
       const newDP = Number(stats.doremiPoints ?? 0) + dpGain;
       const newNotes = Number(stats.battleNotes ?? 0) + 1;
-      const premium = Number(data.premiumTickets ?? 0) + premiumGain;
 
       await setDoc(
         ref,
         {
-          premiumTickets: premium,
           stats: { ...stats, doremiPoints: newDP, battleNotes: newNotes },
-          lastBattleAt: new Date().toISOString(),
+          lastBonusAt: new Date().toISOString(),
         },
         { merge: true }
       );
-    } catch (e) {
-      console.error("Save Error:", e);
+    } catch (err) {
+      console.error("BonusSave Error:", err);
     }
 
     setSaving(false);
   };
 
-  // ✅ バトル終了後の処理
+  // ✅ 終了後処理
   useEffect(() => {
-    if (result === "finished") {
-      const dpGain = calcBaseDP(correctCount);
+    if (finished) {
+      const dpGain = correctCount; // 各問1DP
+      saveBonusResult(dpGain);
 
-      // 🌟 分岐ロジック
-      if (correctCount <= 3) {
-        // 通常終了（努力報酬のみ）
-        saveBattleResult(dpGain);
-        navigate("/battle/result", { state: { dpGain, correctCount } });
-      } else if (correctCount >= 4 && correctCount <= 6) {
-        // 4〜6問 → 延長誘導
-        saveBattleResult(dpGain);
-        setShowAdExtend(true);
-      } else if (correctCount === 7) {
-        // 7問 → パーフェクト誘導
-        saveBattleResult(dpGain, 1);
-        setShowAdPerfect(true);
-      }
-
-      // 🎵 勝利サウンド＋波紋演出
-      if (correctCount >= 4) {
+      // 🎵 成功演出
+      if (correctCount > 0) {
         const path = `/sounds/${themeName || "normal"}/battle_win.mp3`;
         const se = new Audio(path);
         se.volume = 0.8;
@@ -146,8 +110,12 @@ export default function BattleChallengePage() {
         setShowRipple(true);
         setTimeout(() => setShowRipple(false), 2200);
       }
+
+      setTimeout(() => {
+        navigate("/battle/result", { state: { dpGain, correctCount } });
+      }, 2500);
     }
-  }, [result]);
+  }, [finished]);
 
   // ✅ UI構成
   return (
@@ -155,11 +123,11 @@ export default function BattleChallengePage() {
       className="relative min-h-screen flex flex-col items-center justify-start pt-10 px-4 overflow-hidden"
       style={{ background: theme.background, color: theme.textColor }}
     >
-      {/* 🌟 勝利波紋 */}
+      {/* 🌟 波紋＆音符 */}
       {showRipple && (
         <>
           <div
-            className="absolute top-1/2 left-1/2 w-[240px] h-[240px] rounded-full pointer-events-none z-[900]"
+            className="absolute top-1/2 left-1/2 w-[220px] h-[220px] rounded-full pointer-events-none z-[900]"
             style={{
               transform: "translate(-50%, -50%)",
               background:
@@ -167,10 +135,9 @@ export default function BattleChallengePage() {
               animation: "ripple 2s ease-out forwards",
               boxShadow:
                 "0 0 30px 10px rgba(255, 215, 0, 0.4), 0 0 80px 20px rgba(255, 215, 0, 0.3)",
-              filter: "blur(1px)",
             }}
           />
-          <NoteBurstGold count={7} mode="gold" />
+          <NoteBurstGold count={5} mode="gold" />
         </>
       )}
 
@@ -183,13 +150,20 @@ export default function BattleChallengePage() {
       `}</style>
 
       {/* ナビキャラ */}
-      <NaviBubble
-        message={
-          result
-            ? "結果をまとめています..."
-            : `第${round}問！ がんばって！`
-        }
-      />
+      <div className="mb-4">
+        <NaviBubble
+          message={
+            !finished
+              ? "さあ、ボーナスラウンドへ！"
+              : "がんばったね！結果をまとめてるよ🎵"
+          }
+          subMessage={
+            !finished
+              ? "3問のボーナス問題で、さらにDPをゲットしよう！"
+              : ""
+          }
+        />
+      </div>
 
       {/* タイトル */}
       <motion.h1
@@ -197,20 +171,20 @@ export default function BattleChallengePage() {
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        ⚔️ バトル（7問制）
+        🎁 ボーナス問題（3問チャレンジ）
       </motion.h1>
 
-      {/* スコア */}
-      <NoteTrackBattle progress={progress} victoryAt={7} />
+      {/* ゲージ */}
+      <NoteTrackBattle progress={progress} victoryAt={3} />
 
-      {/* 問題パネル */}
-      {!result && (
+      {/* 問題 */}
+      {!finished && (
         <motion.div
           className="w-full max-w-md bg-white/80 backdrop-blur rounded-2xl shadow-lg p-5 mt-6"
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="text-sm text-gray-600 mb-1">第 {round} 問 / 全7問</div>
+          <div className="text-sm text-gray-600 mb-1">第 {round} 問 / 全3問</div>
           <div className="text-3xl font-extrabold text-gray-800 text-center my-4 select-none">
             {q.text}
           </div>
@@ -235,18 +209,33 @@ export default function BattleChallengePage() {
         </motion.div>
       )}
 
-      {/* モーダル分岐 */}
+      {/* 結果表示 */}
       <AnimatePresence>
-        {showAdExtend && (
-          <AdExtendModal
-            correctCount={correctCount}
-            onClose={() => navigate("/bonus/play")}
-          />
-        )}
-        {showAdPerfect && (
-          <AdPerfectModal
-            onClose={() => navigate("/bonus/special")}
-          />
+        {finished && (
+          <motion.div
+            className="fixed inset-0 flex items-center justify-center bg-black/40 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <motion.div
+              className="bg-white rounded-2xl p-6 text-center shadow-2xl max-w-sm w-full"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+            >
+              <div className="text-3xl mb-3">🎉 ボーナス結果！</div>
+              <div className="text-lg text-gray-700 mb-4">
+                {correctCount}問正解！＋{correctCount} DP 獲得！
+              </div>
+              <button
+                onClick={() =>
+                  navigate("/battle/result", { state: { dpGain: correctCount } })
+                }
+                className="px-6 py-3 bg-pink-500 text-white font-bold rounded-xl shadow hover:opacity-90"
+              >
+                ✅ 結果へ進む
+              </button>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

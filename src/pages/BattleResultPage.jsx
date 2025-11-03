@@ -1,172 +1,188 @@
 // ------------------------------------------------------
-// 🌈 BattleResultPage.jsx（v3.6 修正版 / AdRewardModal対応・正解数分岐）
+// 🎵 BattleResultPage.jsx（共通リザルトページ / Doresta EX Final）
 // ------------------------------------------------------
+// ✅ 機能一覧
+//  - 通常 / ボーナス / スペシャル全対応
+//  - DP報酬・音符・ストリーク更新
+//  - 黄金波紋＋ドレミノナビ演出
+//  - Firestore自動加算＆継続ストリーク処理
+// ------------------------------------------------------
+
 import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { useLocation, useNavigate } from "react-router-dom";
-import { updateDoremiPoints } from "@/utils/updateDoremiPoints";
-import { playFullScale } from "@/lib/useDoremiSound";
-import RankUpModal from "@/components/ui/RankUpModal";
-import AdRewardModal from "@/components/ui/AdRewardModal"; // ✅ 修正済み
+import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate, useLocation } from "react-router-dom";
+import { db } from "@/fbkit/app";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { useTheme } from "@/context/ThemeContext";
+import NaviBubble from "@/components/NaviBubble";
+import NoteBurstGold from "@/components/effects/NoteBurstGold";
 
 export default function BattleResultPage() {
-  const location = useLocation();
+  const { theme, themeName } = useTheme();
   const navigate = useNavigate();
-  const { state } = location;
-  const isWin = state?.isWin ?? false;
-  const userScore = state?.userScore ?? 0;
-  const cpuScore = state?.cpuScore ?? 0;
+  const location = useLocation();
+  const auth = getAuth();
+  const user = auth.currentUser;
 
-  const [dpInfo, setDpInfo] = useState(null);
-  const [rainbow, setRainbow] = useState(false);
-  const [showRankUp, setShowRankUp] = useState(false);
-  const [showAdModal, setShowAdModal] = useState(false);
-  const [adType, setAdType] = useState(null);
+  // 🧾 受け取るデータ（Battle / Bonus / Special 共通）
+  const { dpGain = 0, correctCount = 0, fromBonus = false } =
+    location.state || {};
 
-  const uid = "demoUser"; // 後でAuth uidに置換
+  const [saving, setSaving] = useState(false);
+  const [showRipple, setShowRipple] = useState(false);
+  const [stats, setStats] = useState({
+    totalDP: 0,
+    streak: 0,
+    bestStreak: 0,
+    notes: 0,
+  });
 
-  // 🎯 DP加算＋RankUpチェック＋広告タイプ判定
+  // ------------------------------------------------------
+  // 🪙 Firestore更新
+  // ------------------------------------------------------
   useEffect(() => {
-    let gain = 0;
-    let type = null;
+    if (!user?.uid || saving) return;
+    (async () => {
+      setSaving(true);
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
+      const data = snap.exists() ? snap.data() : {};
+      const userStats = data.stats || {};
 
-    if (userScore <= 3) {
-      gain = 0;
-      type = null;
-    } else if (userScore >= 4 && userScore <= 6) {
-      gain = userScore === 4 ? 2 : userScore === 5 ? 5 : 7;
-      type = "extend";
-    } else if (userScore === 7) {
-      gain = 10;
-      type = "bonus";
-    }
+      const currentStreak = Number(data.currentBattleStreak ?? 0);
+      const bestStreak = Number(data.bestBattleStreak ?? 0);
+      const continueStreak = Boolean(data.continueStreak ?? false);
+      const prevNotes = Number(userStats.battleNotes ?? 0);
+      const prevDP = Number(userStats.doremiPoints ?? 0);
 
-    setAdType(type);
+      // ✅ ストリーク更新ロジック
+      const newStreak = correctCount > 0 ? currentStreak + 1 : 0;
+      const newBest = Math.max(bestStreak, newStreak);
+      const newNotes = prevNotes + 1;
+      const newDP = prevDP + dpGain;
 
-    if (gain > 0) {
-      updateDoremiPoints(uid, gain).then((info) => {
-        setDpInfo(info);
-        if (isWin || userScore === 7) {
-          playFullScale();
-          setTimeout(() => setRainbow(true), 600);
-        }
-        if (info?.prevRank !== info?.rank) setShowRankUp(true);
+      await setDoc(
+        ref,
+        {
+          currentBattleStreak: newStreak,
+          bestBattleStreak: newBest,
+          continueStreak: correctCount > 0,
+          stats: { ...userStats, doremiPoints: newDP, battleNotes: newNotes },
+          lastBattleResultAt: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+
+      setStats({
+        totalDP: newDP,
+        streak: newStreak,
+        bestStreak: newBest,
+        notes: newNotes,
       });
-    } else {
-      setDpInfo({ points: 0, rank: "リコーダー", prevRank: "リコーダー" });
-    }
 
-    // 🎥 広告誘導モーダル（4問以上で表示）
-    if (type) setTimeout(() => setShowAdModal(true), 2500);
-  }, [userScore, isWin]);
+      // ✅ サウンド・演出
+      const path = `/sounds/${themeName || "normal"}/battle_win.mp3`;
+      const se = new Audio(path);
+      se.volume = 0.8;
+      se.play().catch(() => {});
+      setShowRipple(true);
+      setTimeout(() => setShowRipple(false), 2200);
 
-  // 🎥 広告完了時の処理
-  const handleAdComplete = async () => {
-    if (adType === "extend") {
-      alert("🌀 延長3問に挑戦できるようになったよ！");
-      navigate("/battle/play?mode=extend");
-    } else if (adType === "bonus") {
-      await updateDoremiPoints(uid, 5);
-      alert("🌟 ボーナス問題で +5 DP 獲得！");
-    } else {
-      alert("❤️ 再開しました！");
-      navigate("/battle/play");
-    }
-    setShowAdModal(false);
-  };
+      setSaving(false);
+    })();
+  }, [user]);
 
-  const handleRetry = () => navigate("/battle/play");
-
+  // ------------------------------------------------------
+  // 🎨 UI
+  // ------------------------------------------------------
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-indigo-50 to-blue-100 overflow-hidden text-center transition-all duration-700">
-      {/* 🌈 背景虹 */}
-      {rainbow && (
-        <motion.div
-          className="absolute top-0 left-0 w-full h-[50vh] pointer-events-none"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-          style={{
-            background:
-              "linear-gradient(120deg, rgba(255,0,0,0.5), rgba(255,165,0,0.5), rgba(255,255,0,0.5), rgba(0,255,0,0.5), rgba(0,191,255,0.5), rgba(0,0,255,0.5), rgba(148,0,211,0.5))",
-            filter:
-              "blur(25px) saturate(1.5) brightness(1.1) drop-shadow(0 0 20px rgba(255,255,255,0.3))",
-            borderRadius: "50% / 25%",
-            transform: "rotate(-8deg)",
-          }}
+    <div
+      className="relative min-h-screen flex flex-col items-center justify-start pt-10 px-4 overflow-hidden"
+      style={{ background: theme.background, color: theme.textColor }}
+    >
+      {/* 🌟 黄金波紋演出 */}
+      {showRipple && (
+        <>
+          <div
+            className="absolute top-1/2 left-1/2 w-[240px] h-[240px] rounded-full pointer-events-none z-[900]"
+            style={{
+              transform: "translate(-50%, -50%)",
+              background:
+                "radial-gradient(circle, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0.1) 70%)",
+              animation: "ripple 2s ease-out forwards",
+              boxShadow:
+                "0 0 40px 15px rgba(255,215,0,0.5), 0 0 100px 30px rgba(255,215,0,0.4)",
+              filter: "blur(1px)",
+            }}
+          />
+          <NoteBurstGold count={7} mode="gold" />
+        </>
+      )}
+
+      <style>{`
+        @keyframes ripple {
+          0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.9; }
+          50% { transform: translate(-50%, -50%) scale(1.8); opacity: 0.7; }
+          100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+        }
+      `}</style>
+
+      {/* 🎵 ドレミノナビ */}
+      <div className="mb-5">
+        <NaviBubble
+          message={
+            fromBonus
+              ? "ボーナスもがんばったね！✨"
+              : correctCount >= 7
+              ? "フルコンボ！真のチャンピオンだよ！🔥"
+              : correctCount >= 4
+              ? "いい戦いだったね！努力がDPになったよ！"
+              : "がんばったね！努力の音はちゃんと響いてるよ🎵"
+          }
+          subMessage={`今回の報酬：＋${dpGain} DP`}
         />
-      )}
-
-      {/* 🏆 タイトル */}
-      <motion.h2
-        className="text-3xl font-bold text-indigo-600 mb-4 z-10"
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-      >
-        {userScore >= 7
-          ? "🌟 パーフェクト！"
-          : userScore >= 4
-          ? "🌀 よくがんばった！あと少し！"
-          : "💪 次こそリズムを刻もう！"}
-      </motion.h2>
-
-      <p className="text-gray-700 mb-6 z-10">
-        あなた {userScore} 問 vs CPU {cpuScore} 問
-      </p>
-
-      {/* 🎵 DP情報 */}
-      {dpInfo ? (
-        <motion.div
-          className="bg-white rounded-2xl shadow-lg px-8 py-6 mb-6 z-10"
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-        >
-          <p className="text-lg mb-2">
-            🎵 獲得ドレミポイント：
-            <span className="font-bold">
-              {userScore >= 4 ? `+${dpInfo?.points - (dpInfo?.prevPoints || 0)} DP` : "0 DP"}
-            </span>
-          </p>
-          <p className="text-gray-600 mb-2">累計：{dpInfo.points} DP</p>
-          <p className="text-pink-600 font-bold text-xl">
-            鍵盤称号：{dpInfo.rank}
-          </p>
-          {dpInfo.prevRank !== dpInfo.rank && (
-            <motion.div
-              className="mt-3 text-yellow-500 font-bold text-lg"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              🌟 称号アップ！ {dpInfo.prevRank} → {dpInfo.rank} 🎹
-            </motion.div>
-          )}
-        </motion.div>
-      ) : (
-        <p className="text-gray-400">DPを更新中...</p>
-      )}
-
-      {/* 🔁 ボタン */}
-      <div className="flex flex-col gap-3 z-10">
-        <button
-          onClick={handleRetry}
-          className="bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-6 rounded-xl shadow-md transition"
-        >
-          🔁 もう一度バトル！
-        </button>
-        <button
-          onClick={() => navigate("/")}
-          className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-xl transition"
-        >
-          🏠 ホームへ
-        </button>
       </div>
 
-      {/* 🎥 AdRewardModal */}
-      <AdRewardModal
-        open={showAdModal} // ✅ 修正ポイント①
-        onClose={() => setShowAdModal(false)}
-        onReward={handleAdComplete}
-      />
+      {/* 🏆 結果カード */}
+      <motion.div
+        className="bg-white/80 backdrop-blur rounded-2xl shadow-lg p-6 w-full max-w-md text-center border border-yellow-200"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <div className="text-2xl font-bold mb-2">🎯 バトル結果</div>
+        <div className="text-gray-700 mb-4">
+          正解数：<strong>{correctCount}</strong> 問 <br />
+          獲得DP：<strong>＋{dpGain}</strong> DP
+        </div>
+
+        <div className="bg-yellow-50 rounded-xl p-4 text-left text-sm shadow-inner mb-4">
+          <p>💎 総DP：{stats.totalDP}</p>
+          <p>🎵 音符：{stats.notes} / 7</p>
+          <p>🔥 連続ストリーク：{stats.streak}（最高 {stats.bestStreak}）</p>
+        </div>
+
+        <motion.button
+          onClick={() => navigate("/")}
+          className="px-6 py-3 bg-pink-500 text-white font-bold rounded-xl shadow hover:opacity-90"
+          whileTap={{ scale: 0.95 }}
+        >
+          🏠 ホームへ戻る
+        </motion.button>
+      </motion.div>
+
+      {/* 🎶 補足演出 */}
+      <AnimatePresence>
+        {showRipple && (
+          <motion.div
+            className="absolute bottom-10 text-center text-white/80 text-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            「努力の音が、次のバトルへ響く…🎵」
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

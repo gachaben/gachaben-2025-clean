@@ -1,5 +1,5 @@
 // ------------------------------------------------------
-// src/pages/DebugPage.jsx（Express API対応 / CORS完全安定版）
+// 🧭 src/pages/DebugPage.jsx（Express API対応 / CORS完全安定版）
 // ------------------------------------------------------
 import React, { useState } from "react";
 
@@ -7,8 +7,13 @@ export default function DebugPage() {
   const [result, setResult] = useState("");
   const [battleId, setBattleId] = useState("");
 
-  // ✅ Firebase Emulator での Functions 実行用URL
-  const BASE_URL = "http://localhost:5003/gachaben-2025/us-central1/api";
+  // ✅ Firebase Emulator or Production自動切り替え
+  const USE_EMU = import.meta.env.VITE_USE_EMU === "true";
+  const EMU_HOST = import.meta.env.VITE_EMU_HOST || "127.0.0.1";
+  const EMU_PORT = import.meta.env.VITE_FUNCTIONS_PORT || 5003;
+
+  // ✅ 接続先（Emulator or Cloud）
+  const BASE_URL = "http://localhost:5003/gachaben-2025/asia-northeast1/api";
 
 
   // ✅ createBattle 実行
@@ -44,7 +49,7 @@ export default function DebugPage() {
         body: JSON.stringify({
           uid: "debug-user",
           battleId,
-          round: 1,
+          round: { question: "Q1", result: "win" },
         }),
       });
 

@@ -1,13 +1,16 @@
 // ------------------------------------------------------
-// functions/src/index.ts（🔥 Firestore書き込み + Express対応 / 最終安定版）
+// functions/src/index.ts（🔥 Firestore書き込み + Express対応 / 完全安定版）
 // ------------------------------------------------------
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import express, { Request, Response } from "express";
 import cors from "cors";
-import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore"; // ✅ 新仕様import
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
+import { createBattleEX } from "./createBattleEX"; // 🆕 EXバトル
 
+// ------------------------------------------------------
 // ✅ Firebase Admin 初期化（Emulator対応）
+// ------------------------------------------------------
 if (!admin.apps.length) {
   admin.initializeApp({
     projectId: "gachaben-2025",
@@ -15,13 +18,16 @@ if (!admin.apps.length) {
   console.log("✅ Admin initialized (index.ts)");
 }
 
-// ✅ Firestore取得（admin.firestore() は使わない）
+// ✅ Firestore取得
 const db = getFirestore();
 
-// ✅ Expressアプリ設定
+// ✅ Expressアプリ作成
 const app = express();
 
-// ✅ CORS設定（ViteローカルURL許可）
+// ------------------------------------------------------
+// 🌍 CORS設定（Viteローカルアクセス許可）
+// ------------------------------------------------------
+// ⚠️ express.json() より先に置くこと！
 app.use(
   cors({
     origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -31,15 +37,17 @@ app.use(
   })
 );
 
-// ✅ プリフライト対応
+// ✅ プリフライト（OPTIONS）リクエスト対応
 app.options("*", cors());
+
+// ✅ JSON受け取り許可
 app.use(express.json());
 
 // ------------------------------------------------------
-// 🟢 createBattle
+// 🟢 createBattle（旧）
 // ------------------------------------------------------
 app.post("/createBattle", async (req: Request, res: Response): Promise<void> => {
-  console.log("[createBattle] called");
+  console.log("📩 [createBattle] called");
 
   try {
     const uid = (req.body && (req.body as any).uid) || "debug-user";
@@ -56,7 +64,7 @@ app.post("/createBattle", async (req: Request, res: Response): Promise<void> => 
       updatedAt: Timestamp.now(),
     });
 
-    console.log(`[createBattle] ✅ created: ${battleId}`);
+    console.log(`✅ [createBattle] created: ${battleId}`);
 
     res.status(200).json({
       ok: true,
@@ -64,7 +72,7 @@ app.post("/createBattle", async (req: Request, res: Response): Promise<void> => 
       battleId,
     });
   } catch (err) {
-    console.error("[createBattle] Error:", err);
+    console.error("❌ [createBattle] Error:", err);
     res.status(500).json({
       ok: false,
       msg: "createBattle Error",
@@ -74,10 +82,15 @@ app.post("/createBattle", async (req: Request, res: Response): Promise<void> => 
 });
 
 // ------------------------------------------------------
+// 🟢 createBattleEX（7問制EXバトル初期化）
+// ------------------------------------------------------
+app.post("/createBattleEX", createBattleEX);
+
+// ------------------------------------------------------
 // 🟢 commitRound
 // ------------------------------------------------------
 app.post("/commitRound", async (req: Request, res: Response): Promise<void> => {
-  console.log("[commitRound] called");
+  console.log("📩 [commitRound] called");
 
   try {
     const { battleId, round } = req.body || {};
@@ -88,13 +101,15 @@ app.post("/commitRound", async (req: Request, res: Response): Promise<void> => {
       updatedAt: Timestamp.now(),
     });
 
+    console.log(`✅ [commitRound] updated: ${battleId}`);
+
     res.status(200).json({
       ok: true,
       msg: "commitRound OK ✅",
       battleId,
     });
   } catch (err) {
-    console.error("[commitRound] Error:", err);
+    console.error("❌ [commitRound] Error:", err);
     res.status(500).json({
       ok: false,
       msg: "commitRound Error",
@@ -107,7 +122,7 @@ app.post("/commitRound", async (req: Request, res: Response): Promise<void> => {
 // 🟢 finishBattleFn
 // ------------------------------------------------------
 app.post("/finishBattleFn", async (req: Request, res: Response): Promise<void> => {
-  console.log("[finishBattleFn] called");
+  console.log("📩 [finishBattleFn] called");
 
   try {
     const { battleId } = req.body || {};
@@ -116,7 +131,10 @@ app.post("/finishBattleFn", async (req: Request, res: Response): Promise<void> =
     await db.collection("battles").doc(battleId).update({
       status: "finished",
       finishedAt: FieldValue.serverTimestamp(),
+      updatedAt: Timestamp.now(),
     });
+
+    console.log(`✅ [finishBattleFn] finished: ${battleId}`);
 
     res.status(200).json({
       ok: true,
@@ -124,7 +142,7 @@ app.post("/finishBattleFn", async (req: Request, res: Response): Promise<void> =
       battleId,
     });
   } catch (err) {
-    console.error("[finishBattleFn] Error:", err);
+    console.error("❌ [finishBattleFn] Error:", err);
     res.status(500).json({
       ok: false,
       msg: "finishBattleFn Error",
@@ -137,12 +155,12 @@ app.post("/finishBattleFn", async (req: Request, res: Response): Promise<void> =
 // 🟢 pingFn（接続確認）
 // ------------------------------------------------------
 app.get("/pingFn", async (_req: Request, res: Response): Promise<void> => {
-  console.log("[pingFn] pong 🏓");
+  console.log("🏓 [pingFn] pong");
   res.status(200).json({ ok: true, msg: "pong 🏓 from pingFn" });
 });
 
 // ------------------------------------------------------
 // ✅ Firebase Functions へエクスポート
 // ------------------------------------------------------
-exports.api = functions.https.onRequest(app);
+exports.api = functions.region("asia-northeast1").https.onRequest(app);
 console.log("🚀 Express API registered (/api/*)");

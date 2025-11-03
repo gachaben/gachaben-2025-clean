@@ -1,15 +1,14 @@
 // ------------------------------------------------------
-// 🎵 useDoremiSound.js（完全統一版 / AudioContext管理＋ドレミ再生）
+// 🎵 useDoremiSound.js（v3.0 / 完全統一版・AudioContext安定管理）
 // ------------------------------------------------------
 
-// ------------------------------------------------------
-// 🎧 AudioContext 共通管理
-// ------------------------------------------------------
+// ✅ AudioContext をアプリ全体で共有
 let audioCtx;
+
 if (typeof window !== "undefined") {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  // 🔊 ページ遷移時に自動停止
+  // 🧹 ページ遷移時に停止・解放
   window.addEventListener("beforeunload", () => {
     if (audioCtx && audioCtx.state !== "closed") {
       audioCtx.close();
@@ -17,60 +16,70 @@ if (typeof window !== "undefined") {
     }
   });
 
-  // ✅ 初回クリックで resume（LessonPage対策）
+  // 🟢 初回クリックで resume（モバイル再生ブロック対策）
   document.addEventListener("click", () => {
-    if (audioCtx.state === "suspended") {
-      audioCtx.resume().then(() => {
-        console.log("🔊 AudioContext resumed globally");
-      });
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().then(() => console.log("🔊 AudioContext resumed globally"));
     }
   });
 }
 
 // ------------------------------------------------------
-// ✅ 単音再生
+// ✅ 単音再生（効果音・個別音符）
 // ------------------------------------------------------
 export function playNote(note) {
-  console.log("🎵 [playNote] 呼び出し:", note);
-  const audio = new Audio(`/sounds/doremi/${note}.wav`);
-  audio.volume = 0.8;
+  if (!note) return;
+  try {
+    const audio = new Audio(`/sounds/doremi/${note}.wav`);
+    audio.volume = 0.8;
+    audio.play().catch((err) => console.warn(`⚠️ playNote(${note}) failed`, err));
 
-  audio.play()
-    .then(() => {
-      console.log(`✅ [playNote] 再生成功: ${note}`);
-      // 再生終了後に停止・解放
-      audio.addEventListener("ended", () => {
-        audio.pause();
-        audio.currentTime = 0;
-        console.log(`🛑 [playNote] 停止: ${note}`);
-      });
-    })
-    .catch((err) => {
-      console.error(`❌ [playNote] 再生失敗 (${note})`, err);
+    // 自動停止・メモリ解放
+    audio.addEventListener("ended", () => {
+      audio.pause();
+      audio.currentTime = 0;
     });
+  } catch (err) {
+    console.error(`❌ playNote(${note}) error`, err);
+  }
 }
 
 // ------------------------------------------------------
 // ✅ 全音階再生（ド→ド2）
 // ------------------------------------------------------
-export function playFullScale() {
-  console.log("🎶 [playFullScale] 呼び出し開始");
+export function playFullScale(speed = 400) {
   const notes = ["do", "re", "mi", "fa", "so", "la", "si", "do2"];
-  let i = 0;
+  let index = 0;
 
   const playNext = () => {
-    if (i < notes.length) {
-      const note = notes[i];
-      console.log(`➡️ [playFullScale] 再生中: ${note}`);
-      const audio = new Audio(`/sounds/doremi/${note}.wav`);
-      audio.volume = 0.8;
-      audio.play()
-        .then(() => console.log(`✅ [playFullScale] 再生成功: ${note}`))
-        .catch((err) => console.error(`❌ [playFullScale] 再生失敗: ${note}`, err));
-      i++;
-      setTimeout(playNext, 400);
-    }
+    if (index >= notes.length) return;
+    playNote(notes[index]);
+    index++;
+    setTimeout(playNext, speed);
   };
 
+  playNext();
+}
+
+// ------------------------------------------------------
+// ✅ 成功・再挑戦ショート効果音
+// ------------------------------------------------------
+export const playSuccess = () => playNote("so");  // 成功時（爽やか）
+export const playRetry = () => playNote("mi");    // 再挑戦（温かみ）
+export const playFail = () => playNote("fa");     // 失敗時（軽い落ち着き）
+
+// ------------------------------------------------------
+// ✅ カスタムスケール再生（任意音列）
+// ------------------------------------------------------
+export function playSequence(sequence = [], interval = 350) {
+  if (!sequence.length) return;
+  let i = 0;
+  const playNext = () => {
+    if (i < sequence.length) {
+      playNote(sequence[i]);
+      i++;
+      setTimeout(playNext, interval);
+    }
+  };
   playNext();
 }

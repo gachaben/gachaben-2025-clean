@@ -1,11 +1,12 @@
 // ------------------------------------------------------
-// 🚀 src/App.jsx（v2.9.2 安定版 / PremiumGacha 認証保護追加）
+// 🚀 src/App.jsx（v3.0 / BattlePlayPage対応＋安定版）
 // ------------------------------------------------------
 
 import React from "react";
 import { Routes, Route, Navigate, Link } from "react-router-dom";
 import { onAuthStateChanged, getAuth } from "firebase/auth";
 
+// ==== 各ページインポート ====
 import ChallengeTestPage from "@/pages/ChallengeTestPage.jsx";
 import LessonTestPage from "@/pages/LessonTestPage.jsx";
 import ActiveTimeTestPage from "@/pages/ActiveTimeTestPage.jsx";
@@ -13,11 +14,12 @@ import HomePage from "@/pages/HomePage.jsx";
 import LoginPage from "@/pages/LoginPage.jsx";
 import DebugPage from "@/pages/DebugPage.jsx";
 import DoReMiBoard from "@/pages/DoReMiBoard.jsx";
-import StudyPage from "./pages/StudyPage";
-import MissionGachaPage from "./pages/MissionGachaPage";
+import StudyPage from "@/pages/StudyPage.jsx";
+import MissionGachaPage from "@/pages/MissionGachaPage.jsx";
 import PremiumGachaPage from "@/pages/PremiumGachaPage.jsx";
 import AppOpeningScene from "@/pages/AppOpeningScene.jsx";
 import BattleChallengePage from "@/pages/BattleChallengePage.jsx";
+import BattlePlayPage from "@/pages/BattlePlayPage.jsx"; // ✅ 追加済み
 import BattleResultPage from "@/pages/BattleResultPage.jsx";
 import BattleHistoryPage from "@/pages/BattleHistoryPage.jsx";
 import ReviewHomePage from "@/pages/ReviewHomePage.jsx";
@@ -26,10 +28,18 @@ import ReviewMistakesPage from "@/pages/ReviewMistakesPage.jsx";
 import ReviewListPage from "@/pages/ReviewListPage.jsx";
 import ReviewPlayPage from "@/pages/ReviewPlayPage.jsx";
 import ReviewSessionStart from "@/pages/ReviewSessionStart.jsx";
+import ChallengeSelectPage from "@/pages/ChallengeSelectPage.jsx";
+import ChallengePlayPage from "@/pages/ChallengePlayPage.jsx";
+import ChallengeResultPage from "@/pages/ChallengeResultPage.jsx";
+import ChallengeRetryPage from "@/pages/ChallengeRetryPage.jsx";
+
+// ==== コンテキスト・共通 ====
 import { HeartsProvider } from "@/context/HeartsContext";
 import TopBar from "@/components/TopBar";
 
+// ------------------------------------------------------
 // 🔐 認証状態管理
+// ------------------------------------------------------
 function useAuthState() {
   const [state, setState] = React.useState({ user: null, loading: true });
   React.useEffect(() => {
@@ -48,7 +58,9 @@ function RequireAuth({ children }) {
   return children;
 }
 
+// ------------------------------------------------------
 // 🧭 開発用ナビゲーションバー
+// ------------------------------------------------------
 function Nav() {
   return (
     <nav className="p-2 flex flex-wrap gap-3 text-sm bg-gray-50 border-b justify-center">
@@ -65,7 +77,9 @@ function Nav() {
   );
 }
 
+// ------------------------------------------------------
 // 🚀 アプリ本体
+// ------------------------------------------------------
 export default function App() {
   const { user, loading } = useAuthState();
 
@@ -89,28 +103,11 @@ export default function App() {
           <Route path="/active-test" element={<ActiveTimeTestPage />} />
           <Route path="/study" element={<StudyPage />} />
 
-          {/* ✅ ミッションガチャ */}
-          <Route
-            path="/mission-gacha"
-            element={
-              <RequireAuth>
-                <MissionGachaPage />
-              </RequireAuth>
-            }
-          />
-
-          {/* 🌈 プレミアムガチャ（認証保護あり） */}
-          <Route
-            path="/premium-gacha"
-            element={
-              <RequireAuth>
-                <PremiumGachaPage />
-              </RequireAuth>
-            }
-          />
-
-          {/* 🌅 起動画面 */}
-          <Route path="/opening" element={<AppOpeningScene />} />
+          {/* ==== チャレンジ ==== */}
+          <Route path="/challenge" element={<ChallengeSelectPage />} />
+          <Route path="/challenge/play" element={<ChallengePlayPage />} />
+          <Route path="/challenge/result" element={<ChallengeResultPage />} />
+          <Route path="/challenge/retry" element={<ChallengeRetryPage />} />
 
           {/* ==== バトル関連 ==== */}
           <Route
@@ -130,6 +127,14 @@ export default function App() {
             }
           />
           <Route
+            path="/battle/play"
+            element={
+              <RequireAuth>
+                <BattlePlayPage />
+              </RequireAuth>
+            }
+          />
+          <Route
             path="/battle/result"
             element={
               <RequireAuth>
@@ -145,6 +150,29 @@ export default function App() {
               </RequireAuth>
             }
           />
+
+          {/* ==== ミッションガチャ ==== */}
+          <Route
+            path="/mission-gacha"
+            element={
+              <RequireAuth>
+                <MissionGachaPage />
+              </RequireAuth>
+            }
+          />
+
+          {/* ==== プレミアムガチャ ==== */}
+          <Route
+            path="/premium-gacha"
+            element={
+              <RequireAuth>
+                <PremiumGachaPage />
+              </RequireAuth>
+            }
+          />
+
+          {/* ==== 起動画面 ==== */}
+          <Route path="/opening" element={<AppOpeningScene />} />
 
           {/* ==== 復習モード ==== */}
           <Route path="/review" element={<ReviewHomePage />} />

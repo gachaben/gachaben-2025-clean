@@ -32,6 +32,7 @@ import ChallengeSelectPage from "@/pages/ChallengeSelectPage.jsx";
 import ChallengePlayPage from "@/pages/ChallengePlayPage.jsx";
 import ChallengeResultPage from "@/pages/ChallengeResultPage.jsx";
 import ChallengeRetryPage from "@/pages/ChallengeRetryPage.jsx";
+import BattleBonusPage from "@/pages/BattleBonusPage.jsx";
 
 // ==== コンテキスト・共通 ====
 import { HeartsProvider } from "@/context/HeartsContext";
@@ -111,13 +112,14 @@ export default function App() {
 
           {/* ==== バトル関連 ==== */}
           <Route
-            path="/battle"
-            element={
-              <RequireAuth>
-                <BattleChallengePage user={{ grade: 3 }} />
-              </RequireAuth>
-            }
-          />
+  path="/battle"
+  element={
+    <RequireAuth>
+      <BattlePlayPage />   {/* ← ここを BattleChallengePage から切り替え */}
+    </RequireAuth>
+  }
+/>
+
           <Route
             path="/battle/challenge"
             element={
@@ -150,6 +152,17 @@ export default function App() {
               </RequireAuth>
             }
           />
+<Route
+  path="/battle/bonus"
+  element={
+    <RequireAuth>
+      <BattleBonusPage />
+    </RequireAuth>
+  }
+/>
+
+
+
 
           {/* ==== ミッションガチャ ==== */}
           <Route

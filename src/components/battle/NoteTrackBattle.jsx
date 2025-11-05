@@ -1,37 +1,36 @@
-// ------------------------------------------------------
-// 🎵 NoteTrackBattle.jsx（7音進行ゲージ）
-// ------------------------------------------------------
 import React from "react";
 
-const labels = ["ド","レ","ミ","ファ","ソ","ラ","シ","ド"];
-
-export default function NoteTrackBattle({ progress = 0, victoryAt = 4 }) {
-  // progress: 現バトルでの点灯数（0〜7）
+export default function NoteTrackBattle({ history = [], total = 7 }) {
   return (
-    <div className="flex items-end gap-2 select-none">
-      {labels.map((n, i) => {
-        const lit = i < progress;
-        const isVictory = i === victoryAt - 1;
-        return (
-          <div key={i} className="flex flex-col items-center">
+    <div className="flex flex-col items-center mb-4">
+      {/* ラベル（ドレミファソラシド） */}
+      <div className="flex gap-1 text-xs text-gray-500 mb-1 select-none">
+        {["ド", "レ", "ミ", "ファ", "ソ", "ラ", "シ"].slice(0, total).map((n, i) => (
+          <span key={i} style={{ width: 20 }} className="text-center">{n}</span>
+        ))}
+      </div>
+
+      {/* ノートトラック（履歴反映） */}
+      <div className="flex gap-2">
+        {Array.from({ length: total }).map((_, i) => {
+          const state = history[i]; // 'correct' or 'wrong' or undefined
+          let color = "#f0f0f0"; // 未挑戦
+          if (state === "correct") color = "#facc15"; // 金
+          else if (state === "wrong") color = "#d1d5db"; // グレー
+
+          return (
             <div
-              className={`w-6 rounded-lg transition-all duration-300 ${
-                lit ? "bg-yellow-400" : "bg-white/60"
-              }`}
+              key={i}
+              className="w-6 h-6 rounded-full shadow-sm"
               style={{
-                height: 18 + i * 8,
-                boxShadow: lit ? "0 0 10px rgba(255,200,0,.8)" : "none",
+                backgroundColor: color,
+                border: "1px solid rgba(0,0,0,0.1)",
+                transition: "background-color 0.3s",
               }}
-              title={`${labels[i]}${isVictory ? "（ここで勝利）" : ""}`}
             />
-            <div
-              className={`text-[10px] mt-1 ${isVictory ? "font-bold text-pink-600" : "text-gray-600"}`}
-            >
-              {labels[i]}
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }

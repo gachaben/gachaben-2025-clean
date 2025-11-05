@@ -1,85 +1,72 @@
 // ------------------------------------------------------
-// 🎵 useDoremiSound.js（v3.0 / 完全統一版・AudioContext安定管理）
+// 🎵 useDoremiSound.js（完全安定版 / 自動AudioContext再開）
 // ------------------------------------------------------
 
-// ✅ AudioContext をアプリ全体で共有
 let audioCtx;
 
-if (typeof window !== "undefined") {
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-  // 🧹 ページ遷移時に停止・解放
-  window.addEventListener("beforeunload", () => {
-    if (audioCtx && audioCtx.state !== "closed") {
-      audioCtx.close();
-      console.log("🧹 AudioContext closed on unload");
-    }
-  });
-
-  // 🟢 初回クリックで resume（モバイル再生ブロック対策）
-  document.addEventListener("click", () => {
-    if (audioCtx && audioCtx.state === "suspended") {
-      audioCtx.resume().then(() => console.log("🔊 AudioContext resumed globally"));
-    }
-  });
+// ✅ AudioContextの取得・再開
+function getCtx() {
+  if (!audioCtx || audioCtx.state === "closed") {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume().catch(() => {});
+  }
+  return audioCtx;
 }
 
-// ------------------------------------------------------
-// ✅ 単音再生（効果音・個別音符）
-// ------------------------------------------------------
-export function playNote(note) {
-  if (!note) return;
-  try {
-    const audio = new Audio(`/sounds/doremi/${note}.wav`);
-    audio.volume = 0.8;
-    audio.play().catch((err) => console.warn(`⚠️ playNote(${note}) failed`, err));
+const freq = {
+  do: 261.63,
+  re: 293.66,
+  mi: 329.63,
+  fa: 349.23,
+  so: 392.0,
+  la: 440.0,
+  si: 493.88,
+  do2: 523.25,
+};
 
-    // 自動停止・メモリ解放
-    audio.addEventListener("ended", () => {
-      audio.pause();
-      audio.currentTime = 0;
-    });
-  } catch (err) {
-    console.error(`❌ playNote(${note}) error`, err);
+// ✅ 音を鳴らす
+export async function playNote(note, duration = 0.25) {
+  const ctx = getCtx();
+  if (!freq[note]) return;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = "sine";
+  osc.frequency.value = freq[note];
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
+
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + duration);
+
+  return new Promise((resolve) => (osc.onended = resolve));
+}
+
+// ✅ ドレミファソラシドを順に再生
+export async function playFullScale(interval = 300) {
+  const notes = ["do", "re", "mi", "fa", "so", "la", "si", "do2"];
+  for (const n of notes) {
+    await playNote(n, 0.23);
+    await new Promise((r) => setTimeout(r, interval));
   }
 }
 
-// ------------------------------------------------------
-// ✅ 全音階再生（ド→ド2）
-// ------------------------------------------------------
-export function playFullScale(speed = 400) {
-  const notes = ["do", "re", "mi", "fa", "so", "la", "si", "do2"];
-  let index = 0;
+// ✅ 不正解音
+export async function playFail() {
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
 
-  const playNext = () => {
-    if (index >= notes.length) return;
-    playNote(notes[index]);
-    index++;
-    setTimeout(playNext, speed);
-  };
+  osc.type = "square";
+  osc.frequency.value = 200;
+  gain.gain.setValueAtTime(0.3, ctx.currentTime);
 
-  playNext();
-}
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.3);
 
-// ------------------------------------------------------
-// ✅ 成功・再挑戦ショート効果音
-// ------------------------------------------------------
-export const playSuccess = () => playNote("so");  // 成功時（爽やか）
-export const playRetry = () => playNote("mi");    // 再挑戦（温かみ）
-export const playFail = () => playNote("fa");     // 失敗時（軽い落ち着き）
-
-// ------------------------------------------------------
-// ✅ カスタムスケール再生（任意音列）
-// ------------------------------------------------------
-export function playSequence(sequence = [], interval = 350) {
-  if (!sequence.length) return;
-  let i = 0;
-  const playNext = () => {
-    if (i < sequence.length) {
-      playNote(sequence[i]);
-      i++;
-      setTimeout(playNext, interval);
-    }
-  };
-  playNext();
+  return new Promise((resolve) => (osc.onended = resolve));
 }

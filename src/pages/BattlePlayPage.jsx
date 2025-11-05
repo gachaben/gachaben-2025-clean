@@ -1,155 +1,218 @@
 // ------------------------------------------------------
-// 🥊 BattlePlayPage.jsx（v3.8 / 延長戦対応＋正解のみ音符点灯 安定版）
+// ⚔️ BattlePlayPage.jsx（v8.4 / 上部吹き出し削除＋2段コメント構成）
 // ------------------------------------------------------
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate, useLocation } from "react-router-dom";
-import { playNote, playFullScale } from "@/lib/useDoremiSound";
-import NoteProgress from "@/components/ui/NoteProgress";
-import { updateDoremiPoints } from "@/utils/updateDoremiPoints";
+import AdSaveModal from "../components/AdSaveModal";
+import { useNavigate } from "react-router-dom";
+import DoreminoBubble from "../components/DoreminoBubble";
 
-export default function BattlePlayPage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const params = new URLSearchParams(location.search);
-  const isExtendMode = params.get("mode") === "extend"; // ✅ 延長戦フラグ
-
-  // 問題数（通常7問、延長3問）
-  const totalRounds = isExtendMode ? 3 : 7;
-
-  const [round, setRound] = useState(0);
+export default function BattlePlayPage({ totalRounds = 7 }) {
+  const [round, setRound] = useState(1);
   const [userCorrect, setUserCorrect] = useState(0);
-  const [cpuCorrect, setCpuCorrect] = useState(0);
-  const [question, setQuestion] = useState(null);
-  const [finished, setFinished] = useState(false);
-  const [rainbow, setRainbow] = useState(false);
+  const [phase, setPhase] = useState("ready");
+  const [showAdBonus, setShowAdBonus] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [praiseStep, setPraiseStep] = useState(1);
+  const navigate = useNavigate();
 
-  const sampleQuestions = [
-    { q: "1 + 2 = ?", a: 3 },
-    { q: "5 - 2 = ?", a: 3 },
-    { q: "3 × 3 = ?", a: 9 },
-    { q: "10 - 4 = ?", a: 6 },
-    { q: "8 ÷ 2 = ?", a: 4 },
-    { q: "7 + 2 = ?", a: 9 },
-    { q: "6 ÷ 3 = ?", a: 2 },
-    { q: "9 - 5 = ?", a: 4 },
-    { q: "2 + 3 = ?", a: 5 },
-    { q: "4 + 4 = ?", a: 8 },
+  // 🎵 MP3再生
+  const playSound = (path) => {
+    const audio = new Audio(`/sounds/doremi/${path}`);
+    audio.volume = 0.8;
+    audio.play().catch((e) => console.warn("Audio play error:", e));
+  };
+
+  const questions = [
+    { text: "8 + 3 = ?", options: ["9", "10", "11", "13"], answer: "11" },
+    { text: "5 × 2 = ?", options: ["7", "10", "8", "12"], answer: "10" },
+    { text: "6 − 1 = ?", options: ["4", "6", "5", "7"], answer: "5" },
+    { text: "9 ÷ 3 = ?", options: ["6", "4", "3", "2"], answer: "3" },
+    { text: "7 + 2 = ?", options: ["8", "9", "10", "11"], answer: "9" },
+    { text: "4 × 3 = ?", options: ["10", "11", "12", "13"], answer: "12" },
+    { text: "15 − 7 = ?", options: ["6", "7", "8", "9"], answer: "8" },
   ];
 
-  const noteOrder = ["do", "re", "mi", "fa", "so", "ra", "si", "do2", "re2", "mi2"];
+  const currentQ = questions[round - 1];
 
+  // ✅ ラウンドごとにメッセージ更新
+  const [message, setMessage] = useState("準備OK？");
   useEffect(() => {
-    setQuestion(sampleQuestions[round]);
-  }, [round]);
-
-  // 🎯 正答・誤答処理（不正解では音符もラウンドも進まない）
-  const handleAnswer = (isCorrect) => {
-    if (finished) return;
-
-    let nextUser = userCorrect;
-    let nextCpu = cpuCorrect;
-
-    if (isCorrect) {
-      // ✅ 正解時のみ進行
-      nextUser++;
-      playNote(noteOrder[nextUser - 1]);
-      setUserCorrect(nextUser);
-    } else {
-      // ❌ 不正解時は音符も進行もしない（間違い音のみ再生）
-      ["mi", "re", "do"].forEach((n, i) =>
-        setTimeout(() => playNote(n), i * 120)
-      );
-      return; // ← 重要！ここでreturnする
+    if (phase === "question") {
+      setMessage(`第${round}問！ がんばって！`);
     }
+  }, [round, phase]);
 
-    // 🎯 CPUランダム正答（平均60%）
-    const cpuAnswer = Math.random() < 0.6;
-    if (cpuAnswer) nextCpu++;
-    setCpuCorrect(nextCpu);
-
-    // 🎯 終了判定
-    if (round + 1 >= totalRounds) {
-      setFinished(true);
-      setTimeout(() => finishBattle(nextUser, nextCpu), 1000);
+  // 🧮 回答処理
+  const handleAnswer = (opt) => {
+    const correct = opt === currentQ.answer;
+    if (correct) setUserCorrect((v) => v + 1);
+    if (round < totalRounds) {
+      setTimeout(() => setRound((r) => r + 1), 500);
     } else {
-      setRound((prev) => prev + 1);
+      setTimeout(() => setPhase("finish"), 700);
     }
   };
 
-  // 🎵 終了処理
-  const finishBattle = async (user, cpu) => {
-    const uid = "demoUser";
-    const isWin = user > cpu;
-
-    if (isExtendMode) {
-      // 延長戦モード時の追加DP処理
-      const extraGain = Math.floor(user * 2.5); // 例: 1正解=約2〜3DP
-      await updateDoremiPoints(uid, extraGain);
-      alert(`🌀 延長戦で +${extraGain} DP 獲得！`);
+  // 🎉 終了時の演出
+  useEffect(() => {
+    if (phase === "finish") {
+      if (userCorrect === totalRounds) {
+        playSound("doremi_full3.mp3");
+        setTimeout(() => {
+          setPraiseStep(2);
+          setShowAdBonus(true);
+        }, 1500);
+      } else if (userCorrect >= 4) {
+        playSound("doremi_full1.mp3");
+        setTimeout(() => {
+          setPraiseStep(2);
+          setShowAdBonus(true);
+        }, 1500);
+      } else {
+        playSound("do.mp3");
+      }
     }
+  }, [phase]);
 
-    // 🌈 全問正解時のみファンファーレ
-    if (user === totalRounds) {
-      playFullScale();
-      setRainbow(true);
-    }
-
-    // 結果ページへ遷移
-    navigate("/battle/result", { state: { isWin, userScore: user, cpuScore: cpu } });
+  // 🎁 広告関係
+  const handleWatchAd = () => setShowModal(true);
+  const handleFinishAd = () => {
+    setShowModal(false);
+    const bonusCount = userCorrect === totalRounds ? 1 : userCorrect >= 4 ? 3 : 0;
+    navigate("/battle/bonus", { state: { bonusCount } });
   };
 
+  // 🌟 初期表示
+  useEffect(() => {
+    setTimeout(() => {
+      setPhase("question");
+      setMessage("第1問！ がんばって！");
+    }, 800);
+  }, []);
+
+  // ---------------------------------------------------
+  // 💡 表示
+  // ---------------------------------------------------
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 relative overflow-hidden text-center">
-      <h2 className="text-2xl font-bold mb-4 mt-10">
-        {isExtendMode ? "🌀 延長ステージ" : "🥊 ドレミバトル"}
-      </h2>
-      <p className="mb-2 text-lg">{`第 ${round + 1} 問 / ${totalRounds}`}</p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-yellow-100 to-orange-100 relative">
+      <h2 className="text-2xl font-bold mb-2">⚔️ バトル（{totalRounds}問制）</h2>
 
-      {/* スコア表示 */}
-      <div className="flex gap-12 mb-6 text-lg font-semibold">
-        <div className="text-pink-600">あなた：{userCorrect}問</div>
-        <div className="text-blue-600">CPU：{cpuCorrect}問</div>
-      </div>
-
-      {/* 問題カード */}
-      {!finished && question && (
+      {/* 出題フェーズ */}
+      {phase === "question" && currentQ && (
         <motion.div
-          className="bg-white rounded-3xl shadow-lg px-8 py-6 mb-6 text-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          key={round}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white rounded-2xl shadow-lg p-6 w-80 text-center"
         >
-          <p className="text-xl font-semibold mb-4">{question.q}</p>
-          <div className="flex gap-4 justify-center flex-wrap">
-            {[question.a, question.a + 1, question.a - 1]
-              .sort(() => Math.random() - 0.5)
-              .map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleAnswer(opt === question.a)}
-                  className="bg-indigo-400 hover:bg-indigo-500 text-white px-6 py-2 rounded-xl transition"
-                >
-                  {opt}
-                </button>
-              ))}
+          <p className="text-lg mb-3 font-semibold text-gray-700">{message}</p>
+          <p className="text-xl font-bold mb-4">{currentQ.text}</p>
+          <div className="grid grid-cols-2 gap-3">
+            {currentQ.options.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => handleAnswer(opt)}
+                className="bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600"
+              >
+                {opt}
+              </button>
+            ))}
           </div>
         </motion.div>
       )}
 
-      {/* ノートゲージ */}
-      <NoteProgress current={userCorrect} isRainbow={rainbow} />
-
-      {/* 結果表示 */}
-      {finished && (
-        <div className="mt-6 text-center">
-          {userCorrect > cpuCorrect ? (
-            <p className="text-xl font-bold text-indigo-600 animate-pulse">
-              🌈 {isExtendMode ? "延長も勝利！" : "勝利！ドレミが響いた！"}
-            </p>
-          ) : (
-            <p className="text-lg text-gray-600">CPUの勝利…！</p>
+      {/* 結果フェーズ */}
+      {phase === "finish" && (
+        <motion.div
+          key="finish"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mt-10"
+        >
+          {/* 🎯 大見出しコメント */}
+          {userCorrect === totalRounds && (
+            <h2 className="text-3xl font-bold text-pink-600 mb-4">
+              🌈 パーフェクト！おめでとう！
+            </h2>
           )}
-        </div>
+          {userCorrect >= 4 && userCorrect < totalRounds && (
+            <h2 className="text-3xl font-bold text-pink-600 mb-4">
+              🎵 ボーナス問題で再挑戦チャンス！
+            </h2>
+          )}
+          {userCorrect < 4 && (
+            <h2 className="text-3xl font-bold text-pink-600 mb-4">💭 がんばったね！</h2>
+          )}
+
+{/* 🎵 ドレミノ吹き出し */}
+{userCorrect === totalRounds && (
+  <DoreminoBubble
+    type="perfect"
+    message={
+      <>
+        すごいね！<br />
+        ドレミがキラキラ光ってるよ！<br />
+        １問５DPのボーナス問題にチャレンジしよう！
+      </>
+    }
+  />
+)}
+
+{userCorrect >= 4 && userCorrect < totalRounds && (
+  <DoreminoBubble
+    type="good"
+    message={
+      <>
+        あとちょっとでパーフェクト！<br />
+        ボーナス問題で３DPをゲットしよう！
+      </>
+    }
+  />
+)}
+
+{userCorrect < 4 && (
+  <DoreminoBubble
+    type="arere"
+    message={
+      <>
+        がんばったね！<br />
+        またチャレンジしよう！<br />
+        応援してるよ📣
+      </>
+    }
+  />
+)}
+
+
+
+         {/* 🎁 ボーナス誘導 */}
+{showAdBonus && (
+  <div className="flex flex-col items-center gap-3 mt-4">
+    <button
+      onClick={handleWatchAd}
+      className="bg-orange-500 text-white px-6 py-4 rounded-xl shadow hover:bg-orange-600 text-base font-semibold leading-snug text-center"
+    >
+      🎁 広告を見てボーナス問題に挑戦しよう！
+    </button>
+
+    <button
+      onClick={() => window.location.reload()}
+      className="text-blue-600 underline text-sm mt-2"
+    >
+      あとで
+    </button>
+  </div>
+)}
+
+        </motion.div>
+      )}
+
+      {/* 🎬 広告モーダル */}
+      {showModal && (
+        <AdSaveModal onClose={() => setShowModal(false)} onFinish={handleFinishAd} />
       )}
     </div>
   );

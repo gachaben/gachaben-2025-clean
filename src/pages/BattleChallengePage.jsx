@@ -31,12 +31,23 @@ function generateQuestion() {
   }
 
   const calc = (x, y, o) =>
-    o === "+" ? x + y : o === "-" ? x - y : o === "×" ? x * y : Math.floor(x / y);
+    o === "+"
+      ? x + y
+      : o === "-"
+      ? x - y
+      : o === "×"
+      ? x * y
+      : Math.floor(x / y);
 
   const answer = calc(a, b, op);
   const choices = new Set([answer]);
-  while (choices.size < 4) choices.add(answer + (Math.floor(Math.random() * 6) - 3));
-  return { text: `${a} ${op} ${b} = ?`, answer, choices: Array.from(choices).sort(() => Math.random() - 0.5) };
+  while (choices.size < 4)
+    choices.add(answer + (Math.floor(Math.random() * 6) - 3));
+  return {
+    text: `${a} ${op} ${b} = ?`,
+    answer,
+    choices: Array.from(choices).sort(() => Math.random() - 0.5),
+  };
 }
 
 export default function BattleChallengePage() {
@@ -49,6 +60,7 @@ export default function BattleChallengePage() {
   const [correctCount, setCorrectCount] = useState(0);
   const [progress, setProgress] = useState(0);
   const [q, setQ] = useState(generateQuestion());
+  const [history, setHistory] = useState([]); // ← 追加：['correct' | 'wrong'] を積む
   const [locked, setLocked] = useState(false);
   const [result, setResult] = useState(null);
   const [showRipple, setShowRipple] = useState(false);
@@ -63,6 +75,10 @@ export default function BattleChallengePage() {
 
     const correct = choice === q.answer;
     if (correct) setCorrectCount((v) => v + 1);
+
+    // ✅ 結果を履歴に追加（ここが重要）
+    setHistory((prev) => [...prev, correct ? "correct" : "wrong"]);
+
     setProgress((v) => v + 1);
 
     setTimeout(() => {
@@ -118,36 +134,53 @@ export default function BattleChallengePage() {
   };
 
   // ✅ バトル終了後の処理
-  useEffect(() => {
-    if (result === "finished") {
+ useEffect(() => {
+    if (result !== "finished") return;
+
+    let isHandled = false; // ✅ 二重実行防止
+ 
+    const handleFinish = async () => {
+      if (isHandled) return;
+      isHandled = true;
+ 
       const dpGain = calcBaseDP(correctCount);
-
-      // 🌟 分岐ロジック
-      if (correctCount <= 3) {
-        // 通常終了（努力報酬のみ）
-        saveBattleResult(dpGain);
-        navigate("/battle/result", { state: { dpGain, correctCount } });
-      } else if (correctCount >= 4 && correctCount <= 6) {
-        // 4〜6問 → 延長誘導
-        saveBattleResult(dpGain);
-        setShowAdExtend(true);
-      } else if (correctCount === 7) {
-        // 7問 → パーフェクト誘導
-        saveBattleResult(dpGain, 1);
-        setShowAdPerfect(true);
-      }
-
-      // 🎵 勝利サウンド＋波紋演出
+ 
+      // 🎵 勝利サウンド（1回のみ）
       if (correctCount >= 4) {
-        const path = `/sounds/${themeName || "normal"}/battle_win.mp3`;
-        const se = new Audio(path);
-        se.volume = 0.8;
-        se.play().catch(() => {});
+        try {
+          const path = `/sounds/${themeName || "normal"}/battle_win.mp3`;
+          const se = new Audio(path);
+          se.volume = 0.8;
+          await se.play();
+          // ⏳ 2秒後にフェードアウト＆停止
+          setTimeout(() => se.pause(), 2000);
+        } catch (e) {
+          console.warn("Sound play failed:", e);
+        }
+ 
         setShowRipple(true);
         setTimeout(() => setShowRipple(false), 2200);
       }
-    }
-  }, [result]);
+ 
+      // 🌟 分岐ロジック（非同期で確実に遷移）
+      const dpPromise = saveBattleResult(dpGain, correctCount === 7 ? 1 : 0);
+      await dpPromise;
+ 
+     if (correctCount <= 3) {
+       navigate("/battle/result", { state: { dpGain, correctCount } });
+      } else if (correctCount >= 4 && correctCount <= 6) {
+        setShowAdExtend(true);
+      } else if (correctCount === 7) {
+        setShowAdPerfect(true);
+     }
+     };
+ 
+    handleFinish();
+     // cleanup: 万一result再変更でも1回のみ実行
+   return () => {
+      isHandled = true;
+    };
+    }, [result]);
 
   // ✅ UI構成
   return (
@@ -185,9 +218,7 @@ export default function BattleChallengePage() {
       {/* ナビキャラ */}
       <NaviBubble
         message={
-          result
-            ? "結果をまとめています..."
-            : `第${round}問！ がんばって！`
+          result ? "結果をまとめています..." : `第${round}問！ がんばって！`
         }
       />
 
@@ -201,7 +232,7 @@ export default function BattleChallengePage() {
       </motion.h1>
 
       {/* スコア */}
-      <NoteTrackBattle progress={progress} victoryAt={7} />
+      <NoteTrackBattle history={history} total={7} />
 
       {/* 問題パネル */}
       {!result && (
@@ -210,7 +241,9 @@ export default function BattleChallengePage() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="text-sm text-gray-600 mb-1">第 {round} 問 / 全7問</div>
+          <div className="text-sm text-gray-600 mb-1">
+            第 {round} 問 / 全7問
+          </div>
           <div className="text-3xl font-extrabold text-gray-800 text-center my-4 select-none">
             {q.text}
           </div>
@@ -237,17 +270,27 @@ export default function BattleChallengePage() {
 
       {/* モーダル分岐 */}
       <AnimatePresence>
-        {showAdExtend && (
+         {showAdExtend && (
           <AdExtendModal
-            correctCount={correctCount}
-            onClose={() => navigate("/bonus/play")}
+           open={showAdExtend}
+            onClose={() => setShowAdExtend(false)}
+           onConfirm={() => {
+              setShowAdExtend(false);
+              navigate("/bonus/play");
+            }}
           />
         )}
+
         {showAdPerfect && (
           <AdPerfectModal
-            onClose={() => navigate("/bonus/special")}
+            open={showAdPerfect}
+            onClose={() => setShowAdPerfect(false)}
+            onConfirm={() => {
+              setShowAdPerfect(false);
+              navigate("/bonus/special");
+            }}
           />
-        )}
+       )}
       </AnimatePresence>
     </div>
   );

@@ -1,6 +1,6 @@
 // src/components/BattleStartButton.tsx
 import React from "react";
-import { apiPost } from "@/lib/api";
+import { apiPost } from "../lib/api";
 
 type Props = {
   onStarted?: (battleId: string) => void; // 親にbattleIdを渡したい時用
